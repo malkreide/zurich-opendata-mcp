@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "zurich-opendata": {
+      "command": "python",
+      "args": ["-m", "zurich_opendata_mcp.server"],
+      "env": {}
+    }
+  }
+}
