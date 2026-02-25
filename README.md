@@ -243,7 +243,6 @@ MIT License
 
 ## 🤝 Context
 
-Developed as part of the AI strategy of the Schulamt (Department of Education) of the City of Zurich.
 All data used is published under open licenses (CC0 / Open by Default since 2021).
 
 ---
