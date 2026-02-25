@@ -243,7 +243,6 @@ MIT License
 
 ## 🤝 Kontext
 
-Entwickelt im Rahmen der KI-Strategie des Schulamts der Stadt Zürich.
 Alle genutzten Daten stehen unter offenen Lizenzen (CC0 / Open by Default seit 2021).
 
 ---
