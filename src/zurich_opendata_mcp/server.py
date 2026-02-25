@@ -6,6 +6,7 @@ Integriert CKAN (data.stadt-zuerich.ch), ParkenDD, und weitere städtische APIs.
 """
 
 import json
+import os
 from typing import Optional
 
 from mcp.server.fastmcp import FastMCP
@@ -48,6 +49,8 @@ mcp = FastMCP(
         "Alle Datensätze unter CC0-Lizenz frei nutzbar. "
         "Kategorien: Bildung, Bevölkerung, Mobilität, Umwelt, Finanzen, u.v.m."
     ),
+    host=os.environ.get("MCP_HOST", "0.0.0.0"),
+    port=int(os.environ.get("PORT", "8000")),
 )
 
 
@@ -1943,25 +1946,9 @@ async def get_tourism_categories_resource() -> str:
 
 
 def main():
-    """Start the Zurich Open Data MCP server.
-
-    Transport mode is controlled via the MCP_TRANSPORT environment variable:
-      - "sse"   → HTTP + Server-Sent Events (for remote / cloud deployment)
-      - "stdio" → Standard I/O (default, for Claude Desktop / local use)
-
-    For SSE mode, host and port can be set via MCP_HOST and MCP_PORT.
-    """
-    import os
-
-    transport = os.environ.get("MCP_TRANSPORT", "stdio").lower()
-
-    if transport == "sse":
-        host = os.environ.get("MCP_HOST", "0.0.0.0")
-        port = int(os.environ.get("MCP_PORT", os.environ.get("PORT", "8080")))
-        print(f"🚀 Zurich Open Data MCP Server starting on {host}:{port} (SSE)")
-        mcp.run(transport="sse", host=host, port=port)
-    else:
-        mcp.run()
+    """Start the Zurich Open Data MCP server."""
+    transport = os.environ.get("MCP_TRANSPORT", "stdio")
+    mcp.run(transport=transport)
 
 
 if __name__ == "__main__":
