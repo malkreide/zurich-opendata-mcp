@@ -2011,6 +2011,7 @@ STRB_DEPARTEMENTE = [
 
 # ─── Shared Helpers ───────────────────────────────────────────────────────────
 
+
 def _strb_where_clause(
     query: Optional[str] = None,
     departement: Optional[str] = None,
@@ -2040,9 +2041,7 @@ async def _strb_query(where: str, limit: int) -> tuple[list[dict], int]:
         f'ORDER BY "Beschlussdatum" DESC '
         f"LIMIT {limit}"
     )
-    sql_count = (
-        f'SELECT COUNT(*) AS cnt FROM "{STRB_RESOURCE_ID}" WHERE {where}'
-    )
+    sql_count = f'SELECT COUNT(*) AS cnt FROM "{STRB_RESOURCE_ID}" WHERE {where}'
     result_data = await ckan_request("datastore_search_sql", {"sql": sql_data})
     result_count = await ckan_request("datastore_search_sql", {"sql": sql_count})
 
@@ -2066,7 +2065,7 @@ def _format_strb_markdown(records: list[dict], total: int, titel: str) -> str:
     """Formatiert STRB-Ergebnisse als lesbare Markdown-Liste."""
     lines = [
         f"## {titel}",
-        f"",
+        "",
         f"**{total} Beschlüsse** gefunden (zeige {len(records)})",
         "",
     ]
@@ -2081,6 +2080,7 @@ def _format_strb_markdown(records: list[dict], total: int, titel: str) -> str:
 
 
 # ─── Tool 1: Volltextsuche ────────────────────────────────────────────────────
+
 
 class SearchSTRBInput(BaseModel):
     """Input für die Volltextsuche in Stadtratsbeschlüssen."""
@@ -2176,8 +2176,11 @@ async def search_stadtratsbeschluesse(params: SearchSTRBInput) -> str:
             return (
                 f"Keine Stadtratsbeschlüsse gefunden für: '{params.query}'"
                 + (f", Departement: '{params.departement}'" if params.departement else "")
-                + (f", Zeitraum: {params.datum_von or '?'} – {params.datum_bis or '?'}"
-                   if params.datum_von or params.datum_bis else "")
+                + (
+                    f", Zeitraum: {params.datum_von or '?'} – {params.datum_bis or '?'}"
+                    if params.datum_von or params.datum_bis
+                    else ""
+                )
                 + "\n\nHinweis: Das Archiv enthält öffentliche Beschlüsse ab Februar 2025."
             )
 
@@ -2200,6 +2203,7 @@ async def search_stadtratsbeschluesse(params: SearchSTRBInput) -> str:
 
 
 # ─── Tool 2: Alle Beschlüsse eines Departements ───────────────────────────────
+
 
 class BeschluesseDepartementInput(BaseModel):
     """Input für Beschlüsse-Abfrage nach Departement."""
@@ -2286,8 +2290,7 @@ async def get_beschluesse_by_departement(params: BeschluesseDepartementInput) ->
         if not records:
             return (
                 f"Keine Stadtratsbeschlüsse für Departement '{params.departement}' gefunden.\n\n"
-                f"Verfügbare Departemente:\n"
-                + "\n".join(f"- {d}" for d in STRB_DEPARTEMENTE)
+                f"Verfügbare Departemente:\n" + "\n".join(f"- {d}" for d in STRB_DEPARTEMENTE)
             )
 
         if params.format == "json":
@@ -2309,6 +2312,7 @@ async def get_beschluesse_by_departement(params: BeschluesseDepartementInput) ->
 
 
 # ─── Tool 3: Einzelbeschluss per Nummer ──────────────────────────────────────
+
 
 class GetSTRBDetailInput(BaseModel):
     """Input für den Abruf eines einzelnen Stadtratsbeschlusses."""
@@ -2372,14 +2376,16 @@ async def get_stadtratsbeschluss_detail(params: GetSTRBDetailInput) -> str:
             )
 
         r = _format_strb_record(records[0])
-        return "\n".join([
-            f"## Stadtratsbeschluss {r['beschlussnummer']}",
-            f"",
-            f"**Titel:** {r['titel']}",
-            f"**Datum:** {r['datum']}",
-            f"**Departement:** {r['departement']}",
-            f"**Link:** {r['link']}",
-        ])
+        return "\n".join(
+            [
+                f"## Stadtratsbeschluss {r['beschlussnummer']}",
+                "",
+                f"**Titel:** {r['titel']}",
+                f"**Datum:** {r['datum']}",
+                f"**Departement:** {r['departement']}",
+                f"**Link:** {r['link']}",
+            ]
+        )
 
     except Exception as e:
         return handle_api_error(e, f"STRB-Detail {params.beschlussnummer}")
