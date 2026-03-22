@@ -13,39 +13,6 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 - 20 tools for Zurich Open Data (CKAN, geodata, parliament, tourism, SPARQL, real-time)
 - Dual stdio/Streamable HTTP transport
 - GitHub Actions CI/CD with Trusted Publisher
-```
-
----
-
-## Teil 3: Den ersten Release erstellen
-
-Das ist der **Auslöser** — der Moment, in dem der Workflow startet.
-
-**Schritt 3.1** — Gehe zu: https://github.com/malkreide/zurich-opendata-mcp/releases
-
-**Schritt 3.2** — Klick auf **"Create a new release"** (rechts oben oder in der leeren Liste)
-
-**Schritt 3.3** — Fülle das Formular aus:
-
-| Feld | Wert |
-|---|---|
-| **Choose a tag** | `v0.2.0` → klick **"Create new tag: v0.2.0"** |
-| **Target** | `main` |
-| **Release title** | `v0.2.0 — Initial PyPI Release` |
-| **Description** | Kopiere den CHANGELOG-Eintrag von oben |
-| **Set as latest release** | ✅ angehakt |
-
-**Schritt 3.4** — Klick **"Publish release"**.
-
-**Was jetzt passiert** (automatisch, du musst nichts mehr tun):
-```
-GitHub Release erstellt
-    → Workflow "publish.yml" startet
-    → Job "build": python -m build → erzeugt .whl und .tar.gz
-    → Job "publish": GitHub sendet OIDC-Token an PyPI
-    → PyPI prüft: "Ist das wirklich malkreide/zurich-opendata-mcp, Workflow publish.yml?"
-    → Ja → Paket wird hochgeladen
-    → Fertig: https://pypi.org/project/zurich-opendata-mcp/
 
 ## [0.2.0] – 2026-02-21
 
