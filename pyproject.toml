@@ -43,10 +43,10 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/schulamt-zuerich/zurich-opendata-mcp"
-Repository = "https://github.com/schulamt-zuerich/zurich-opendata-mcp"
-Issues = "https://github.com/schulamt-zuerich/zurich-opendata-mcp/issues"
-Changelog = "https://github.com/schulamt-zuerich/zurich-opendata-mcp/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/malkreide/zurich-opendata-mcp"
+Repository = "https://github.com/malkreide/zurich-opendata-mcp"
+Issues = "https://github.com/malkreide/zurich-opendata-mcp/issues"
+Changelog = "https://github.com/malkreide/zurich-opendata-mcp/blob/main/CHANGELOG.md"
 "Open Data Zürich" = "https://data.stadt-zuerich.ch"
 
 [project.scripts]
