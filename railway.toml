@@ -1,0 +1,7 @@
+[build]
+buildCommand = "pip install -e ."
+
+[deploy]
+startCommand = "python -m zurich_opendata_mcp"
+restartPolicyType = "on-failure"
+restartPolicyMaxRetries = 3
