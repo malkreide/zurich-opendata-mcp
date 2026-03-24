@@ -24,30 +24,30 @@ jobs:
       - name: uv installieren
         run: pip install uv
 
+      - name: uv Cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/uv
+          key: ${{ runner.os }}-uv-${{ hashFiles('pyproject.toml') }}
+
       - name: Abhängigkeiten installieren
-        run: uv pip install -e ".[dev]" --system
+        run: uv sync --extra dev
 
       - name: Linting mit ruff
         run: ruff check src/
+        
+      - name: Format-Check mit ruff
+        run: ruff format --check src/
 
       - name: Syntax-Prüfung
         run: python -m py_compile src/zurich_opendata_mcp/server.py src/zurich_opendata_mcp/api_client.py
 
       - name: Import-Test
         run: python -c "from zurich_opendata_mcp.server import mcp; print('Import OK')"
+        env:
+          PYTHONPATH: src
 
       - name: Unit-Tests (ohne Live-API)
         run: pytest tests/ -m "not live"
         env:
           PYTHONPATH: src
-
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-      - run: pip install ruff
-      - run: ruff check src/
-      - run: ruff format --check src/
