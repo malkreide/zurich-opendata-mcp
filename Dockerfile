@@ -13,7 +13,8 @@ RUN pip install --no-cache-dir .
 ENV MCP_TRANSPORT=sse
 ENV MCP_HOST=0.0.0.0
 
-# Render sets PORT automatically
+# Railway sets PORT automatically
 EXPOSE 8000
 
-CMD ["zurich-opendata-mcp"]
+# Direkter Python-Aufruf statt Console-Script
+CMD ["python", "-m", "zurich_opendata_mcp"]
