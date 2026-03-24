@@ -1,7 +1,6 @@
 [build]
-buildCommand = "pip install -e ."
+dockerfilePath = "Dockerfile"
 
 [deploy]
-startCommand = "python -m zurich_opendata_mcp"
 restartPolicyType = "on-failure"
 restartPolicyMaxRetries = 3
