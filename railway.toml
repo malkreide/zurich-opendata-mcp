@@ -3,6 +3,4 @@ builder = "nixpacks"
 
 [deploy]
 startCommand = "python -m zurich_opendata_mcp"
-healthcheckPath = "/health"
-healthcheckTimeout = 30
 restartPolicyType = "on_failure"
