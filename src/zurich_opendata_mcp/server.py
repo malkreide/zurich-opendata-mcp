@@ -2393,8 +2393,13 @@ def main():
     """Start the Zurich Open Data MCP server."""
     transport = os.environ.get("MCP_TRANSPORT", "stdio")
     if transport in ("streamable-http", "sse"):
+        import uvicorn
         host = os.environ.get("MCP_HOST", "0.0.0.0")
         port = int(os.environ.get("PORT", os.environ.get("MCP_PORT", "8000")))
-        mcp.settings.host = host
-        mcp.settings.port = port
-    mcp.run(transport=transport)
+        if transport == "sse":
+            app = mcp.sse_app()
+        else:
+            app = mcp.http_app()
+        uvicorn.run(app, host=host, port=port)
+    else:
+        mcp.run(transport=transport)
