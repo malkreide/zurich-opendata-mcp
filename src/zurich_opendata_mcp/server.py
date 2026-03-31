@@ -2392,8 +2392,9 @@ async def get_stadtratsbeschluss_detail(params: GetSTRBDetailInput) -> str:
 def main():
     """Start the Zurich Open Data MCP server."""
     transport = os.environ.get("MCP_TRANSPORT", "stdio")
-    mcp.run(transport=transport)
-
-
-if __name__ == "__main__":
-    main()
+    if transport == "streamable-http":
+        host = os.environ.get("MCP_HOST", "0.0.0.0")
+        port = int(os.environ.get("PORT", os.environ.get("MCP_PORT", "8000")))
+        mcp.run(transport=transport, host=host, port=port)
+    else:
+        mcp.run(transport=transport)
