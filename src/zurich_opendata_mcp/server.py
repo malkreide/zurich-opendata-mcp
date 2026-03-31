@@ -2066,7 +2066,7 @@ def _format_strb_markdown(records: list[dict], total: int, titel: str) -> str:
     """Formatiert STRB-Ergebnisse als lesbare Markdown-Liste."""
     lines = [
         f"## {titel}",
-        f"",
+        "",
         f"**{total} Beschlüsse** gefunden (zeige {len(records)})",
         "",
     ]
@@ -2374,7 +2374,7 @@ async def get_stadtratsbeschluss_detail(params: GetSTRBDetailInput) -> str:
         r = _format_strb_record(records[0])
         return "\n".join([
             f"## Stadtratsbeschluss {r['beschlussnummer']}",
-            f"",
+            "",
             f"**Titel:** {r['titel']}",
             f"**Datum:** {r['datum']}",
             f"**Departement:** {r['departement']}",
