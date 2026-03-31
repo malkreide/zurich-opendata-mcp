@@ -6,8 +6,6 @@ Fehlertoleranz, Geo-Vollstaendigkeit, Parlament-Filter, Edge Cases.
 
 import asyncio
 import io
-import json
-import os
 import re
 import sys
 import time
@@ -20,49 +18,40 @@ if sys.platform == "win32":
 sys.path.insert(0, "src")
 
 from zurich_opendata_mcp.server import (
-    zurich_search_datasets,
-    zurich_get_dataset,
+    AirQualityInput,
+    AnalyzeDatasetInput,
+    DatastoreQueryInput,
+    DatastoreSqlInput,
+    GeoFeaturesInput,
+    GetDatasetInput,
+    ListGroupInput,
+    ParliamentMembersInput,
+    ParliamentSearchInput,
+    SearchDatasetsInput,
+    SparqlQueryInput,
+    TagSearchInput,
+    TourismSearchInput,
+    VBZPassengersInput,
+    WeatherLiveInput,
+    zurich_air_quality,
+    zurich_analyze_datasets,
+    zurich_catalog_stats,
     zurich_datastore_query,
     zurich_datastore_sql,
+    zurich_geo_features,
+    zurich_geo_layers,
+    zurich_get_dataset,
     zurich_list_categories,
     zurich_list_tags,
     zurich_parking_live,
-    zurich_analyze_datasets,
-    zurich_catalog_stats,
-    zurich_find_school_data,
-    zurich_weather_live,
-    zurich_air_quality,
-    zurich_water_weather,
-    zurich_pedestrian_traffic,
-    zurich_vbz_passengers,
-    zurich_geo_layers,
-    zurich_geo_features,
-    zurich_parliament_search,
     zurich_parliament_members,
-    zurich_tourism,
+    zurich_parliament_search,
+    zurich_search_datasets,
     zurich_sparql,
+    zurich_tourism,
+    zurich_vbz_passengers,
+    zurich_weather_live,
 )
-from zurich_opendata_mcp.server import (
-    SearchDatasetsInput,
-    GetDatasetInput,
-    DatastoreQueryInput,
-    DatastoreSqlInput,
-    ListGroupInput,
-    TagSearchInput,
-    AnalyzeDatasetInput,
-    WeatherLiveInput,
-    AirQualityInput,
-    WaterWeatherInput,
-    PedestrianInput,
-    VBZPassengersInput,
-    GeoFeaturesInput,
-    ParliamentSearchInput,
-    ParliamentMembersInput,
-    TourismSearchInput,
-    SparqlQueryInput,
-    FindSchoolDataInput,
-)
-
 
 # ---------------------------------------------------------------------------
 # Szenario 1: Unicode und Umlaute in Suchanfragen
@@ -148,14 +137,14 @@ async def test_scenario_3_sql_aggregations():
         DatastoreSqlInput(sql=f'SELECT COUNT(*) FROM "{meteo_id}"')
     )
     assert "Fehler" not in result or "SQL" in result
-    print(f"  3a: COUNT(*): OK")
+    print("  3a: COUNT(*): OK")
 
     # 3b: SELECT mit LIMIT
     result = await zurich_datastore_sql(
         DatastoreSqlInput(sql=f'SELECT * FROM "{meteo_id}" LIMIT 5')
     )
     assert isinstance(result, str) and len(result) > 20
-    print(f"  3b: SELECT * LIMIT 5: OK")
+    print("  3b: SELECT * LIMIT 5: OK")
 
     # 3c: SELECT DISTINCT (wenn unterstuetzt)
     result = await zurich_datastore_sql(
@@ -164,7 +153,7 @@ async def test_scenario_3_sql_aggregations():
         )
     )
     assert isinstance(result, str) and len(result) > 10
-    print(f"  3c: SELECT DISTINCT: OK")
+    print("  3c: SELECT DISTINCT: OK")
 
     # 3d: WHERE-Klausel
     result = await zurich_datastore_sql(
@@ -173,7 +162,7 @@ async def test_scenario_3_sql_aggregations():
         )
     )
     assert isinstance(result, str) and len(result) > 10
-    print(f"  3d: WHERE-Klausel: OK")
+    print("  3d: WHERE-Klausel: OK")
 
     print("PASSED\n")
 
@@ -312,7 +301,7 @@ async def test_scenario_7_parliament_by_party():
             ParliamentMembersInput(party=party, max_results=3)
         )
         assert isinstance(result, str) and len(result) > 20
-        has_content = "Treffer" in result or "Keine" in result or "Mitglied" in result or "Gemeinderatsmitglied" in result or "Gemeinderät" in result
+        assert "Treffer" in result or "Keine" in result or "Mitglied" in result or "Gemeinderatsmitglied" in result or "Gemeinderät" in result
         print(f"  Partei '{party}': OK")
 
     # Nicht existierende Partei
@@ -354,7 +343,7 @@ async def test_scenario_8_tag_search_patterns():
     if tag_count_match:
         print(f"  Alle Tags (limit=100): {tag_count_match.group(0)}: OK")
     else:
-        print(f"  Alle Tags (limit=100): OK")
+        print("  Alle Tags (limit=100): OK")
 
     print("PASSED\n")
 
@@ -553,14 +542,14 @@ async def test_scenario_13_tourism_text_search():
         TourismSearchInput(category="museen", search_text="Kunsthaus", max_results=5)
     )
     assert isinstance(result, str) and len(result) > 20
-    print(f"  13a: 'Kunsthaus' in museen: OK")
+    print("  13a: 'Kunsthaus' in museen: OK")
 
     # 13b: Suche nach "See" in Aktivitaeten
     result = await zurich_tourism(
         TourismSearchInput(category="aktivitaeten", search_text="See", max_results=5)
     )
     assert isinstance(result, str) and len(result) > 20
-    print(f"  13b: 'See' in aktivitaeten: OK")
+    print("  13b: 'See' in aktivitaeten: OK")
 
     # 13c: Suche die nichts findet
     result = await zurich_tourism(
@@ -572,14 +561,14 @@ async def test_scenario_13_tourism_text_search():
     )
     assert isinstance(result, str)
     # Sollte "Keine" oder leere Ergebnis-Liste zeigen
-    print(f"  13c: Nicht existierender Suchtext -> saubere Antwort: OK")
+    print("  13c: Nicht existierender Suchtext -> saubere Antwort: OK")
 
     # 13d: Numerische Kategorie-ID direkt
     result = await zurich_tourism(
         TourismSearchInput(category="152", max_results=3)
     )
     assert isinstance(result, str) and len(result) > 20
-    print(f"  13d: Numerische Kategorie-ID '152': OK")
+    print("  13d: Numerische Kategorie-ID '152': OK")
 
     print("PASSED\n")
 
@@ -826,7 +815,7 @@ async def test_scenario_20_pydantic_validation():
 
     # 20c: Leerer Query (Whitespace only, wird getrimmt)
     try:
-        inp = SearchDatasetsInput(query="   ", rows=1)
+        SearchDatasetsInput(query="   ", rows=1)
         # Wenn strip_whitespace aktiv ist, koennte es leer werden
         # Abhaengig von der Validierung
         print("  20c: Whitespace-Query -> akzeptiert (OK)")
@@ -857,7 +846,7 @@ async def test_scenario_20_pydantic_validation():
     # 20g: Parlament year_from > year_to (logischer Fehler)
     # Ob Pydantic das faengt haengt von der Implementierung ab
     try:
-        inp = ParliamentSearchInput(query="test", year_from=2025, year_to=2020)
+        ParliamentSearchInput(query="test", year_from=2025, year_to=2020)
         print("  20g: year_from > year_to -> akzeptiert (keine Validierung)")
     except ValidationError:
         print("  20g: year_from > year_to -> ValidationError: OK")

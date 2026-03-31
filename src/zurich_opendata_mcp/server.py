@@ -7,7 +7,6 @@ Integriert CKAN (data.stadt-zuerich.ch), ParkenDD, und weitere städtische APIs.
 
 import json
 import os
-from typing import Optional
 
 from mcp.server.fastmcp import FastMCP
 from pydantic import BaseModel, ConfigDict, Field
@@ -73,11 +72,11 @@ class SearchDatasetsInput(BaseModel):
     )
     rows: int = Field(default=10, description="Anzahl Ergebnisse (max. 50)", ge=1, le=50)
     offset: int = Field(default=0, description="Offset für Paginierung", ge=0)
-    sort: Optional[str] = Field(
+    sort: str | None = Field(
         default=None,
         description="Sortierung, z.B. 'metadata_modified desc', 'title asc', 'score desc'",
     )
-    filter_group: Optional[str] = Field(
+    filter_group: str | None = Field(
         default=None,
         description=f"Nach Kategorie filtern. Verfügbar: {', '.join(ZURICH_GROUPS)}",
     )
@@ -202,15 +201,15 @@ class DatastoreQueryInput(BaseModel):
         description="Resource-ID aus dem Datensatz (UUID-Format)",
         min_length=1,
     )
-    filters: Optional[str] = Field(
+    filters: str | None = Field(
         default=None,
         description='JSON-Filter, z.B. {"Quartier": "Wiedikon"} oder {"Jahr": 2024}',
     )
-    query: Optional[str] = Field(
+    query: str | None = Field(
         default=None,
         description="Volltextsuche innerhalb der Ressource",
     )
-    sort: Optional[str] = Field(
+    sort: str | None = Field(
         default=None,
         description="Sortierung, z.B. 'Jahr desc'",
     )
@@ -362,7 +361,7 @@ class ListGroupInput(BaseModel):
 
     model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
 
-    group_id: Optional[str] = Field(
+    group_id: str | None = Field(
         default=None,
         description=f"Gruppen-ID für Details. Verfügbar: {', '.join(ZURICH_GROUPS)}. "
         "Wenn leer, werden alle Kategorien aufgelistet.",
@@ -422,7 +421,7 @@ class TagSearchInput(BaseModel):
 
     model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
 
-    query: Optional[str] = Field(
+    query: str | None = Field(
         default=None,
         description="Suchbegriff für Tags, z.B. 'schul', 'verkehr', 'wohn'",
     )
@@ -715,7 +714,7 @@ class FindSchoolDataInput(BaseModel):
 
     model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
 
-    topic: Optional[str] = Field(
+    topic: str | None = Field(
         default=None,
         description=(
             "Spezifisches Schulthema, z.B. 'Schulanlagen', 'Ferien', "
@@ -830,7 +829,7 @@ class WeatherLiveInput(BaseModel):
 
     model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
 
-    station: Optional[str] = Field(
+    station: str | None = Field(
         default=None,
         description=(
             "Messstation filtern (z.B. 'Zch_Stampfenbachstrasse', "
@@ -838,7 +837,7 @@ class WeatherLiveInput(BaseModel):
             "Leer = alle Stationen."
         ),
     )
-    parameter: Optional[str] = Field(
+    parameter: str | None = Field(
         default=None,
         description=(
             "Messparameter filtern: 'T' (Temperatur °C), 'Hr' (Luftfeuchte %), "
@@ -935,7 +934,7 @@ class AirQualityInput(BaseModel):
 
     model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
 
-    station: Optional[str] = Field(
+    station: str | None = Field(
         default=None,
         description=(
             "Messstation: 'Zch_Stampfenbachstrasse', 'Zch_Schimmelstrasse', "
@@ -943,7 +942,7 @@ class AirQualityInput(BaseModel):
             "Leer = alle."
         ),
     )
-    parameter: Optional[str] = Field(
+    parameter: str | None = Field(
         default=None,
         description=(
             "Schadstoff: 'NO2' (Stickstoffdioxid), 'O3' (Ozon), "
@@ -1193,17 +1192,17 @@ class VBZPassengersInput(BaseModel):
 
     model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
 
-    line: Optional[str] = Field(
+    line: str | None = Field(
         default=None,
         description=("Liniennummer filtern, z.B. '4' (Tram 4), '33' (Bus 33). Leer = alle Linien."),
     )
-    stop: Optional[str] = Field(
+    stop: str | None = Field(
         default=None,
         description=(
             "Haltestelle filtern (Name oder Teilname), z.B. 'Paradeplatz', 'Central', 'Bellevue'. Leer = alle."
         ),
     )
-    query: Optional[str] = Field(
+    query: str | None = Field(
         default=None,
         description="Volltextsuche über alle Felder",
     )
@@ -1323,7 +1322,7 @@ class GeoFeaturesInput(BaseModel):
         ge=1,
         le=500,
     )
-    property_filter: Optional[str] = Field(
+    property_filter: str | None = Field(
         default=None,
         description=(
             "CQL-Filter für Eigenschaften, z.B. \"kategorie = 'Kindergarten'\" "
@@ -1434,19 +1433,19 @@ class ParliamentSearchInput(BaseModel):
         min_length=1,
         max_length=500,
     )
-    year_from: Optional[int] = Field(
+    year_from: int | None = Field(
         default=None,
         description="Geschäfte ab diesem Jahr filtern, z.B. 2020",
         ge=1990,
         le=2030,
     )
-    year_to: Optional[int] = Field(
+    year_to: int | None = Field(
         default=None,
         description="Geschäfte bis zu diesem Jahr filtern, z.B. 2025",
         ge=1990,
         le=2030,
     )
-    department: Optional[str] = Field(
+    department: str | None = Field(
         default=None,
         description=(
             "Nach zuständigem Departement filtern. Beispiele: 'Schul- und Sportdepartement', 'Finanzdepartement'"
@@ -1550,15 +1549,15 @@ class ParliamentMembersInput(BaseModel):
 
     model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
 
-    name: Optional[str] = Field(
+    name: str | None = Field(
         default=None,
         description="Name oder Teilname des Ratsmitglieds, z.B. 'Marti' oder 'Peter'",
     )
-    party: Optional[str] = Field(
+    party: str | None = Field(
         default=None,
         description="Parteiname, z.B. 'SP', 'SVP', 'Grüne', 'FDP', 'GLP', 'AL', 'Mitte'",
     )
-    commission: Optional[str] = Field(
+    commission: str | None = Field(
         default=None,
         description=(
             "Kommissionsname, z.B. 'GPK', 'RPK', 'Bildungsrat'. Sucht aktive Mitglieder der genannten Kommission."
@@ -1714,7 +1713,7 @@ class TourismSearchInput(BaseModel):
             + ". Oder eine numerische Kategorie-ID."
         ),
     )
-    search_text: Optional[str] = Field(
+    search_text: str | None = Field(
         default=None,
         description="Optionaler Suchtext zur Filterung der Ergebnisse, z.B. 'Altstadt' oder 'vegan'",
     )
@@ -2012,10 +2011,10 @@ STRB_DEPARTEMENTE = [
 # ─── Shared Helpers ───────────────────────────────────────────────────────────
 
 def _strb_where_clause(
-    query: Optional[str] = None,
-    departement: Optional[str] = None,
-    datum_von: Optional[str] = None,
-    datum_bis: Optional[str] = None,
+    query: str | None = None,
+    departement: str | None = None,
+    datum_von: str | None = None,
+    datum_bis: str | None = None,
 ) -> str:
     """Erstellt die WHERE-Klausel für STRB-SQL-Queries."""
     conditions: list[str] = []
@@ -2096,7 +2095,7 @@ class SearchSTRBInput(BaseModel):
         min_length=1,
         max_length=200,
     )
-    departement: Optional[str] = Field(
+    departement: str | None = Field(
         default=None,
         description=(
             "Optionaler Departement-Filter. Kürzel oder Teilname genügt, z.B. 'SSD', 'FD', 'PRD'. "
@@ -2105,12 +2104,12 @@ class SearchSTRBInput(BaseModel):
         ),
         max_length=100,
     )
-    datum_von: Optional[str] = Field(
+    datum_von: str | None = Field(
         default=None,
         description="Frühestes Beschlussdatum (ISO-Format: YYYY-MM-DD), z.B. '2025-01-01'.",
         pattern=r"^\d{4}-\d{2}-\d{2}$",
     )
-    datum_bis: Optional[str] = Field(
+    datum_bis: str | None = Field(
         default=None,
         description="Spätestes Beschlussdatum (ISO-Format: YYYY-MM-DD), z.B. '2025-12-31'.",
         pattern=r"^\d{4}-\d{2}-\d{2}$",
@@ -2121,7 +2120,7 @@ class SearchSTRBInput(BaseModel):
         ge=1,
         le=100,
     )
-    format: Optional[str] = Field(
+    format: str | None = Field(
         default="markdown",
         description="Ausgabeformat: 'markdown' (Standard, lesbar) oder 'json' (maschinenlesbar).",
     )
@@ -2225,12 +2224,12 @@ class BeschluesseDepartementInput(BaseModel):
         min_length=2,
         max_length=100,
     )
-    datum_von: Optional[str] = Field(
+    datum_von: str | None = Field(
         default=None,
         description="Frühestes Beschlussdatum (YYYY-MM-DD).",
         pattern=r"^\d{4}-\d{2}-\d{2}$",
     )
-    datum_bis: Optional[str] = Field(
+    datum_bis: str | None = Field(
         default=None,
         description="Spätestes Beschlussdatum (YYYY-MM-DD).",
         pattern=r"^\d{4}-\d{2}-\d{2}$",
@@ -2241,7 +2240,7 @@ class BeschluesseDepartementInput(BaseModel):
         ge=1,
         le=200,
     )
-    format: Optional[str] = Field(
+    format: str | None = Field(
         default="markdown",
         description="Ausgabeformat: 'markdown' oder 'json'.",
     )

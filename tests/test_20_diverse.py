@@ -5,7 +5,6 @@ Parallelität, Sicherheit, Konsistenz und Plausibilität.
 """
 
 import asyncio
-import json
 import re
 import sys
 import time
@@ -13,49 +12,46 @@ import time
 sys.path.insert(0, "src")
 
 from zurich_opendata_mcp.server import (
-    zurich_search_datasets,
-    zurich_get_dataset,
+    AirQualityInput,
+    AnalyzeDatasetInput,
+    DatastoreQueryInput,
+    DatastoreSqlInput,
+    FindSchoolDataInput,
+    GeoFeaturesInput,
+    GetDatasetInput,
+    ListGroupInput,
+    ParliamentMembersInput,
+    ParliamentSearchInput,
+    PedestrianInput,
+    SearchDatasetsInput,
+    SparqlQueryInput,
+    TagSearchInput,
+    TourismSearchInput,
+    VBZPassengersInput,
+    WaterWeatherInput,
+    WeatherLiveInput,
+    zurich_air_quality,
+    zurich_analyze_datasets,
+    zurich_catalog_stats,
     zurich_datastore_query,
     zurich_datastore_sql,
+    zurich_find_school_data,
+    zurich_geo_features,
+    zurich_geo_layers,
+    zurich_get_dataset,
     zurich_list_categories,
     zurich_list_tags,
     zurich_parking_live,
-    zurich_analyze_datasets,
-    zurich_catalog_stats,
-    zurich_find_school_data,
-    zurich_weather_live,
-    zurich_air_quality,
-    zurich_water_weather,
-    zurich_pedestrian_traffic,
-    zurich_vbz_passengers,
-    zurich_geo_layers,
-    zurich_geo_features,
-    zurich_parliament_search,
     zurich_parliament_members,
-    zurich_tourism,
+    zurich_parliament_search,
+    zurich_pedestrian_traffic,
+    zurich_search_datasets,
     zurich_sparql,
+    zurich_tourism,
+    zurich_vbz_passengers,
+    zurich_water_weather,
+    zurich_weather_live,
 )
-from zurich_opendata_mcp.server import (
-    SearchDatasetsInput,
-    GetDatasetInput,
-    DatastoreQueryInput,
-    DatastoreSqlInput,
-    ListGroupInput,
-    TagSearchInput,
-    AnalyzeDatasetInput,
-    WeatherLiveInput,
-    AirQualityInput,
-    WaterWeatherInput,
-    PedestrianInput,
-    VBZPassengersInput,
-    GeoFeaturesInput,
-    ParliamentSearchInput,
-    ParliamentMembersInput,
-    TourismSearchInput,
-    SparqlQueryInput,
-    FindSchoolDataInput,
-)
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Szenario 1: Parallele API-Aufrufe (Concurrency-Stresstest)
@@ -112,7 +108,7 @@ async def test_scenario_2_pagination_boundaries():
     # 2b: Maximum rows=50
     result = await zurich_search_datasets(SearchDatasetsInput(query="*", rows=50))
     assert "Datensätze" in result
-    print(f"  2b: rows=50 -> OK")
+    print("  2b: rows=50 -> OK")
 
     # 2c: Hoher Offset (jenseits aller Ergebnisse)
     result = await zurich_search_datasets(
@@ -120,7 +116,7 @@ async def test_scenario_2_pagination_boundaries():
     )
     # Sollte sauber 0 Ergebnisse zeigen, nicht crashen
     assert "Datensätze" in result or "Keine" in result
-    print(f"  2c: offset=99999 -> saubere Antwort: OK")
+    print("  2c: offset=99999 -> saubere Antwort: OK")
 
     # 2d: DataStore limit=1
     meteo_id = "f9aa1373-404f-443b-b623-03ff02d2d0b7"
@@ -129,16 +125,16 @@ async def test_scenario_2_pagination_boundaries():
     )
     if "Fehler" not in result:
         assert "Einträge" in result or "Datensätze" in result or "DataStore" in result
-        print(f"  2d: DataStore limit=1: OK")
+        print("  2d: DataStore limit=1: OK")
     else:
-        print(f"  2d: DataStore limit=1: OK (API-Antwort)")
+        print("  2d: DataStore limit=1: OK (API-Antwort)")
 
     # 2e: DataStore maximum limit=100
     result = await zurich_datastore_query(
         DatastoreQueryInput(resource_id=meteo_id, limit=100)
     )
     assert len(result) > 0
-    print(f"  2e: DataStore limit=100: OK")
+    print("  2e: DataStore limit=100: OK")
 
     print("PASSED\n")
 
@@ -192,7 +188,7 @@ async def test_scenario_3_cross_api_consistency():
     )
     assert "Stampfenbach" in weather, "Wetter: Station nicht gefunden"
     assert "Stampfenbach" in air or "Luftqualität" in air, "Luft: Station nicht gefunden"
-    print(f"  3c: Station Stampfenbachstr. in Wetter + Luft: OK")
+    print("  3c: Station Stampfenbachstr. in Wetter + Luft: OK")
 
     print("PASSED\n")
 
@@ -215,7 +211,7 @@ async def test_scenario_4_sql_injection_safety():
     )
     assert "Fehler" in result or "SELECT" in result or "nur SELECT" in result.lower() or "not allowed" in result.lower(), \
         f"DROP TABLE nicht blockiert: {result[:100]}"
-    print(f"  4a: DROP TABLE -> blockiert: OK")
+    print("  4a: DROP TABLE -> blockiert: OK")
 
     # 4b: INSERT-Versuch
     result = await zurich_datastore_sql(
@@ -223,7 +219,7 @@ async def test_scenario_4_sql_injection_safety():
     )
     assert "Fehler" in result or "SELECT" in result or "not allowed" in result.lower() or "nur SELECT" in result.lower(), \
         f"INSERT nicht blockiert: {result[:100]}"
-    print(f"  4b: INSERT -> blockiert: OK")
+    print("  4b: INSERT -> blockiert: OK")
 
     # 4c: UPDATE-Versuch
     result = await zurich_datastore_sql(
@@ -231,7 +227,7 @@ async def test_scenario_4_sql_injection_safety():
     )
     assert "Fehler" in result or "SELECT" in result or "not allowed" in result.lower() or "nur SELECT" in result.lower(), \
         f"UPDATE nicht blockiert: {result[:100]}"
-    print(f"  4c: UPDATE -> blockiert: OK")
+    print("  4c: UPDATE -> blockiert: OK")
 
     # 4d: DELETE-Versuch
     result = await zurich_datastore_sql(
@@ -239,14 +235,14 @@ async def test_scenario_4_sql_injection_safety():
     )
     assert "Fehler" in result or "SELECT" in result or "not allowed" in result.lower() or "nur SELECT" in result.lower(), \
         f"DELETE nicht blockiert: {result[:100]}"
-    print(f"  4d: DELETE -> blockiert: OK")
+    print("  4d: DELETE -> blockiert: OK")
 
     # 4e: SQL-Injection über Suchparameter
     result = await zurich_search_datasets(
         SearchDatasetsInput(query="'; DROP TABLE datasets;--", rows=1)
     )
     assert "Fehler" not in result or "Datensätze" in result or "Keine" in result
-    print(f"  4e: SQL-Injection in Suchfeld -> sicher behandelt: OK")
+    print("  4e: SQL-Injection in Suchfeld -> sicher behandelt: OK")
 
     # 4f: Ungültiges JSON in DataStore-Filter
     result = await zurich_datastore_query(
@@ -258,7 +254,7 @@ async def test_scenario_4_sql_injection_safety():
     )
     assert "gültiges JSON" in result or "JSON" in result, \
         f"Ungültiges JSON nicht erkannt: {result[:100]}"
-    print(f"  4f: Ungültiges JSON-Filter -> klare Meldung: OK")
+    print("  4f: Ungültiges JSON-Filter -> klare Meldung: OK")
 
     print("PASSED\n")
 
@@ -279,14 +275,14 @@ async def test_scenario_5_water_station_comparison():
     )
 
     # 5a: Beide Stationen liefern Daten
-    assert "Tiefenbrunnen" in tb, f"Tiefenbrunnen nicht im Output"
-    assert "Mythenquai" in mq, f"Mythenquai nicht im Output"
-    print(f"  5a: Beide Stationen liefern Daten: OK")
+    assert "Tiefenbrunnen" in tb, "Tiefenbrunnen nicht im Output"
+    assert "Mythenquai" in mq, "Mythenquai nicht im Output"
+    print("  5a: Beide Stationen liefern Daten: OK")
 
     # 5b: Wassertemperatur sollte in beiden vorhanden sein
     assert "Wassertemperatur" in tb, "Tiefenbrunnen: Wassertemperatur fehlt"
     assert "Wassertemperatur" in mq, "Mythenquai: Wassertemperatur fehlt"
-    print(f"  5b: Wassertemperatur in beiden: OK")
+    print("  5b: Wassertemperatur in beiden: OK")
 
     # 5c: Temperaturen sollten plausibel sein (0-35°C)
     temp_matches = re.findall(r'Wassertemperatur.*?(\d+[\.,]\d+)\s*°C', tb)
@@ -295,11 +291,11 @@ async def test_scenario_5_water_station_comparison():
         assert 0 <= temp <= 35, f"Unplausible Wassertemperatur: {temp}°C"
         print(f"  5c: Wassertemperatur Tiefenbrunnen={temp}°C (plausibel): OK")
     else:
-        print(f"  5c: Temperatur nicht extrahierbar (Format unklar): OK")
+        print("  5c: Temperatur nicht extrahierbar (Format unklar): OK")
 
     # 5d: Outputs sollten sich unterscheiden (verschiedene Messwerte)
     assert tb != mq, "Beide Stationen liefern identische Outputs"
-    print(f"  5d: Stationen liefern unterschiedliche Daten: OK")
+    print("  5d: Stationen liefern unterschiedliche Daten: OK")
 
     print("PASSED\n")
 
@@ -324,7 +320,7 @@ async def test_scenario_6_geo_cql_filters():
     )
     # Entweder Ergebnisse oder ein Fehler bezüglich des Filters
     assert "Geodaten" in result or "Feature" in result or "Fehler" in result
-    print(f"  6a: CQL kategorie='Kindergarten': OK")
+    print("  6a: CQL kategorie='Kindergarten': OK")
 
     # 6b: Schulanlagen mit LIKE-Filter
     result = await zurich_geo_features(
@@ -335,21 +331,21 @@ async def test_scenario_6_geo_cql_filters():
         )
     )
     assert "Geodaten" in result or "Fehler" in result or "Feature" in result
-    print(f"  6b: CQL LIKE '%Wasser%': OK")
+    print("  6b: CQL LIKE '%Wasser%': OK")
 
     # 6c: Schulkreise abrufen (Polygon-Layer)
     result = await zurich_geo_features(
         GeoFeaturesInput(layer_id="schulkreise", max_features=20)
     )
     assert "Geodaten" in result or "Schulkreis" in result or "Feature" in result
-    print(f"  6c: Schulkreise (Polygon-Layer): OK")
+    print("  6c: Schulkreise (Polygon-Layer): OK")
 
     # 6d: Klimadaten-Layer
     result = await zurich_geo_features(
         GeoFeaturesInput(layer_id="klimadaten", max_features=5)
     )
     assert "Geodaten" in result or "Klima" in result or "Fehler" in result
-    print(f"  6d: Klimadaten-Layer: OK")
+    print("  6d: Klimadaten-Layer: OK")
 
     print("PASSED\n")
 
@@ -375,7 +371,7 @@ async def test_scenario_7_school_data_all_topics():
     # Ohne Topic (breite Suche)
     result = await zurich_find_school_data(FindSchoolDataInput())
     assert "Schulamt" in result or "Schul" in result
-    print(f"  Ohne Topic (breit): OK")
+    print("  Ohne Topic (breit): OK")
 
     print("PASSED\n")
 
@@ -421,7 +417,7 @@ async def test_scenario_9_parking_plausibility():
 
     # 9a: Grundstruktur vorhanden
     assert "Parkhaus" in result or "Parkplatz" in result
-    print(f"  9a: Parkhaus/Parkplatz im Output: OK")
+    print("  9a: Parkhaus/Parkplatz im Output: OK")
 
     # 9b: Prozent-Werte sollten 0-100% sein
     pct_matches = re.findall(r'(\d+)%', result)
@@ -431,7 +427,7 @@ async def test_scenario_9_parking_plausibility():
             assert 0 <= pct <= 100, f"Ungültiger Prozentwert: {pct}%"
         print(f"  9b: {len(pct_matches)} Prozentwerte alle im Bereich 0-100%: OK")
     else:
-        print(f"  9b: Keine Prozentwerte gefunden (OK bei geschlossenem Parkhaus)")
+        print("  9b: Keine Prozentwerte gefunden (OK bei geschlossenem Parkhaus)")
 
     # 9c: "Frei" und "Gesamt" Werte sollten vorhanden sein
     frei_matches = re.findall(r'[Ff]rei[:\s]*(\d+)', result)
@@ -439,13 +435,13 @@ async def test_scenario_9_parking_plausibility():
     if frei_matches and gesamt_matches:
         print(f"  9c: {len(frei_matches)} Frei-Werte, {len(gesamt_matches)} Gesamt-Werte: OK")
     else:
-        print(f"  9c: Frei/Gesamt Werte vorhanden: OK")
+        print("  9c: Frei/Gesamt Werte vorhanden: OK")
 
     # 9d: Idempotenz – zweiter Aufruf liefert ähnliches Format
     result2 = await zurich_parking_live()
     assert "Parkhaus" in result2 or "Parkplatz" in result2
     # Struktur sollte identisch sein (gleiche Parkhäuser)
-    print(f"  9d: Idempotenz (zweiter Aufruf gleiches Format): OK")
+    print("  9d: Idempotenz (zweiter Aufruf gleiches Format): OK")
 
     print("PASSED\n")
 
@@ -494,35 +490,35 @@ async def test_scenario_11_vbz_filter_combinations():
         VBZPassengersInput(line="4", limit=5)
     )
     assert "VBZ" in result
-    print(f"  11a: Linie 4 (Tram): OK")
+    print("  11a: Linie 4 (Tram): OK")
 
     # 11b: Bus-Linie 33
     result = await zurich_vbz_passengers(
         VBZPassengersInput(line="33", limit=5)
     )
     assert "VBZ" in result
-    print(f"  11b: Linie 33 (Bus): OK")
+    print("  11b: Linie 33 (Bus): OK")
 
     # 11c: Haltestelle Paradeplatz
     result = await zurich_vbz_passengers(
         VBZPassengersInput(stop="Paradeplatz", limit=5)
     )
     assert "VBZ" in result
-    print(f"  11c: Haltestelle Paradeplatz: OK")
+    print("  11c: Haltestelle Paradeplatz: OK")
 
     # 11d: Nicht existierende Linie
     result = await zurich_vbz_passengers(
         VBZPassengersInput(line="999", limit=5)
     )
     assert "VBZ" in result  # Sollte sauber leer kommen
-    print(f"  11d: Linie 999 (nicht existent): OK")
+    print("  11d: Linie 999 (nicht existent): OK")
 
     # 11e: Nicht existierende Haltestelle
     result = await zurich_vbz_passengers(
         VBZPassengersInput(stop="XYZ_NONEXISTENT", limit=5)
     )
     assert "VBZ" in result
-    print(f"  11e: Nicht existierende Haltestelle: OK")
+    print("  11e: Nicht existierende Haltestelle: OK")
 
     print("PASSED\n")
 
@@ -606,7 +602,7 @@ async def test_scenario_14_pedestrian_timeseries():
 
     # 14a: Enthält Zeitstempel
     assert "Passanten" in result or "Bahnhofstrasse" in result
-    print(f"  14a: Daten vorhanden: OK")
+    print("  14a: Daten vorhanden: OK")
 
     # 14b: Sollte Zahlenwerte enthalten
     numbers = re.findall(r'\b(\d{2,6})\b', result)
@@ -618,7 +614,7 @@ async def test_scenario_14_pedestrian_timeseries():
     assert "Passanten" in result_week or "Bahnhofstrasse" in result_week
     assert len(result_week) >= len(result), \
         "Wochendaten sollten mindestens so lang wie Tagesdaten sein"
-    print(f"  14c: Wochendaten (limit=168) >= Tagesdaten: OK")
+    print("  14c: Wochendaten (limit=168) >= Tagesdaten: OK")
 
     print("PASSED\n")
 
@@ -638,35 +634,35 @@ async def test_scenario_15_parliament_year_ranges():
         ParliamentSearchInput(query="Schule", year_from=1990, year_to=1995, max_results=3)
     )
     assert "Treffer" in result or "Keine" in result or "Geschäft" in result
-    print(f"  15a: 1990-1995: OK")
+    print("  15a: 1990-1995: OK")
 
     # 15b: Zukünftiger Zeitraum (2029-2030)
     result = await zurich_parliament_search(
         ParliamentSearchInput(query="Budget", year_from=2029, year_to=2030, max_results=3)
     )
     assert "Treffer" in result or "Keine" in result
-    print(f"  15b: 2029-2030 (Zukunft): OK")
+    print("  15b: 2029-2030 (Zukunft): OK")
 
     # 15c: Ein einzelnes Jahr
     result = await zurich_parliament_search(
         ParliamentSearchInput(query="Verkehr", year_from=2020, year_to=2020, max_results=5)
     )
     assert "Treffer" in result or "Keine" in result or "Geschäft" in result
-    print(f"  15c: Genau 2020: OK")
+    print("  15c: Genau 2020: OK")
 
     # 15d: max_results=1 (Minimum)
     result = await zurich_parliament_search(
         ParliamentSearchInput(query="Digitalisierung", max_results=1)
     )
     assert "Treffer" in result or "Keine" in result or "Geschäft" in result
-    print(f"  15d: max_results=1: OK")
+    print("  15d: max_results=1: OK")
 
     # 15e: max_results=50 (Maximum)
     result = await zurich_parliament_search(
         ParliamentSearchInput(query="Schule", max_results=50)
     )
     assert "Treffer" in result or "Geschäft" in result
-    print(f"  15e: max_results=50: OK")
+    print("  15e: max_results=50: OK")
 
     print("PASSED\n")
 
@@ -724,7 +720,7 @@ async def test_scenario_17_air_quality_all_pollutants():
         )
         assert "Luftqualität" in result, f"Schadstoff '{poll}': Fehler"
         # Entweder Daten oder sauber "keine Daten"
-        has_data = poll in result or "µg/m³" in result or "Keine" in result or "keine" in result
+        assert poll in result or "µg/m³" in result or "Keine" in result or "keine" in result
         print(f"  {poll}: OK")
 
     print("PASSED\n")
@@ -757,7 +753,7 @@ async def test_scenario_18_weather_all_params_stations():
     # Alle Stationen ohne Parameter-Filter
     result = await zurich_weather_live(WeatherLiveInput(limit=5))
     assert "Wetterdaten" in result
-    print(f"  Alle Stationen (ungefiltert): OK")
+    print("  Alle Stationen (ungefiltert): OK")
 
     print("PASSED\n")
 

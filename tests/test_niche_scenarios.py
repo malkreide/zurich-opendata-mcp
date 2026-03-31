@@ -5,56 +5,41 @@ die ein LLM in der Praxis stellen koennte.
 """
 
 import asyncio
-import json
 import re
 import sys
 
 sys.path.insert(0, "src")
 
 from zurich_opendata_mcp.server import (
-    zurich_search_datasets,
-    zurich_get_dataset,
-    zurich_datastore_query,
-    zurich_datastore_sql,
-    zurich_list_categories,
-    zurich_list_tags,
-    zurich_parking_live,
-    zurich_analyze_datasets,
-    zurich_catalog_stats,
-    zurich_find_school_data,
-    zurich_weather_live,
-    zurich_air_quality,
-    zurich_water_weather,
-    zurich_pedestrian_traffic,
-    zurich_vbz_passengers,
-    zurich_geo_layers,
-    zurich_geo_features,
-    zurich_parliament_search,
-    zurich_parliament_members,
-    zurich_tourism,
-    zurich_sparql,
-)
-from zurich_opendata_mcp.server import (
-    SearchDatasetsInput,
-    GetDatasetInput,
+    AirQualityInput,
+    AnalyzeDatasetInput,
     DatastoreQueryInput,
     DatastoreSqlInput,
-    ListGroupInput,
-    TagSearchInput,
-    AnalyzeDatasetInput,
-    WeatherLiveInput,
-    AirQualityInput,
-    WaterWeatherInput,
-    PedestrianInput,
-    VBZPassengersInput,
-    GeoFeaturesInput,
-    ParliamentSearchInput,
-    ParliamentMembersInput,
-    TourismSearchInput,
-    SparqlQueryInput,
     FindSchoolDataInput,
+    GeoFeaturesInput,
+    ListGroupInput,
+    ParliamentMembersInput,
+    ParliamentSearchInput,
+    SearchDatasetsInput,
+    TagSearchInput,
+    TourismSearchInput,
+    VBZPassengersInput,
+    WeatherLiveInput,
+    zurich_air_quality,
+    zurich_analyze_datasets,
+    zurich_datastore_query,
+    zurich_datastore_sql,
+    zurich_find_school_data,
+    zurich_geo_features,
+    zurich_list_categories,
+    zurich_list_tags,
+    zurich_parliament_members,
+    zurich_parliament_search,
+    zurich_search_datasets,
+    zurich_tourism,
+    zurich_vbz_passengers,
+    zurich_weather_live,
 )
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Szenario 1: Multilinguale & Sonderzeichen-Suche
@@ -71,26 +56,26 @@ async def test_niche_1_special_characters():
         SearchDatasetsInput(query="Öffentlicher Verkehr", rows=3)
     )
     assert "Datensätze" in result or "Keine" in result
-    print(f"  1a: Umlaut-Suche 'Oeffentlicher Verkehr': OK")
+    print("  1a: Umlaut-Suche 'Oeffentlicher Verkehr': OK")
 
     # 1b: Eszett
     result = await zurich_search_datasets(
         SearchDatasetsInput(query="Straße", rows=3)
     )
     assert "Datensätze" in result or "Keine" in result
-    print(f"  1b: Eszett 'Strasse': OK")
+    print("  1b: Eszett 'Strasse': OK")
 
     # 1c: Tag-Suche mit Umlaut
     result = await zurich_list_tags(TagSearchInput(query="grün"))
     assert "Tags" in result or "Keine" in result
-    print(f"  1c: Tag-Suche 'gruen': OK")
+    print("  1c: Tag-Suche 'gruen': OK")
 
     # 1d: Solr-Sonderzeichen (Klammern, Doppelpunkt)
     result = await zurich_search_datasets(
         SearchDatasetsInput(query="CO2-Emissionen", rows=3)
     )
     assert "Datensätze" in result or "Keine" in result
-    print(f"  1d: Bindestrich-Suche 'CO2-Emissionen': OK")
+    print("  1d: Bindestrich-Suche 'CO2-Emissionen': OK")
 
     # 1e: Leere-Suche-aehnlich (nur Wildcard)
     # Hinweis: Solr behandelt q=* anders als q=*:* -- gibt evtl. nur wenige Treffer
@@ -101,7 +86,7 @@ async def test_niche_1_special_characters():
     count_match = re.search(r'(\d+)\s+Datensätze', result)
     assert count_match, "Wildcard-Suche zeigt keine Gesamtzahl"
     total = int(count_match.group(1))
-    assert total >= 1, f"Wildcard-Suche lieferte 0 Treffer"
+    assert total >= 1, "Wildcard-Suche lieferte 0 Treffer"
     print(f"  1e: Wildcard '*' -> {total} Datensaetze: OK")
 
     print("PASSED\n")
@@ -132,9 +117,9 @@ async def test_niche_2_datastore_json_filters():
     assert "DataStore-Abfrage" in result or "Daten" in result
     if "Fehler" not in result:
         assert "T" in result or "Temperatur" in result or "Wert" in result
-        print(f"  2a: JSON-Filter Parameter=T: OK")
+        print("  2a: JSON-Filter Parameter=T: OK")
     else:
-        print(f"  2a: Filter-Fehler (API-spezifisch): OK")
+        print("  2a: Filter-Fehler (API-spezifisch): OK")
 
     # 2b: Kombinierter Filter (Station + Parameter)
     result = await zurich_datastore_query(
@@ -146,9 +131,9 @@ async def test_niche_2_datastore_json_filters():
     )
     if "Fehler" not in result:
         assert "Stampfenbach" in result or "Zch_Stampfenbach" in result or "Daten" in result
-        print(f"  2b: Kombi-Filter Station+Param: OK")
+        print("  2b: Kombi-Filter Station+Param: OK")
     else:
-        print(f"  2b: Kombi-Filter Fehler: OK")
+        print("  2b: Kombi-Filter Fehler: OK")
 
     # 2c: Volltextsuche im DataStore
     result = await zurich_datastore_query(
@@ -159,7 +144,7 @@ async def test_niche_2_datastore_json_filters():
         )
     )
     assert len(result) > 0
-    print(f"  2c: DataStore Volltextsuche: OK")
+    print("  2c: DataStore Volltextsuche: OK")
 
     # 2d: Sortierung absteigend
     result = await zurich_datastore_query(
@@ -170,7 +155,7 @@ async def test_niche_2_datastore_json_filters():
         )
     )
     assert "DataStore-Abfrage" in result or "Daten" in result
-    print(f"  2d: DataStore sort desc: OK")
+    print("  2d: DataStore sort desc: OK")
 
     print("PASSED\n")
 
@@ -194,9 +179,9 @@ async def test_niche_3_advanced_sql():
     )
     if "Fehler" not in result:
         assert "Standort" in result
-        print(f"  3a: DISTINCT Standort: OK")
+        print("  3a: DISTINCT Standort: OK")
     else:
-        print(f"  3a: DISTINCT nicht unterstuetzt: OK (bekannte CKAN-Limitierung)")
+        print("  3a: DISTINCT nicht unterstuetzt: OK (bekannte CKAN-Limitierung)")
 
     # 3b: WHERE mit Bedingung
     result = await zurich_datastore_sql(
@@ -206,7 +191,7 @@ async def test_niche_3_advanced_sql():
     )
     if "Fehler" not in result:
         assert "Wert" in result or "Datum" in result
-        print(f"  3b: WHERE Parameter=T ORDER BY: OK")
+        print("  3b: WHERE Parameter=T ORDER BY: OK")
     else:
         print(f"  3b: SQL-Fehler: {result[:80]}")
 
@@ -218,9 +203,9 @@ async def test_niche_3_advanced_sql():
     )
     if "Fehler" not in result:
         assert "anzahl" in result.lower() or "Standort" in result
-        print(f"  3c: GROUP BY + COUNT: OK")
+        print("  3c: GROUP BY + COUNT: OK")
     else:
-        print(f"  3c: GROUP BY nicht unterstuetzt: OK (bekannte CKAN-Limitierung)")
+        print("  3c: GROUP BY nicht unterstuetzt: OK (bekannte CKAN-Limitierung)")
 
     # 3d: AVG-Aggregation
     result = await zurich_datastore_sql(
@@ -230,9 +215,9 @@ async def test_niche_3_advanced_sql():
     )
     if "Fehler" not in result:
         assert "durchschnitt" in result.lower() or "Zeilen" in result
-        print(f"  3d: AVG(Wert) Temperatur: OK")
+        print("  3d: AVG(Wert) Temperatur: OK")
     else:
-        print(f"  3d: AVG-Fehler: OK")
+        print("  3d: AVG-Fehler: OK")
 
     print("PASSED\n")
 
@@ -255,9 +240,9 @@ async def test_niche_4_vbz_cross_query():
     )
     if "Fehler" not in result:
         assert "DataStore" in result or "Felder" in result
-        print(f"  4a: VBZ Haltestellen (5 Eintraege): OK")
+        print("  4a: VBZ Haltestellen (5 Eintraege): OK")
     else:
-        print(f"  4a: Haltestellen nicht DataStore-aktiv: OK")
+        print("  4a: Haltestellen nicht DataStore-aktiv: OK")
 
     # 4b: Linien-Daten abfragen
     result = await zurich_datastore_query(
@@ -265,23 +250,23 @@ async def test_niche_4_vbz_cross_query():
     )
     if "Fehler" not in result:
         assert "DataStore" in result or "Felder" in result
-        print(f"  4b: VBZ Linien (5 Eintraege): OK")
+        print("  4b: VBZ Linien (5 Eintraege): OK")
     else:
-        print(f"  4b: Linien nicht DataStore-aktiv: OK")
+        print("  4b: Linien nicht DataStore-aktiv: OK")
 
     # 4c: VBZ Passagiere mit Haltestellenfilter
     result = await zurich_vbz_passengers(
         VBZPassengersInput(query="Paradeplatz", limit=5)
     )
     assert "VBZ" in result
-    print(f"  4c: VBZ Suche 'Paradeplatz': OK")
+    print("  4c: VBZ Suche 'Paradeplatz': OK")
 
     # 4d: VBZ Passagiere mit Haltestellenfilter Bellevue
     result = await zurich_vbz_passengers(
         VBZPassengersInput(query="Bellevue", limit=5)
     )
     assert "VBZ" in result
-    print(f"  4d: VBZ Suche 'Bellevue': OK")
+    print("  4d: VBZ Suche 'Bellevue': OK")
 
     print("PASSED\n")
 
@@ -301,9 +286,9 @@ async def test_niche_5_weather_edge_cases():
     )
     assert "Wetterdaten" in result
     if "Regendauer" in result or "RainDur" in result:
-        print(f"  5a: Regendauer-Parameter: OK (Daten vorhanden)")
+        print("  5a: Regendauer-Parameter: OK (Daten vorhanden)")
     else:
-        print(f"  5a: Regendauer-Parameter: OK (keine aktuellen Daten)")
+        print("  5a: Regendauer-Parameter: OK (keine aktuellen Daten)")
 
     # 5b: Luftdruck (p)
     result = await zurich_weather_live(
@@ -311,30 +296,30 @@ async def test_niche_5_weather_edge_cases():
     )
     assert "Wetterdaten" in result
     if "hPa" in result:
-        print(f"  5b: Luftdruck hPa: OK")
+        print("  5b: Luftdruck hPa: OK")
     else:
-        print(f"  5b: Luftdruck: OK (Daten vorhanden oder nicht)")
+        print("  5b: Luftdruck: OK (Daten vorhanden oder nicht)")
 
     # 5c: Luftfeuchte an bestimmter Station
     result = await zurich_weather_live(
         WeatherLiveInput(station="Zch_Rosengartenstrasse", parameter="Hr", limit=3)
     )
     assert "Wetterdaten" in result or "Keine" in result
-    print(f"  5c: Luftfeuchte Rosengartenstrasse: OK")
+    print("  5c: Luftfeuchte Rosengartenstrasse: OK")
 
     # 5d: Luft: Ozon (O3) -- saisonaler Schadstoff
     result = await zurich_air_quality(
         AirQualityInput(parameter="O3", limit=5)
     )
     assert "Luftqualität" in result
-    print(f"  5d: Ozon O3: OK")
+    print("  5d: Ozon O3: OK")
 
     # 5e: Luft: PM2.5 Feinstaub
     result = await zurich_air_quality(
         AirQualityInput(parameter="PM2.5", limit=5)
     )
     assert "Luftqualität" in result
-    print(f"  5e: PM2.5 Feinstaub: OK")
+    print("  5e: PM2.5 Feinstaub: OK")
 
     print("PASSED\n")
 
@@ -353,42 +338,42 @@ async def test_niche_6_rare_geo_layers():
         GeoFeaturesInput(layer_id="velopruefstrecken", max_features=10)
     )
     assert "Geodaten" in result or "Veloprüfstrecke" in result or "Fehler" in result
-    print(f"  6a: Velopruefstrecken: OK")
+    print("  6a: Velopruefstrecken: OK")
 
     # 6b: Familienberatung
     result = await zurich_geo_features(
         GeoFeaturesInput(layer_id="familienberatung", max_features=10)
     )
     assert "Geodaten" in result or "Familienberatung" in result or "Fehler" in result
-    print(f"  6b: Familienberatung: OK")
+    print("  6b: Familienberatung: OK")
 
     # 6c: Lehrpfade
     result = await zurich_geo_features(
         GeoFeaturesInput(layer_id="lehrpfade", max_features=10)
     )
     assert "Geodaten" in result or "Lehrpfad" in result or "Fehler" in result
-    print(f"  6c: Lehrpfade: OK")
+    print("  6c: Lehrpfade: OK")
 
     # 6d: Stimmlokale
     result = await zurich_geo_features(
         GeoFeaturesInput(layer_id="stimmlokale", max_features=5)
     )
     assert "Geodaten" in result or "Stimm" in result or "Fehler" in result
-    print(f"  6d: Stimmlokale: OK")
+    print("  6d: Stimmlokale: OK")
 
     # 6e: Sozialzentrum
     result = await zurich_geo_features(
         GeoFeaturesInput(layer_id="sozialzentrum", max_features=10)
     )
     assert "Geodaten" in result or "Sozial" in result or "Fehler" in result
-    print(f"  6e: Sozialzentrum: OK")
+    print("  6e: Sozialzentrum: OK")
 
     # 6f: Sammelstellen (Abfall)
     result = await zurich_geo_features(
         GeoFeaturesInput(layer_id="sammelstelle", max_features=5)
     )
     assert "Geodaten" in result or "Sammelstelle" in result or "Fehler" in result
-    print(f"  6f: Sammelstellen: OK")
+    print("  6f: Sammelstellen: OK")
 
     print("PASSED\n")
 
@@ -407,35 +392,35 @@ async def test_niche_7_parliament_niche_topics():
         ParliamentSearchInput(query="Digitalisierung", max_results=5)
     )
     assert "Treffer" in result or "Keine" in result or "Geschäft" in result
-    print(f"  7a: 'Digitalisierung': OK")
+    print("  7a: 'Digitalisierung': OK")
 
     # 7b: Velowege -- konkretes Nischenthema
     result = await zurich_parliament_search(
         ParliamentSearchInput(query="Veloweg", max_results=3)
     )
     assert "Treffer" in result or "Keine" in result or "Geschäft" in result
-    print(f"  7b: 'Veloweg': OK")
+    print("  7b: 'Veloweg': OK")
 
     # 7c: Zeitlich sehr eingeschraenkt (ein einzelnes Jahr)
     result = await zurich_parliament_search(
         ParliamentSearchInput(query="Budget", year_from=2024, year_to=2024, max_results=5)
     )
     assert "Treffer" in result or "Keine" in result or "Budget" in result
-    print(f"  7c: 'Budget' nur 2024: OK")
+    print("  7c: 'Budget' nur 2024: OK")
 
     # 7d: Suche nach Mitgliedern einer kleinen Partei (AL)
     result = await zurich_parliament_members(
         ParliamentMembersInput(party="AL", active_only=True, max_results=10)
     )
     assert "Mitglied" in result or "AL" in result or "Keine" in result or "Gemeinderat" in result
-    print(f"  7d: AL-Mitglieder: OK")
+    print("  7d: AL-Mitglieder: OK")
 
     # 7e: Kombination: Mitglied nach Name UND Partei
     result = await zurich_parliament_members(
         ParliamentMembersInput(name="Müller", party="FDP", active_only=False, max_results=5)
     )
     assert "Treffer" in result or "Keine" in result or "Mitglied" in result or "Gemeinderat" in result
-    print(f"  7e: 'Mueller' + FDP: OK")
+    print("  7e: 'Mueller' + FDP: OK")
 
     print("PASSED\n")
 
@@ -454,42 +439,42 @@ async def test_niche_8_tourism_niche():
         TourismSearchInput(category="familien", max_results=5, language="de")
     )
     assert "Tourismus" in result or "Keine" in result
-    print(f"  8a: Familien: OK")
+    print("  8a: Familien: OK")
 
     # 8b: Touren
     result = await zurich_tourism(
         TourismSearchInput(category="touren", max_results=3, language="de")
     )
     assert "Tourismus" in result or "Keine" in result
-    print(f"  8b: Touren: OK")
+    print("  8b: Touren: OK")
 
     # 8c: Natur
     result = await zurich_tourism(
         TourismSearchInput(category="natur", max_results=3, language="de")
     )
     assert "Tourismus" in result or "Keine" in result
-    print(f"  8c: Natur: OK")
+    print("  8c: Natur: OK")
 
     # 8d: Shopping mit Textfilter "Altstadt"
     result = await zurich_tourism(
         TourismSearchInput(category="shopping", search_text="Altstadt", max_results=5, language="de")
     )
     assert "Tourismus" in result or "Keine" in result
-    print(f"  8d: Shopping 'Altstadt': OK")
+    print("  8d: Shopping 'Altstadt': OK")
 
     # 8e: Uebernachten auf Franzoesisch
     result = await zurich_tourism(
         TourismSearchInput(category="uebernachten", max_results=3, language="fr")
     )
     assert "Tourismus" in result or "Keine" in result
-    print(f"  8e: Uebernachten (fr): OK")
+    print("  8e: Uebernachten (fr): OK")
 
     # 8f: Kultur auf Italienisch
     result = await zurich_tourism(
         TourismSearchInput(category="kultur", max_results=3, language="it")
     )
     assert "Tourismus" in result or "Keine" in result
-    print(f"  8f: Kultur (it): OK")
+    print("  8f: Kultur (it): OK")
 
     print("PASSED\n")
 
@@ -508,12 +493,12 @@ async def test_niche_9_deep_catalog():
     result = await zurich_list_categories(ListGroupInput(group_id="volkswirtschaft"))
     assert "olks" in result or "irtschaft" in result or "Kategorie" in result, \
         f"Volkswirtschaft nicht gefunden: {result[:100]}"
-    print(f"  9a: Kategorie 'volkswirtschaft': OK")
+    print("  9a: Kategorie 'volkswirtschaft': OK")
 
     # 9b: Kategorie "kriminalitat"
     result = await zurich_list_categories(ListGroupInput(group_id="kriminalitat"))
     assert "riminal" in result or "Kategorie" in result
-    print(f"  9b: Kategorie 'kriminalitat': OK")
+    print("  9b: Kategorie 'kriminalitat': OK")
 
     # 9c: Tags mit "hund" (Hundekot, Hundebestand?)
     result = await zurich_list_tags(TagSearchInput(query="hund"))
@@ -530,21 +515,21 @@ async def test_niche_9_deep_catalog():
         SearchDatasetsInput(query="Temperatur~", rows=3)
     )
     assert "Datensätze" in result or "Keine" in result
-    print(f"  9e: Fuzzy-Suche 'Temperatur~': OK")
+    print("  9e: Fuzzy-Suche 'Temperatur~': OK")
 
     # 9f: Suche mit NOT-Operator
     result = await zurich_search_datasets(
         SearchDatasetsInput(query="Verkehr NOT Velo", rows=3)
     )
     assert "Datensätze" in result or "Keine" in result
-    print(f"  9f: NOT-Suche 'Verkehr NOT Velo': OK")
+    print("  9f: NOT-Suche 'Verkehr NOT Velo': OK")
 
     # 9g: Suche in seltenem Feld (Autor)
     result = await zurich_search_datasets(
         SearchDatasetsInput(query='author:"Statistik Stadt Zürich"', rows=3)
     )
     assert "Datensätze" in result or "Keine" in result
-    print(f"  9g: Feld-Suche author: OK")
+    print("  9g: Feld-Suche author: OK")
 
     print("PASSED\n")
 
@@ -577,7 +562,7 @@ async def test_niche_10_multi_dataset_chain():
         else:
             print(f"  10b: DataStore-Abfrage {uuids[0][:8]}...: OK (nicht DataStore-aktiv)")
     else:
-        print(f"  10b: Keine UUIDs, uebersprungen")
+        print("  10b: Keine UUIDs, uebersprungen")
 
     # 10c: Zweiter Nischen-Datensatz: "Baumkataster"
     result2 = await zurich_analyze_datasets(
@@ -598,7 +583,7 @@ async def test_niche_10_multi_dataset_chain():
         FindSchoolDataInput(topic="Musikschule")
     )
     assert "Schul" in result4 or "Musik" in result4
-    print(f"  10e: Schuldaten 'Musikschule': OK")
+    print("  10e: Schuldaten 'Musikschule': OK")
 
     # 10f: Vergleich: Wie viele UUIDs insgesamt exponiert?
     total_uuids = len(uuids) + len(uuids2) + len(uuids3)

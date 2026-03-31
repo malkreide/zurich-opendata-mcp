@@ -5,54 +5,44 @@ Datenkonsistenz, adversariale Eingaben und domänenspezifische Nischen.
 """
 
 import asyncio
-import json
 import re
 import sys
 
 sys.path.insert(0, "src")
 
 from zurich_opendata_mcp.server import (
-    zurich_search_datasets,
-    zurich_get_dataset,
-    zurich_datastore_query,
-    zurich_datastore_sql,
-    zurich_list_categories,
-    zurich_list_tags,
-    zurich_parking_live,
-    zurich_analyze_datasets,
-    zurich_catalog_stats,
-    zurich_find_school_data,
-    zurich_weather_live,
-    zurich_air_quality,
-    zurich_water_weather,
-    zurich_pedestrian_traffic,
-    zurich_vbz_passengers,
-    zurich_geo_layers,
-    zurich_geo_features,
-    zurich_parliament_search,
-    zurich_parliament_members,
-    zurich_tourism,
-    zurich_sparql,
-)
-from zurich_opendata_mcp.server import (
-    SearchDatasetsInput,
-    GetDatasetInput,
+    AirQualityInput,
+    AnalyzeDatasetInput,
     DatastoreQueryInput,
     DatastoreSqlInput,
-    ListGroupInput,
-    TagSearchInput,
-    AnalyzeDatasetInput,
-    WeatherLiveInput,
-    AirQualityInput,
-    WaterWeatherInput,
-    PedestrianInput,
-    VBZPassengersInput,
-    GeoFeaturesInput,
-    ParliamentSearchInput,
-    ParliamentMembersInput,
-    TourismSearchInput,
-    SparqlQueryInput,
     FindSchoolDataInput,
+    GeoFeaturesInput,
+    GetDatasetInput,
+    ListGroupInput,
+    ParliamentSearchInput,
+    PedestrianInput,
+    SearchDatasetsInput,
+    TourismSearchInput,
+    VBZPassengersInput,
+    WaterWeatherInput,
+    WeatherLiveInput,
+    zurich_air_quality,
+    zurich_analyze_datasets,
+    zurich_catalog_stats,
+    zurich_datastore_query,
+    zurich_datastore_sql,
+    zurich_find_school_data,
+    zurich_geo_features,
+    zurich_get_dataset,
+    zurich_list_categories,
+    zurich_parking_live,
+    zurich_parliament_search,
+    zurich_pedestrian_traffic,
+    zurich_search_datasets,
+    zurich_tourism,
+    zurich_vbz_passengers,
+    zurich_water_weather,
+    zurich_weather_live,
 )
 
 
@@ -384,7 +374,7 @@ async def test_10_parking_validation():
     # Pruefe: mind. 1 offenes Parkhaus
     assert "open" in r.lower(), "Kein Parkhaus offen?"
 
-    print(f"  Tabellenstruktur: OK")
+    print("  Tabellenstruktur: OK")
     print(f"  {len(percents)} Belegungswerte alle 0-100%: OK")
     print("PASSED\n")
 
@@ -423,14 +413,14 @@ async def test_12_parliament_historical():
         ParliamentSearchInput(query="Budget", year_from=1995, year_to=2000, max_results=3)
     )
     assert "Treffer" in r or "Keine" in r or "Budget" in r
-    print(f"  Geschaefte 1995-2000: OK")
+    print("  Geschaefte 1995-2000: OK")
 
     # Suche nach maximal alten Geschaeften
     r2 = await zurich_parliament_search(
         ParliamentSearchInput(query="Stadtrat", year_from=1990, year_to=1995, max_results=3)
     )
     assert "Treffer" in r2 or "Keine" in r2
-    print(f"  Geschaefte 1990-1995: OK")
+    print("  Geschaefte 1990-1995: OK")
 
     print("PASSED\n")
 
@@ -499,28 +489,28 @@ async def test_15_solr_field_queries():
         SearchDatasetsInput(query="tags:sachdaten", rows=5)
     )
     assert "Datensätze" in r or "Keine" in r
-    print(f"  15a: tags:sachdaten: OK")
+    print("  15a: tags:sachdaten: OK")
 
     # 15b: Titel-basierte Suche
     r = await zurich_search_datasets(
         SearchDatasetsInput(query='title:"Bevölkerung"', rows=5)
     )
     assert "Datensätze" in r or "Keine" in r
-    print(f"  15b: title:Bevoelkerung: OK")
+    print("  15b: title:Bevoelkerung: OK")
 
     # 15c: Kombination: Tag + Freitext
     r = await zurich_search_datasets(
         SearchDatasetsInput(query="tags:geodaten Schule", rows=5)
     )
     assert "Datensätze" in r or "Keine" in r
-    print(f"  15c: tags:geodaten + Schule: OK")
+    print("  15c: tags:geodaten + Schule: OK")
 
     # 15d: Negativer Filter (NOT tag)
     r = await zurich_search_datasets(
         SearchDatasetsInput(query="Energie NOT tags:tabelle", rows=5)
     )
     assert "Datensätze" in r or "Keine" in r
-    print(f"  15d: Energie NOT tags:tabelle: OK")
+    print("  15d: Energie NOT tags:tabelle: OK")
 
     print("PASSED\n")
 

@@ -11,7 +11,7 @@ Supported APIs:
 """
 
 import xml.etree.ElementTree as ET
-from typing import Any, Optional
+from typing import Any
 
 import httpx
 
@@ -81,7 +81,7 @@ async def _get_client() -> httpx.AsyncClient:
     )
 
 
-async def ckan_request(action: str, params: Optional[dict[str, Any]] = None) -> dict[str, Any]:
+async def ckan_request(action: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
     """Make a CKAN API request and return the result.
 
     Args:
@@ -107,7 +107,7 @@ async def ckan_request(action: str, params: Optional[dict[str, Any]] = None) -> 
         return data["result"]
 
 
-async def http_get_json(url: str, params: Optional[dict[str, Any]] = None) -> Any:
+async def http_get_json(url: str, params: dict[str, Any] | None = None) -> Any:
     """Generic JSON GET request for non-CKAN APIs."""
     async with await _get_client() as client:
         response = await client.get(url, params=params or {})
@@ -198,7 +198,7 @@ async def wfs_get_features(
     typename: str,
     max_features: int = 50,
     output_format: str = "GeoJSON",
-    cql_filter: Optional[str] = None,
+    cql_filter: str | None = None,
 ) -> dict[str, Any]:
     """Fetch features from the Zurich Geoportal WFS."""
     url = f"{WFS_BASE_URL}/{service_name}"
@@ -259,7 +259,7 @@ async def paris_search(
         return ET.fromstring(response.content)
 
 
-def paris_extract_text(element: Optional[ET.Element], default: str = "") -> str:
+def paris_extract_text(element: ET.Element | None, default: str = "") -> str:
     """Safely extract text from an XML element."""
     if element is not None and element.text:
         return element.text.strip()

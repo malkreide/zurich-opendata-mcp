@@ -4,54 +4,47 @@ Tests all tools against the live CKAN API.
 """
 
 import asyncio
-import json
 import sys
 
 # Add src to path
 sys.path.insert(0, "src")
 
 from zurich_opendata_mcp.server import (
-    zurich_search_datasets,
-    zurich_get_dataset,
-    zurich_datastore_query,
-    zurich_list_categories,
-    zurich_list_tags,
-    zurich_parking_live,
+    AirQualityInput,
+    AnalyzeDatasetInput,
+    FindSchoolDataInput,
+    GeoFeaturesInput,
+    GetDatasetInput,
+    ListGroupInput,
+    ParliamentMembersInput,
+    ParliamentSearchInput,
+    PedestrianInput,
+    SearchDatasetsInput,
+    SparqlQueryInput,
+    TagSearchInput,
+    TourismSearchInput,
+    VBZPassengersInput,
+    WaterWeatherInput,
+    WeatherLiveInput,
+    zurich_air_quality,
     zurich_analyze_datasets,
     zurich_catalog_stats,
     zurich_find_school_data,
-    zurich_weather_live,
-    zurich_air_quality,
-    zurich_water_weather,
-    zurich_pedestrian_traffic,
-    zurich_vbz_passengers,
-)
-from zurich_opendata_mcp.server import (
-    SearchDatasetsInput,
-    GetDatasetInput,
-    DatastoreQueryInput,
-    ListGroupInput,
-    TagSearchInput,
-    AnalyzeDatasetInput,
-    WeatherLiveInput,
-    AirQualityInput,
-    WaterWeatherInput,
-    PedestrianInput,
-    VBZPassengersInput,
-    FindSchoolDataInput,
-    GeoFeaturesInput,
-    ParliamentSearchInput,
-    ParliamentMembersInput,
-    TourismSearchInput,
-    SparqlQueryInput,
-)
-from zurich_opendata_mcp.server import (
-    zurich_geo_layers,
     zurich_geo_features,
-    zurich_parliament_search,
+    zurich_geo_layers,
+    zurich_get_dataset,
+    zurich_list_categories,
+    zurich_list_tags,
+    zurich_parking_live,
     zurich_parliament_members,
-    zurich_tourism,
+    zurich_parliament_search,
+    zurich_pedestrian_traffic,
+    zurich_search_datasets,
     zurich_sparql,
+    zurich_tourism,
+    zurich_vbz_passengers,
+    zurich_water_weather,
+    zurich_weather_live,
 )
 
 
