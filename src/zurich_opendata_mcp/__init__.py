@@ -1,6 +1,3 @@
-"""
-Zurich Open Data MCP Server
-Bietet MCP-Zugriff auf Open Data der Stadt Zürich.
-"""
+"""Zurich Open Data MCP Server."""
 
 __version__ = "0.2.0"

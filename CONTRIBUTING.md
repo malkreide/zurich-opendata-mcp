@@ -1,69 +1,68 @@
 # Contributing
 
-🌐 **[English](CONTRIBUTING_EN.md)** | **Deutsch**
+🌐 **English** | **[Deutsch](CONTRIBUTING.de.md)**
 
-Beiträge zu diesem Projekt sind willkommen! Dieses Dokument beschreibt den Prozess.
+Contributions to this project are welcome! This document describes the process.
 
-## Entwicklungsumgebung einrichten
+## Setting Up the Development Environment
 
 ```bash
-git clone https://github.com/schulamt-zuerich/zurich-opendata-mcp.git
+git clone https://github.com/malkreide/zurich-opendata-mcp.git
 cd zurich-opendata-mcp
 
-# Virtual environment erstellen
+# Create virtual environment
 python -m venv .venv
 source .venv/bin/activate  # macOS/Linux
 
-# Pakete installieren (inkl. Dev-Dependencies)
+# Install packages (including dev dependencies)
 pip install -e ".[dev]"
 ```
 
-## Code-Qualität
+## Code Quality
 
 ```bash
 # Linting
 ruff check src/
 
-# Formatierung
+# Formatting
 ruff format src/
 
-# Integrationstests (gegen Live-APIs)
+# Integration tests (against live APIs)
 python tests/test_integration.py
 ```
 
-## Neues Tool hinzufügen
+## Adding a New Tool
 
-1. **API-Client** (`api_client.py`): Falls eine neue API angebunden wird, Konstanten und HTTP-Funktionen ergänzen.
+1. **API Client** (`api_client.py`): If connecting a new API, add constants and HTTP functions.
 2. **Server** (`server.py`):
-   - Pydantic `BaseModel` für Input-Parameter definieren
-   - `@mcp.tool()`-Funktion implementieren
-   - Markdown-formatierte Antwort zurückgeben
-3. **Tests** (`test_integration.py`): Integrationstest gegen Live-API hinzufügen.
-4. **README.md / README_EN.md**: Tool-Beschreibung und Beispiel-Abfrage in beiden Sprachen ergänzen.
-5. **CHANGELOG.md**: Änderung dokumentieren.
+   - Define a Pydantic `BaseModel` for input parameters
+   - Implement an `@mcp.tool()` function
+   - Return a Markdown-formatted response
+3. **Tests** (`test_integration.py`): Add an integration test against the live API.
+4. **README.md / README.de.md**: Add tool description and example query in both languages.
+5. **CHANGELOG.md**: Document the change.
 
 ## Pull Requests
 
-- Ein PR pro Feature/Bugfix
-- Tests müssen bestehen
-- `ruff check` darf keine Fehler zeigen
-- Beschreibung auf Deutsch oder Englisch
-- Dokumentation in beiden Sprachen aktualisieren
+- One PR per feature/bugfix
+- Tests must pass
+- `ruff check` must show no errors
+- Documentation updated in both English and German
 
-## Datenquellen
+## Data Sources
 
-Alle genutzten APIs sind öffentlich zugänglich und erfordern keine Authentifizierung.
-Die Daten stehen unter CC0- oder vergleichbaren offenen Lizenzen.
+All APIs used are publicly accessible and require no authentication.
+Data is published under CC0 or comparable open licenses.
 
-| API | Dokumentation |
+| API | Documentation |
 |-----|--------------|
 | CKAN | https://data.stadt-zuerich.ch/api/3/ |
 | Geoportal WFS | https://www.ogd.stadt-zuerich.ch/wfs/geoportal |
-| Paris (Gemeinderat) | https://www.gemeinderat-zuerich.ch/api |
-| Zürich Tourismus | https://www.zuerich.com/en/api/v2/data |
+| Paris (City Parliament) | https://www.gemeinderat-zuerich.ch/api |
+| Zurich Tourism | https://www.zuerich.com/en/api/v2/data |
 | SPARQL | https://ld.stadt-zuerich.ch/query |
 | ParkenDD | https://api.parkendd.de/Zuerich |
 
-## Fragen?
+## Questions?
 
-Bei Fragen zur Entwicklung oder zu den genutzten APIs: Issue auf GitHub eröffnen.
+For questions about development or the APIs used, open an issue on GitHub.

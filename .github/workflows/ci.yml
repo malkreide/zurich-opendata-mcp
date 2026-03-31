@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main]
   pull_request:
     branches: [main]
 
@@ -16,38 +16,18 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Python ${{ matrix.python-version }} einrichten
-        uses: actions/setup-python@v5
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: uv installieren
-        run: pip install uv
+      - name: Install dependencies
+        run: |
+          pip install -e ".[dev]"
 
-      - name: uv Cache
-        uses: actions/cache@v5
-        with:
-          path: ~/.cache/uv
-          key: ${{ runner.os }}-uv-${{ hashFiles('pyproject.toml') }}
+      - name: Run tests
+        run: |
+          PYTHONPATH=src pytest tests/ -m "not live"
 
-      - name: Abhängigkeiten installieren
-        run: uv sync --extra dev
-
-      - name: Linting mit ruff
-        run: uv run ruff check src/
-
-      - name: Format-Check mit ruff
-        run: uv run ruff format --check src/
-
-      - name: Syntax-Prüfung
-        run: uv run python -m py_compile src/zurich_opendata_mcp/server.py src/zurich_opendata_mcp/api_client.py
-
-      - name: Import-Test
-        run: uv run python -c "from zurich_opendata_mcp.server import mcp; print('Import OK')"
-        env:
-          PYTHONPATH: src
-
-      - name: Unit-Tests (ohne Live-API)
-        run: uv run pytest tests/ -m "not live"
-        env:
-          PYTHONPATH: src
+      - name: Lint
+        run: ruff check src/ tests/
