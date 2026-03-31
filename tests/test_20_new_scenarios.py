@@ -10,6 +10,8 @@ import re
 import sys
 import time
 
+import pytest
+
 # Windows Console Encoding Fix
 if sys.platform == "win32":
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
@@ -250,6 +252,7 @@ async def test_scenario_5_invalid_resource_ids():
 #   Jeder Layer muss Geodaten oder einen klaren Fehler liefern
 # ---------------------------------------------------------------------------
 
+@pytest.mark.live
 async def test_scenario_6_all_geo_layers():
     print("=" * 60)
     print("SZENARIO 6: Alle 14 Geo-Layer abrufen")
