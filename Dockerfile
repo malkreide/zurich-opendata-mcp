@@ -10,7 +10,7 @@ COPY src/ src/
 RUN pip install --no-cache-dir .
 
 # Environment: SSE transport for remote access
-ENV MCP_TRANSPORT=sse
+ENV MCP_TRANSPORT=streamable-http
 ENV MCP_HOST=0.0.0.0
 
 # Railway sets PORT automatically
