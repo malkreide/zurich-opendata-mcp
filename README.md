@@ -6,6 +6,10 @@ An MCP (Model Context Protocol) server providing AI-powered access to **Open Dat
 
 > Enables Claude, ChatGPT, and other MCP-compatible AI assistants to directly query 900+ datasets, geodata, parliamentary proceedings, tourism data, linked data, and real-time environmental and mobility information from the City of Zurich. **20 Tools, 6 Resources, 6 APIs.**
 
+<p align="center">
+  <img src="assets/demo.png" alt="Demo: Claude queries school facilities via MCP tool call" width="720">
+</p>
+
 ## ✨ Features
 
 ### CKAN Open Data (data.stadt-zuerich.ch)
@@ -150,6 +154,18 @@ Once configured, you can ask Claude:
 ### Tourism & Statistics
 - *"What restaurants does Zurich Tourism recommend?"* → `zurich_tourism`
 - *"How has Zurich's population evolved?"* → `zurich_sparql`
+
+## 🛡️ Safety & Limits
+
+| Aspect | Details |
+|--------|---------|
+| **Access** | Read-only (`readOnlyHint: true`) — the server cannot modify or delete any data |
+| **Personal data** | No personal data — all sources are aggregated, public open data |
+| **Rate limits** | Built-in per-query caps (e.g. max 100 records, 500 geo features, 50 search results) |
+| **Timeout** | 30 seconds per API call |
+| **Authentication** | No API keys required — all 6 APIs are publicly accessible |
+| **Licenses** | All data under CC0 / open licenses (Open by Default since 2021) |
+| **Terms of Service** | Subject to ToS of the respective data sources: [City of Zurich Open Data](https://data.stadt-zuerich.ch), [Zurich City Parliament](https://www.gemeinderat-zuerich.ch), [Zurich Tourism](https://www.zuerich.com) |
 
 ## 🔗 Data Sources
 

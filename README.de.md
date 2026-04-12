@@ -6,6 +6,10 @@ MCP (Model Context Protocol) Server für den KI-gestützten Zugriff auf **Open D
 
 > Ermöglicht Claude, ChatGPT und anderen MCP-kompatiblen KI-Assistenten den direkten Zugriff auf 900+ Datensätze, Geodaten, Parlamentsgeschäfte, Tourismusdaten, Linked Data und Echtzeit-Umwelt-/Mobilitätsinformationen der Stadt Zürich. **20 Tools, 6 Resources, 6 APIs.**
 
+<p align="center">
+  <img src="assets/demo.png" alt="Demo: Claude fragt Schulanlagen via MCP Tool Call ab" width="720">
+</p>
+
 ## ✨ Features
 
 ### CKAN Open Data (data.stadt-zuerich.ch)
@@ -150,6 +154,18 @@ Nach der Konfiguration kannst du in Claude fragen:
 ### Tourismus & Statistik
 - *«Welche Restaurants empfiehlt Zürich Tourismus?»* → `zurich_tourism`
 - *«Wie hat sich die Bevölkerung Zürichs entwickelt?»* → `zurich_sparql`
+
+## 🛡️ Safety & Limits
+
+| Aspekt | Details |
+|--------|---------|
+| **Zugriff** | Nur lesend (`readOnlyHint: true`) — der Server kann keine Daten ändern oder löschen |
+| **Personendaten** | Keine personenbezogenen Daten — alle Quellen sind aggregierte, öffentliche Open Data |
+| **Rate Limits** | Eingebaute Obergrenzen pro Abfrage (z.B. max. 100 Datensätze, 500 Geo-Features, 50 Suchergebnisse) |
+| **Timeout** | 30 Sekunden pro API-Aufruf |
+| **Authentifizierung** | Keine API-Keys nötig — alle 6 APIs sind öffentlich zugänglich |
+| **Lizenzen** | Alle Daten unter CC0 / offenen Lizenzen (Open by Default seit 2021) |
+| **Nutzungsbedingungen** | Es gelten die ToS der jeweiligen Datenquellen: [Stadt Zürich Open Data](https://data.stadt-zuerich.ch), [Gemeinderat Zürich](https://www.gemeinderat-zuerich.ch), [Zürich Tourismus](https://www.zuerich.com) |
 
 ## 🔗 Datenquellen
 
