@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/malkreide-zurich-opendata-mcp-badge.png)](https://mseep.ai/app/malkreide-zurich-opendata-mcp)
+
 > 🇨🇭 **Part of the [Swiss Public Data MCP Portfolio](https://github.com/malkreide)**
 
 # 🏙️ Zurich Open Data MCP Server
