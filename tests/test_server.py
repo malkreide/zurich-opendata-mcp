@@ -1,13 +1,14 @@
 """
 Tests for Zurich Open Data MCP Server.
 
-All tests are marked as 'live' because they hit real APIs.
-Run with: PYTHONPATH=src pytest tests/ -m live
-Skip in CI with: PYTHONPATH=src pytest tests/ -m "not live"
+API-hitting tests are marked as 'live'.
+Run all tests:           PYTHONPATH=src pytest tests/ -m live
+Run only non-live (CI):  PYTHONPATH=src pytest tests/ -m "not live"
 """
 
 import pytest
 
+import zurich_opendata_mcp.server as server_module
 from zurich_opendata_mcp.server import (
     AirQualityInput,
     AnalyzeDatasetInput,
@@ -45,6 +46,15 @@ from zurich_opendata_mcp.server import (
     zurich_water_weather,
     zurich_weather_live,
 )
+
+# ─── Smoke tests (no network) ────────────────────────────────────────────────
+
+
+def test_server_module_exposes_mcp_instance():
+    """Importing the package and instantiating FastMCP must succeed offline."""
+    assert hasattr(server_module, "mcp")
+    assert server_module.mcp.name
+
 
 # ─── CKAN Tools ──────────────────────────────────────────────────────────────
 
