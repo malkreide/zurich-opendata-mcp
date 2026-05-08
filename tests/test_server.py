@@ -191,3 +191,44 @@ async def test_catalog_stats():
 async def test_find_school_data():
     result = await zurich_find_school_data(FindSchoolDataInput())
     assert "Schulamt" in result or "Schul" in result
+
+
+# ─── Schema / Validation Tests (no live API) ─────────────────────────────────
+
+
+def test_search_datasets_input_defaults():
+    params = SearchDatasetsInput(query="Schule")
+    assert params.rows == 10
+    assert params.offset == 0
+    assert params.sort is None
+    assert params.filter_group is None
+
+
+def test_search_datasets_input_rejects_empty_query():
+    with pytest.raises(ValueError):
+        SearchDatasetsInput(query="")
+
+
+def test_search_datasets_input_rejects_out_of_range_rows():
+    with pytest.raises(ValueError):
+        SearchDatasetsInput(query="x", rows=100)
+    with pytest.raises(ValueError):
+        SearchDatasetsInput(query="x", rows=0)
+
+
+def test_get_dataset_input_strips_whitespace():
+    params = GetDatasetInput(dataset_id="  ssd_schulferien  ")
+    assert params.dataset_id == "ssd_schulferien"
+
+
+def test_get_dataset_input_rejects_empty_id():
+    with pytest.raises(ValueError):
+        GetDatasetInput(dataset_id="")
+
+
+def test_mcp_server_exposes_tools():
+    """Smoke-Test: Server-Modul importierbar und MCP-Instanz vorhanden."""
+    from zurich_opendata_mcp.server import mcp
+
+    assert mcp is not None
+    assert mcp.name
