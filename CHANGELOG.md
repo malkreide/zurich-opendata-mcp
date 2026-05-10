@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Documentation
+- Synced `README.md` and `README.de.md` with the post-refactor reality
+  (audit findings M-2 / M-3 / L-14):
+  - Tool count `20` → `24`, resource count `6` → `5` in tagline + footer.
+  - New §"Stadtratsbeschlüsse / Council Resolutions" listing the three STRB
+    tools with example queries.
+  - "Project Structure" tree replaced with the current `app.py` /
+    `clients/` / `tools/` layout (incl. `audits/`, `CLAUDE.md`).
+  - "Development" section: switched from
+    `python tests/test_integration.py` to `pytest tests/ -m "not live"` /
+    `pytest tests/ -m live`.
+  - Geo-layer table regenerated from `GEOPORTAL_LAYERS` in `config.py`
+    (removed `quartiere`, `sportanlagen`, `veloparkierung`,
+    `zweiradparkierung` which never existed in code; added
+    `sport`, `velopruefstrecken`, `stimmlokale`, `sozialzentrum`).
+  - `zurich_sparql` now flagged as "currently disabled" in the feature
+    list to match the runtime behaviour.
+
 ### Security
 - Fixed SQL-injection in `tools/strb.py` (audit finding H-1). The `query` and
   `departement` parameters of `search_stadtratsbeschluesse` and

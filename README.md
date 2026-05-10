@@ -13,7 +13,7 @@
 
 An MCP (Model Context Protocol) server providing AI-powered access to **Open Data from the City of Zurich, Switzerland**.
 
-> Enables Claude, ChatGPT, and other MCP-compatible AI assistants to directly query 900+ datasets, geodata, parliamentary proceedings, tourism data, linked data, and real-time environmental and mobility information from the City of Zurich. **20 Tools, 6 Resources, 6 APIs.**
+> Enables Claude, ChatGPT, and other MCP-compatible AI assistants to directly query 900+ datasets, geodata, parliamentary proceedings, council resolutions, tourism data, linked data, and real-time environmental and mobility information from the City of Zurich. **24 Tools, 5 Resources, 6 APIs.**
 
 ### Demo
 
@@ -51,7 +51,12 @@ An MCP (Model Context Protocol) server providing AI-powered access to **Open Dat
 - **`zurich_tourism`** – 🏨 Attractions, restaurants, hotels, events (Schema.org data, 4 languages)
 
 ### Linked Data (SPARQL)
-- **`zurich_sparql`** – 📊 SPARQL queries on the statistical linked data endpoint
+- **`zurich_sparql`** – 📊 SPARQL queries on the statistical linked data endpoint *(currently disabled — endpoint not productive yet)*
+
+### Stadtratsbeschlüsse (Council Resolutions)
+- **`search_stadtratsbeschluesse`** – 📜 Full-text search of public council resolutions (title, department, date range)
+- **`get_beschluesse_by_departement`** – 📜 List all resolutions of a department (e.g. `SSD`, `FD`, `PRD`)
+- **`get_stadtratsbeschluss_detail`** – 📜 Single resolution by `NNNN/YYYY` number
 
 ### Analysis Tools
 - **`zurich_analyze_datasets`** – Comprehensive analysis: relevance, recency, data structure
@@ -160,6 +165,11 @@ Once configured, you can ask Claude:
 - *"What parliamentary motions about schools were filed?"* → `zurich_parliament_search`
 - *"Which council members belong to the SP party?"* → `zurich_parliament_members`
 
+### Council Resolutions (Stadtratsbeschlüsse)
+- *"Find council resolutions about Volksschule from 2025"* → `search_stadtratsbeschluesse`
+- *"List all SSD resolutions in 2025"* → `get_beschluesse_by_departement`
+- *"Show council resolution 1203/2025"* → `get_stadtratsbeschluss_detail`
+
 ### Tourism & Statistics
 - *"What restaurants does Zurich Tourism recommend?"* → `zurich_tourism`
 - *"How has Zurich's population evolved?"* → `zurich_sparql`
@@ -201,39 +211,51 @@ Once configured, you can ask Claude:
 
 ## 📍 Available Geo Layers
 
+Source of truth: `GEOPORTAL_LAYERS` in [`src/zurich_opendata_mcp/config.py`](src/zurich_opendata_mcp/config.py).
+
 | Layer ID | Description |
 |----------|-------------|
 | `schulanlagen` | School facilities (kindergartens, schools, after-school care) |
-| `schulkreise` | School district boundaries |
-| `schulwege` | School routes and safe paths |
-| `stadtkreise` | City district boundaries |
-| `quartiere` | Statistical quarters |
-| `spielplaetze` | Playgrounds |
-| `sportanlagen` | Sports facilities and swimming pools |
-| `klimadaten` | Climate data (temperatures, heat islands) |
-| `veloparkierung` | Bicycle parking facilities |
-| `lehrpfade` | Educational trails |
-| `familienberatung` | Family counseling meeting points |
+| `schulkreise` | School district boundaries (polygons) |
+| `schulwege` | School-route crossings and hazard points |
+| `stadtkreise` | City district boundaries (polygons) |
+| `spielplaetze` | Public playgrounds |
 | `kreisbuero` | City district offices |
 | `sammelstelle` | Waste collection points |
-| `zweiradparkierung` | Two-wheeler parking |
+| `sport` | Sports facilities |
+| `klimadaten` | Climate data (raster, temperatures, heat islands) |
+| `lehrpfade` | Educational trails |
+| `stimmlokale` | Polling stations |
+| `sozialzentrum` | Social centres |
+| `velopruefstrecken` | Bicycle exam routes for schools |
+| `familienberatung` | Family-counselling meeting points |
 
 ## 🏗️ Project Structure
 
 ```
 zurich-opendata-mcp/
 ├── src/zurich_opendata_mcp/
-│   ├── __init__.py          # Package
-│   ├── server.py            # MCP Server with 20 tools & 6 resources
-│   └── api_client.py        # HTTP client for 6 APIs
+│   ├── __init__.py
+│   ├── app.py               # Shared FastMCP instance
+│   ├── server.py            # Console entry + back-compat re-exports
+│   ├── config.py            # Endpoints, layer maps, resource IDs
+│   ├── http_client.py       # Shared httpx client + CKAN wrapper
+│   ├── formatters.py        # Markdown + error formatting
+│   ├── clients/             # API clients: paris, sparql, tourism, wfs
+│   └── tools/               # @mcp.tool implementations:
+│                            #   catalog, datastore, geo, parliament,
+│                            #   realtime, sparql, strb, tourism,
+│                            #   resources (zurich:// URIs)
 ├── tests/
-│   └── test_integration.py  # 20 integration tests
-├── .github/workflows/ci.yml # GitHub Actions CI
-├── pyproject.toml           # Project configuration
-├── README.md / README.de.md # Documentation (EN/DE)
-├── CONTRIBUTING.md / .de.md # Contribution guide (EN/DE)
-├── CHANGELOG.md             # Changelog
-├── LICENSE                  # MIT
+│   └── test_server.py       # Pydantic + integration tests (live-marked)
+├── audits/                  # Code-audit reports
+├── .github/workflows/       # ci.yml + publish.yml (Trusted Publisher)
+├── pyproject.toml
+├── README.md / README.de.md
+├── CONTRIBUTING.md / .de.md
+├── CHANGELOG.md
+├── CLAUDE.md                # Project conventions for Claude
+├── LICENSE
 └── claude_desktop_config.json
 ```
 
@@ -243,11 +265,14 @@ zurich-opendata-mcp/
 # Install dev dependencies
 pip install -e ".[dev]"
 
-# Integration tests (against live APIs)
-python tests/test_integration.py
+# Unit + validation tests (no network)
+pytest tests/ -m "not live"
+
+# Live integration tests (against live APIs — opt-in)
+pytest tests/ -m live
 
 # Linting
-ruff check src/
+ruff check src/ tests/
 ```
 
 ## Safety & Limits
@@ -271,4 +296,4 @@ All data used is published under open licenses (CC0 / Open by Default since 2021
 
 ---
 
-*Powered by [Model Context Protocol](https://modelcontextprotocol.io/) • 6 APIs • 20 Tools • 6 Resources*
+*Powered by [Model Context Protocol](https://modelcontextprotocol.io/) • 6 APIs • 24 Tools • 5 Resources*

@@ -13,7 +13,7 @@
 
 MCP (Model Context Protocol) Server für den KI-gestützten Zugriff auf **Open Data der Stadt Zürich**.
 
-> Ermöglicht Claude, ChatGPT und anderen MCP-kompatiblen KI-Assistenten den direkten Zugriff auf 900+ Datensätze, Geodaten, Parlamentsgeschäfte, Tourismusdaten, Linked Data und Echtzeit-Umwelt-/Mobilitätsinformationen der Stadt Zürich. **20 Tools, 6 Resources, 6 APIs.**
+> Ermöglicht Claude, ChatGPT und anderen MCP-kompatiblen KI-Assistenten den direkten Zugriff auf 900+ Datensätze, Geodaten, Parlamentsgeschäfte, Stadtratsbeschlüsse, Tourismusdaten, Linked Data und Echtzeit-Umwelt-/Mobilitätsinformationen der Stadt Zürich. **24 Tools, 5 Resources, 6 APIs.**
 
 ### Demo
 
@@ -51,7 +51,12 @@ MCP (Model Context Protocol) Server für den KI-gestützten Zugriff auf **Open D
 - **`zurich_tourism`** – 🏨 Attraktionen, Restaurants, Hotels, Events (Schema.org-Daten, 4 Sprachen)
 
 ### Linked Data (SPARQL)
-- **`zurich_sparql`** – 📊 SPARQL-Abfragen auf dem statistischen Linked Data Endpoint
+- **`zurich_sparql`** – 📊 SPARQL-Abfragen auf dem statistischen Linked Data Endpoint *(zurzeit deaktiviert — Endpunkt noch nicht produktiv)*
+
+### Stadtratsbeschlüsse
+- **`search_stadtratsbeschluesse`** – 📜 Volltextsuche in öffentlichen Stadtratsbeschlüssen (Titel, Departement, Datumsbereich)
+- **`get_beschluesse_by_departement`** – 📜 Alle Beschlüsse eines Departements (z.B. `SSD`, `FD`, `PRD`)
+- **`get_stadtratsbeschluss_detail`** – 📜 Einzelner Beschluss anhand der `NNNN/JJJJ`-Nummer
 
 ### Analyse-Tools
 - **`zurich_analyze_datasets`** – Umfassende Analyse: Relevanz, Aktualität, Datenstruktur
@@ -160,6 +165,11 @@ Nach der Konfiguration kannst du in Claude fragen:
 - *«Welche Vorstösse zum Thema Schule gab es im Gemeinderat?»* → `zurich_parliament_search`
 - *«Welche Ratsmitglieder gehören der SP an?»* → `zurich_parliament_members`
 
+### Stadtratsbeschlüsse
+- *«Such Stadtratsbeschlüsse zur Volksschule aus 2025»* → `search_stadtratsbeschluesse`
+- *«Liste alle SSD-Beschlüsse im Jahr 2025»* → `get_beschluesse_by_departement`
+- *«Zeig Stadtratsbeschluss 1203/2025»* → `get_stadtratsbeschluss_detail`
+
 ### Tourismus & Statistik
 - *«Welche Restaurants empfiehlt Zürich Tourismus?»* → `zurich_tourism`
 - *«Wie hat sich die Bevölkerung Zürichs entwickelt?»* → `zurich_sparql`
@@ -201,39 +211,51 @@ Nach der Konfiguration kannst du in Claude fragen:
 
 ## 📍 Verfügbare Geo-Layer
 
+Single Source of Truth: `GEOPORTAL_LAYERS` in [`src/zurich_opendata_mcp/config.py`](src/zurich_opendata_mcp/config.py).
+
 | Layer-ID | Beschreibung |
 |----------|-------------|
 | `schulanlagen` | Schulstandorte (Kindergärten, Schulhäuser, Horte) |
-| `schulkreise` | Schulkreis-Grenzen |
-| `schulwege` | Schulwege und sichere Routen |
-| `stadtkreise` | Stadtkreis-Grenzen |
-| `quartiere` | Statistische Quartiere |
-| `spielplaetze` | Spielplätze und Spielanlagen |
-| `sportanlagen` | Sportanlagen und Schwimmbäder |
-| `klimadaten` | Klimadaten (Temperaturen, Hitzeinseln) |
-| `veloparkierung` | Veloparkierungs-Anlagen |
-| `lehrpfade` | Lehrpfade und Bildungswege |
-| `familienberatung` | Familienberatungs-Treffpunkte |
+| `schulkreise` | Schulkreis-Grenzen (Polygone) |
+| `schulwege` | Schulweg-Übergänge und Gefahrenstellen |
+| `stadtkreise` | Stadtkreis-Grenzen (Polygone) |
+| `spielplaetze` | Öffentliche Spielplätze |
 | `kreisbuero` | Kreisbüros der Stadt Zürich |
 | `sammelstelle` | Abfall-Sammelstellen |
-| `zweiradparkierung` | Zweiradparkierung |
+| `sport` | Sportanlagen und -einrichtungen |
+| `klimadaten` | Klimadaten (Raster, Temperaturen, Hitzeinseln) |
+| `lehrpfade` | Lehrpfade und Bildungswege |
+| `stimmlokale` | Abstimmungs- und Wahllokale |
+| `sozialzentrum` | Sozialzentren |
+| `velopruefstrecken` | Veloprüfstrecken für Schulen |
+| `familienberatung` | Familienberatungs-Treffpunkte |
 
 ## 🏗️ Projektstruktur
 
 ```
 zurich-opendata-mcp/
 ├── src/zurich_opendata_mcp/
-│   ├── __init__.py          # Package
-│   ├── server.py            # MCP Server mit 20 Tools & 6 Resources
-│   └── api_client.py        # HTTP-Client für 6 APIs
+│   ├── __init__.py
+│   ├── app.py               # Geteilte FastMCP-Instanz
+│   ├── server.py            # Konsolen-Entrypoint + Backwards-Compat-Reexports
+│   ├── config.py            # Endpunkte, Layer-Maps, Resource-IDs
+│   ├── http_client.py       # Geteilter httpx-Client + CKAN-Wrapper
+│   ├── formatters.py        # Markdown- + Fehlerformatierung
+│   ├── clients/             # API-Clients: paris, sparql, tourism, wfs
+│   └── tools/               # @mcp.tool-Implementierungen:
+│                            #   catalog, datastore, geo, parliament,
+│                            #   realtime, sparql, strb, tourism,
+│                            #   resources (zurich:// URIs)
 ├── tests/
-│   └── test_integration.py  # 20 Integrationstests
-├── .github/workflows/ci.yml # GitHub Actions CI
-├── pyproject.toml           # Projekt-Konfiguration
-├── README.md / README.de.md # Dokumentation (EN/DE)
-├── CONTRIBUTING.md / .de.md # Beitragsrichtlinien (EN/DE)
-├── CHANGELOG.md             # Änderungsprotokoll
-├── LICENSE                  # MIT
+│   └── test_server.py       # Pydantic- + Integrationstests (live-markiert)
+├── audits/                  # Audit-Reports
+├── .github/workflows/       # ci.yml + publish.yml (Trusted Publisher)
+├── pyproject.toml
+├── README.md / README.de.md
+├── CONTRIBUTING.md / .de.md
+├── CHANGELOG.md
+├── CLAUDE.md                # Projekt-Konventionen für Claude
+├── LICENSE
 └── claude_desktop_config.json
 ```
 
@@ -243,11 +265,14 @@ zurich-opendata-mcp/
 # Dev-Dependencies installieren
 pip install -e ".[dev]"
 
-# Integrationstests (gegen Live-APIs)
-python tests/test_integration.py
+# Unit- + Validierungstests (kein Netzwerk)
+pytest tests/ -m "not live"
+
+# Live-Integrationstests (gegen Live-APIs — opt-in)
+pytest tests/ -m live
 
 # Linting
-ruff check src/
+ruff check src/ tests/
 ```
 
 ## Sicherheit & Grenzen
@@ -271,4 +296,4 @@ Alle genutzten Daten stehen unter offenen Lizenzen (CC0 / Open by Default seit 2
 
 ---
 
-*Powered by [Model Context Protocol](https://modelcontextprotocol.io/) • 6 APIs • 20 Tools • 6 Resources*
+*Powered by [Model Context Protocol](https://modelcontextprotocol.io/) • 6 APIs • 24 Tools • 5 Resources*
