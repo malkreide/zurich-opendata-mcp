@@ -17,6 +17,7 @@ from ..config import (
     VBZ_REISENDE_ID,
     WATER_MYTHENQUAI_ID,
     WATER_TIEFENBRUNNEN_ID,
+    WaterStation,
 )
 from ..formatters import handle_api_error, md_cell
 from ..http_client import ckan_request, http_get_json
@@ -99,7 +100,7 @@ class WeatherLiveInput(BaseModel):
         "title": "Aktuelle Wetterdaten Zürich",
         "readOnlyHint": True,
         "destructiveHint": False,
-        "idempotentHint": True,
+        "idempotentHint": False,
         "openWorldHint": True,
     },
 )
@@ -201,7 +202,7 @@ class AirQualityInput(BaseModel):
         "title": "Luftqualität Zürich (Echtzeit)",
         "readOnlyHint": True,
         "destructiveHint": False,
-        "idempotentHint": True,
+        "idempotentHint": False,
         "openWorldHint": True,
     },
 )
@@ -279,7 +280,7 @@ class WaterWeatherInput(BaseModel):
 
     model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
 
-    station: str = Field(
+    station: WaterStation = Field(
         default="tiefenbrunnen",
         description="Messstation: 'tiefenbrunnen' oder 'mythenquai'",
     )
@@ -292,7 +293,7 @@ class WaterWeatherInput(BaseModel):
         "title": "See-/Wasserwetter Zürich",
         "readOnlyHint": True,
         "destructiveHint": False,
-        "idempotentHint": True,
+        "idempotentHint": False,
         "openWorldHint": True,
     },
 )
@@ -307,8 +308,8 @@ async def zurich_water_weather(params: WaterWeatherInput) -> str:
         Aktuelle See-Messwerte mit Wasser- und Lufttemperatur, Wind, Pegel
     """
     try:
-        resource_id = WATER_TIEFENBRUNNEN_ID if "tiefen" in params.station.lower() else WATER_MYTHENQUAI_ID
-        station_name = "Tiefenbrunnen" if "tiefen" in params.station.lower() else "Mythenquai"
+        resource_id = WATER_TIEFENBRUNNEN_ID if params.station == "tiefenbrunnen" else WATER_MYTHENQUAI_ID
+        station_name = "Tiefenbrunnen" if params.station == "tiefenbrunnen" else "Mythenquai"
 
         result = await ckan_request(
             "datastore_search",
@@ -371,7 +372,7 @@ class PedestrianInput(BaseModel):
         "title": "Passantenfrequenzen Bahnhofstrasse",
         "readOnlyHint": True,
         "destructiveHint": False,
-        "idempotentHint": True,
+        "idempotentHint": False,
         "openWorldHint": True,
     },
 )
@@ -449,7 +450,7 @@ class VBZPassengersInput(BaseModel):
         "title": "VBZ Fahrgastzahlen",
         "readOnlyHint": True,
         "destructiveHint": False,
-        "idempotentHint": True,
+        "idempotentHint": False,
         "openWorldHint": True,
     },
 )

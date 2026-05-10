@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from importlib.metadata import PackageNotFoundError, version
+from typing import Literal
 
 CKAN_BASE_URL = "https://data.stadt-zuerich.ch"
 CKAN_API_URL = f"{CKAN_BASE_URL}/api/3/action"
@@ -113,3 +114,49 @@ STRB_DEPARTEMENTE = [
     "Stadtkanzlei (SKZ)",
     "Tiefbau- und Entsorgungsdepartement (TED)",
 ]
+
+# Literal aliases for Pydantic input models. Keep in sync with the runtime
+# lists/dicts above — a drift test in tests/test_server.py asserts equality.
+
+ZurichGroup = Literal[
+    "arbeit-und-erwerb",
+    "basiskarten",
+    "bauen-und-wohnen",
+    "bevolkerung",
+    "bildung",
+    "energie",
+    "finanzen",
+    "freizeit",
+    "gesundheit",
+    "kriminalitat",
+    "kultur",
+    "mobilitat",
+    "politik",
+    "preise",
+    "soziales",
+    "tourismus",
+    "umwelt",
+    "verwaltung",
+    "volkswirtschaft",
+]
+
+GeoLayerId = Literal[
+    "schulanlagen",
+    "schulkreise",
+    "schulwege",
+    "stadtkreise",
+    "spielplaetze",
+    "kreisbuero",
+    "sammelstelle",
+    "sport",
+    "klimadaten",
+    "lehrpfade",
+    "stimmlokale",
+    "sozialzentrum",
+    "velopruefstrecken",
+    "familienberatung",
+]
+
+WaterStation = Literal["tiefenbrunnen", "mythenquai"]
+TourismLanguage = Literal["de", "en", "fr", "it"]
+OutputFormat = Literal["markdown", "json"]

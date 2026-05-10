@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from ..app import mcp
 from ..clients.wfs import wfs_get_features
-from ..config import GEOPORTAL_LAYERS
+from ..config import GEOPORTAL_LAYERS, GeoLayerId
 from ..formatters import handle_api_error
 
 
@@ -48,10 +48,9 @@ class GeoFeaturesInput(BaseModel):
 
     model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
 
-    layer_id: str = Field(
+    layer_id: GeoLayerId = Field(
         ...,
         description=f"Layer-ID. Verfügbar: {', '.join(sorted(GEOPORTAL_LAYERS.keys()))}",
-        min_length=1,
     )
     max_features: int = Field(
         default=50,

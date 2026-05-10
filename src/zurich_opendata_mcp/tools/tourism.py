@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from ..app import mcp
 from ..clients.tourism import zt_get_data
-from ..config import ZT_CATEGORIES
+from ..config import ZT_CATEGORIES, TourismLanguage
 from ..formatters import handle_api_error
 
 
@@ -28,7 +28,7 @@ class TourismSearchInput(BaseModel):
         description="Optionaler Suchtext zur Filterung der Ergebnisse, z.B. 'Altstadt' oder 'vegan'",
     )
     max_results: int = Field(default=10, description="Maximale Anzahl Ergebnisse", ge=1, le=50)
-    language: str = Field(
+    language: TourismLanguage = Field(
         default="de",
         description="Sprache der Ergebnisse: 'de', 'en', 'fr', 'it'",
     )
