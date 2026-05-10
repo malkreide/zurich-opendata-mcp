@@ -5,12 +5,12 @@ from __future__ import annotations
 from typing import Any
 
 from ..config import SPARQL_URL, USER_AGENT
-from ..http_client import _get_client
+from ..http_client import get_client
 
 
 async def sparql_query(query: str) -> dict[str, Any]:
     """Execute a SPARQL query against the Zurich Linked Data endpoint."""
-    async with await _get_client() as client:
+    async with get_client() as client:
         response = await client.get(
             SPARQL_URL,
             params={"query": query},

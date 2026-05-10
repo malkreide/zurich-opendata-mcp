@@ -7,7 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Console-script entry point now targets `main()` instead of the bound
+  `mcp.run` method, so `zurich-opendata-mcp --http --port 8080` actually
+  takes effect when launched from the installed script. Closes audit L-1.
+
 ### Changed
+- Renamed `http_client._get_client` to `http_client.get_client` and made
+  it synchronous (it never awaited anything). Updated callers in
+  `clients/wfs.py`, `clients/sparql.py`, `clients/paris.py` and the
+  internal `ckan_request` / `http_get_json` helpers. Closes audit L-5/L-6.
+- `formatters.handle_api_error` now logs a warning (with traceback) at
+  the `zurich_opendata_mcp.formatters` logger before returning the
+  user-facing string, so silent upstream failures leave an audit trail
+  in stdio deployments. Closes audit L-7.
+- `clients/wfs.py`: documented why WFS 1.1.0 is pinned (the singular
+  `typename` parameter is rejected by 2.0.0; Stadt-Zürich Geoserver still
+  serves 1.1.0 layers under the names in `GEOPORTAL_LAYERS`). Closes L-17.
 - Tightened tool input schemas with `typing.Literal` so the JSON Schema
   exposed to MCP clients lists allowed values and Pydantic rejects typos
   at validation time (audit L-9 through L-13):

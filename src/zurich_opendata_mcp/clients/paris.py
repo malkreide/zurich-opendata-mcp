@@ -5,7 +5,7 @@ from __future__ import annotations
 import xml.etree.ElementTree as ET
 
 from ..config import PARIS_API_URL
-from ..http_client import _get_client
+from ..http_client import get_client
 
 
 async def paris_search(
@@ -22,7 +22,7 @@ async def paris_search(
         "s": str(start),
         "m": str(max_results),
     }
-    async with await _get_client() as client:
+    async with get_client() as client:
         response = await client.get(url, params=params, follow_redirects=True)
         response.raise_for_status()
         return ET.fromstring(response.content)

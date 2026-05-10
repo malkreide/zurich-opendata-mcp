@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 import httpx
 
 from .config import CKAN_BASE_URL
+
+logger = logging.getLogger(__name__)
 
 
 def format_dataset_summary(dataset: dict[str, Any]) -> str:
@@ -79,7 +82,15 @@ def md_cell(value: object) -> str:
 
 
 def handle_api_error(e: Exception, context: str = "") -> str:
-    """Consistent error formatting."""
+    """Consistent error formatting. Also logs the failure so stdio
+    deployments leave a trail when an upstream API hiccups."""
+    logger.warning(
+        "API error in %s: %s: %s",
+        context or "tool",
+        type(e).__name__,
+        e,
+        exc_info=True,
+    )
     prefix = f"Fehler bei {context}: " if context else "Fehler: "
     if isinstance(e, httpx.HTTPStatusError):
         status = e.response.status_code

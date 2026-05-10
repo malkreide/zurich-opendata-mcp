@@ -1,0 +1,22 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns:
+          - "*"
+    # When Dependabot opens its first PR for an action, it pins by SHA and
+    # adds the version as a trailing comment. Closes audit L-18 in a
+    # maintainable way (no manual SHA bookkeeping).
+
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      python-deps:
+        patterns:
+          - "*"

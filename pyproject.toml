@@ -47,7 +47,7 @@ dev = [
 ]
 
 [project.scripts]
-zurich-opendata-mcp = "zurich_opendata_mcp.server:mcp.run"
+zurich-opendata-mcp = "zurich_opendata_mcp.server:main"
 
 [project.urls]
 Homepage   = "https://github.com/malkreide/zurich-opendata-mcp"

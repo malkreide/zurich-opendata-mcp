@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from ..config import WFS_BASE_URL
-from ..http_client import _get_client
+from ..http_client import get_client
 
 
 async def wfs_get_features(
@@ -15,7 +15,12 @@ async def wfs_get_features(
     output_format: str = "GeoJSON",
     cql_filter: str | None = None,
 ) -> dict[str, Any]:
-    """Fetch features from the Zurich Geoportal WFS."""
+    """Fetch features from the Zurich Geoportal WFS.
+
+    Pinned to WFS 1.1.0: typename is a single value (WFS 2.0 expects the
+    plural ``typenames``), and the Stadt Zürich Geoserver still serves 1.1.0
+    layers under the names listed in ``GEOPORTAL_LAYERS``.
+    """
     url = f"{WFS_BASE_URL}/{service_name}"
     params: dict[str, str] = {
         "service": "WFS",
@@ -28,7 +33,7 @@ async def wfs_get_features(
     if cql_filter:
         params["CQL_FILTER"] = cql_filter
 
-    async with await _get_client() as client:
+    async with get_client() as client:
         response = await client.get(url, params=params)
         response.raise_for_status()
         return response.json()

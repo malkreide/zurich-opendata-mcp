@@ -512,6 +512,55 @@ def test_strb_format_rejects_unknown():
 # ─── idempotentHint consistency (audit follow-up) ────────────────────────────
 
 
+# ─── Code-hygiene fixes (audit L-1, L-5, L-6, L-7) ──────────────────────────
+
+
+def test_get_client_is_synchronous_and_public():
+    """L-5/L-6: helper is no longer underscore-prefixed and is no longer
+    `async` (it never awaited anything)."""
+    import inspect
+
+    from zurich_opendata_mcp import http_client
+
+    assert hasattr(http_client, "get_client")
+    assert not hasattr(http_client, "_get_client"), (
+        "Old name _get_client should have been removed."
+    )
+    assert not inspect.iscoroutinefunction(http_client.get_client), (
+        "get_client() should be a plain factory, not async."
+    )
+
+
+def test_handle_api_error_logs_warning(caplog):
+    """L-7: handle_api_error should leave a log record so stdio
+    deployments have an audit trail when an upstream API hiccups."""
+    import logging
+
+    from zurich_opendata_mcp.formatters import handle_api_error
+
+    with caplog.at_level(logging.WARNING, logger="zurich_opendata_mcp.formatters"):
+        result = handle_api_error(RuntimeError("upstream is down"), "Wetter")
+
+    assert "Fehler bei Wetter" in result
+    assert any(
+        "RuntimeError" in r.getMessage() and "Wetter" in r.getMessage()
+        for r in caplog.records
+    )
+
+
+def test_console_entry_point_targets_main():
+    """L-1: the console script needs to hit `main()` (which parses --http),
+    not the `mcp.run` bound method that bypasses CLI parsing."""
+    import tomllib
+    from pathlib import Path
+
+    cfg = tomllib.loads(Path("pyproject.toml").read_text())
+    entry = cfg["project"]["scripts"]["zurich-opendata-mcp"]
+    assert entry == "zurich_opendata_mcp.server:main", (
+        f"Entry point points at {entry!r}; should target main() so --http works."
+    )
+
+
 def test_live_data_tools_are_not_idempotent():
     """Tools that return upstream timestamps (weather, air, water,
     pedestrian, VBZ, parking) cannot satisfy the MCP idempotent contract
