@@ -439,6 +439,108 @@ def test_select_gate_rejects_empty():
 # ─── analyze_datasets parallelism (audit M-5) ────────────────────────────────
 
 
+# ─── Pydantic Literals — drift + rejection (audit L-9..L-13, M-?) ────────────
+
+
+def test_literal_zurich_group_matches_runtime_list():
+    from typing import get_args
+
+    from zurich_opendata_mcp.config import ZURICH_GROUPS, ZurichGroup
+
+    assert set(get_args(ZurichGroup)) == set(ZURICH_GROUPS), (
+        "ZurichGroup Literal drifted from ZURICH_GROUPS — keep them in sync."
+    )
+
+
+def test_literal_geo_layer_id_matches_runtime_dict():
+    from typing import get_args
+
+    from zurich_opendata_mcp.config import GEOPORTAL_LAYERS, GeoLayerId
+
+    assert set(get_args(GeoLayerId)) == set(GEOPORTAL_LAYERS.keys()), (
+        "GeoLayerId Literal drifted from GEOPORTAL_LAYERS — keep them in sync."
+    )
+
+
+def test_search_datasets_filter_group_rejects_unknown():
+    from zurich_opendata_mcp.tools.catalog import SearchDatasetsInput
+
+    SearchDatasetsInput(query="x", filter_group="bildung")  # ok
+    with pytest.raises(ValueError):
+        SearchDatasetsInput(query="x", filter_group="not-a-group")
+
+
+def test_geo_features_layer_id_rejects_unknown():
+    from zurich_opendata_mcp.tools.geo import GeoFeaturesInput
+
+    GeoFeaturesInput(layer_id="schulanlagen")  # ok
+    with pytest.raises(ValueError):
+        GeoFeaturesInput(layer_id="quartiere")  # never existed in code
+
+
+def test_water_weather_station_rejects_typo():
+    from zurich_opendata_mcp.tools.realtime import WaterWeatherInput
+
+    WaterWeatherInput(station="tiefenbrunnen")
+    WaterWeatherInput(station="mythenquai")
+    with pytest.raises(ValueError):
+        WaterWeatherInput(station="Tienfenbrunnen")  # typo silently mapped before
+
+
+def test_tourism_language_rejects_unknown():
+    from zurich_opendata_mcp.tools.tourism import TourismSearchInput
+
+    for lang in ("de", "en", "fr", "it"):
+        TourismSearchInput(category="restaurants", language=lang)
+    with pytest.raises(ValueError):
+        TourismSearchInput(category="restaurants", language="zh")
+
+
+def test_strb_format_rejects_unknown():
+    from zurich_opendata_mcp.tools.strb import (
+        BeschluesseDepartementInput,
+        SearchSTRBInput,
+    )
+
+    SearchSTRBInput(query="x", format="markdown")
+    SearchSTRBInput(query="x", format="json")
+    BeschluesseDepartementInput(departement="SSD", format="markdown")
+    with pytest.raises(ValueError):
+        SearchSTRBInput(query="x", format="xml")
+
+
+# ─── idempotentHint consistency (audit follow-up) ────────────────────────────
+
+
+def test_live_data_tools_are_not_idempotent():
+    """Tools that return upstream timestamps (weather, air, water,
+    pedestrian, VBZ, parking) cannot satisfy the MCP idempotent contract
+    (same input -> same output). They must declare idempotentHint=False."""
+    from zurich_opendata_mcp.app import mcp
+
+    expected_non_idempotent = {
+        "zurich_parking_live",
+        "zurich_weather_live",
+        "zurich_air_quality",
+        "zurich_water_weather",
+        "zurich_pedestrian_traffic",
+        "zurich_vbz_passengers",
+        "zurich_datastore_sql",
+    }
+    tools = mcp._tool_manager.list_tools()  # type: ignore[attr-defined]
+    by_name = {t.name: t for t in tools}
+    for name in expected_non_idempotent:
+        assert name in by_name, f"tool not registered: {name}"
+        annotations = getattr(by_name[name], "annotations", None) or {}
+        if hasattr(annotations, "idempotentHint"):
+            value = annotations.idempotentHint
+        else:
+            value = annotations.get("idempotentHint") if isinstance(annotations, dict) else None
+        assert value is False, (
+            f"{name}: idempotentHint={value!r} but tool returns live timestamps"
+        )
+
+
 async def test_analyze_datasets_does_not_call_package_show():
     """Audit M-5: the package_show fan-out per dataset has been removed.
     package_search already includes `resources`, and per-dataset

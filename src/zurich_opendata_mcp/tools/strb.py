@@ -7,7 +7,7 @@ import json
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..app import mcp
-from ..config import STRB_DEPARTEMENTE, STRB_RESOURCE_ID
+from ..config import STRB_DEPARTEMENTE, STRB_RESOURCE_ID, OutputFormat
 from ..formatters import handle_api_error
 from ..http_client import ckan_request
 
@@ -127,7 +127,7 @@ class SearchSTRBInput(BaseModel):
         ge=1,
         le=100,
     )
-    format: str | None = Field(
+    format: OutputFormat = Field(
         default="markdown",
         description="Ausgabeformat: 'markdown' (Standard, lesbar) oder 'json' (maschinenlesbar).",
     )
@@ -245,7 +245,7 @@ class BeschluesseDepartementInput(BaseModel):
         ge=1,
         le=200,
     )
-    format: str | None = Field(
+    format: OutputFormat = Field(
         default="markdown",
         description="Ausgabeformat: 'markdown' oder 'json'.",
     )

@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Tightened tool input schemas with `typing.Literal` so the JSON Schema
+  exposed to MCP clients lists allowed values and Pydantic rejects typos
+  at validation time (audit L-9 through L-13):
+  - `SearchDatasetsInput.filter_group` and `ListGroupInput.group_id` →
+    `ZurichGroup` (19 CKAN categories).
+  - `GeoFeaturesInput.layer_id` → `GeoLayerId` (14 WFS layers).
+  - `WaterWeatherInput.station` → `WaterStation`
+    (`tiefenbrunnen` / `mythenquai`); the old fuzzy
+    `if "tiefen" in station.lower()` lookup mapped typos like
+    `"Tienfenbrunnen"` to Mythenquai. Now rejected with a clear error.
+  - `TourismSearchInput.language` → `TourismLanguage`
+    (`de` / `en` / `fr` / `it`).
+  - `SearchSTRBInput.format` and `BeschluesseDepartementInput.format` →
+    `OutputFormat` (`markdown` / `json`); previously any non-`json` value
+    silently rendered Markdown.
+  Drift tests assert each Literal still matches its runtime list/dict.
+- Corrected `idempotentHint` on the five live-data tools that return
+  upstream timestamps (`zurich_weather_live`, `zurich_air_quality`,
+  `zurich_water_weather`, `zurich_pedestrian_traffic`,
+  `zurich_vbz_passengers`) — calling them twice with the same arguments
+  yields different rows, which contradicts the MCP idempotent contract.
+  Flipped from `True` → `False`. Behaviour is unchanged; clients with
+  caching/replay heuristics now get accurate hints.
+
 ### Fixed
 - `zurich_analyze_datasets` no longer issues a redundant `package_show`
   per dataset and runs the per-dataset `datastore_search` calls

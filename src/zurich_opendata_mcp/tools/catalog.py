@@ -7,7 +7,7 @@ import asyncio
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..app import mcp
-from ..config import CKAN_BASE_URL, ZURICH_GROUPS
+from ..config import CKAN_BASE_URL, ZURICH_GROUPS, ZurichGroup
 from ..formatters import format_dataset_summary, format_resource_info, handle_api_error
 from ..http_client import ckan_request
 
@@ -30,7 +30,7 @@ class SearchDatasetsInput(BaseModel):
         default=None,
         description="Sortierung, z.B. 'metadata_modified desc', 'title asc', 'score desc'",
     )
-    filter_group: str | None = Field(
+    filter_group: ZurichGroup | None = Field(
         default=None,
         description=f"Nach Kategorie filtern. Verfügbar: {', '.join(ZURICH_GROUPS)}",
     )
@@ -150,7 +150,7 @@ class ListGroupInput(BaseModel):
 
     model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
 
-    group_id: str | None = Field(
+    group_id: ZurichGroup | None = Field(
         default=None,
         description=f"Gruppen-ID für Details. Verfügbar: {', '.join(ZURICH_GROUPS)}. "
         "Wenn leer, werden alle Kategorien aufgelistet.",
