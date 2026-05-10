@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from importlib.metadata import PackageNotFoundError, version
+
 CKAN_BASE_URL = "https://data.stadt-zuerich.ch"
 CKAN_API_URL = f"{CKAN_BASE_URL}/api/3/action"
 PARKENDD_URL = "https://api.parkendd.de/Zuerich"
@@ -11,7 +13,16 @@ ZT_API_URL = "https://www.zuerich.com/en/api/v2/data"
 SPARQL_URL = "https://ld.stadt-zuerich.ch/query"
 
 REQUEST_TIMEOUT = 30.0
-USER_AGENT = "ZurichOpenDataMCP/0.3 (MCP Server; +https://github.com/schulamt-zurich)"
+
+try:
+    _PACKAGE_VERSION = version("zurich-opendata-mcp")
+except PackageNotFoundError:
+    _PACKAGE_VERSION = "0.0.0+local"
+
+USER_AGENT = (
+    f"ZurichOpenDataMCP/{_PACKAGE_VERSION} "
+    "(+https://github.com/malkreide/zurich-opendata-mcp)"
+)
 
 ZURICH_GROUPS = [
     "arbeit-und-erwerb",

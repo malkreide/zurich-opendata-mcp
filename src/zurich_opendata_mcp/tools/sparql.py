@@ -1,13 +1,18 @@
-"""SPARQL tool (currently disabled — endpoint not in production)."""
+"""SPARQL tool — currently disabled.
+
+The Linked-Data endpoint at ``ld.stadt-zuerich.ch`` is reachable but not yet
+populated with productive data. The tool is kept registered (so existing
+clients keep discovering it) but always returns a static notice. When the
+endpoint goes live, restore the implementation from git history (pre-Phase-3)
+and flip ``idempotentHint`` back to ``False``.
+"""
 
 from __future__ import annotations
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..app import mcp
-from ..clients.sparql import sparql_query
 from ..config import SPARQL_URL
-from ..formatters import handle_api_error
 
 
 class SparqlQueryInput(BaseModel):
@@ -34,8 +39,8 @@ class SparqlQueryInput(BaseModel):
         "title": "SPARQL-Abfrage (Linked Data)",
         "readOnlyHint": True,
         "destructiveHint": False,
-        "idempotentHint": False,
-        "openWorldHint": True,
+        "idempotentHint": True,
+        "openWorldHint": False,
     },
 )
 async def zurich_sparql(params: SparqlQueryInput) -> str:
@@ -56,50 +61,3 @@ async def zurich_sparql(params: SparqlQueryInput) -> str:
         "- `zurich_datastore_query` – Tabellarische Daten per Resource-UUID abfragen\n"
         "- `zurich_datastore_sql` – SQL-Abfragen auf DataStore-Ressourcen"
     )
-    # ── Original-Implementation (deaktiviert bis Endpunkt produktiv) ──
-    try:
-        # Safety: only allow SELECT queries
-        query_upper = params.query.strip().upper()
-        if not query_upper.startswith("SELECT") and not query_upper.startswith("PREFIX"):
-            return "Nur SELECT-Abfragen sind erlaubt."
-
-        result = await sparql_query(params.query)
-
-        variables = result.get("head", {}).get("vars", [])
-        bindings = result.get("results", {}).get("bindings", [])
-
-        if not bindings:
-            return "SPARQL-Abfrage lieferte keine Ergebnisse."
-
-        lines = [
-            "## SPARQL-Ergebnis",
-            f"**{len(bindings)} Zeilen**, Variablen: {', '.join(variables)}\n",
-        ]
-
-        # Format as markdown table
-        lines.append("| " + " | ".join(variables) + " |")
-        lines.append("| " + " | ".join("---" for _ in variables) + " |")
-
-        for binding in bindings[:100]:
-            row = []
-            for var in variables:
-                cell = binding.get(var, {})
-                value = cell.get("value", "")
-                # Shorten URIs for readability
-                if cell.get("type") == "uri" and "/" in value:
-                    short = value.rsplit("/", 1)[-1]
-                    if len(short) < 80:
-                        value = short
-                if len(value) > 100:
-                    value = value[:97] + "..."
-                row.append(value)
-            lines.append("| " + " | ".join(row) + " |")
-
-        if len(bindings) > 100:
-            lines.append(f"\n*Zeige 100 von {len(bindings)} Zeilen*")
-
-        lines.append(f"\n*Endpoint: {SPARQL_URL}*")
-        return "\n".join(lines)
-
-    except Exception as e:
-        return handle_api_error(e, "SPARQL-Abfrage")

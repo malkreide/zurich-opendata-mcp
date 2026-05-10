@@ -18,7 +18,7 @@ from ..config import (
     WATER_MYTHENQUAI_ID,
     WATER_TIEFENBRUNNEN_ID,
 )
-from ..formatters import handle_api_error
+from ..formatters import handle_api_error, md_cell
 from ..http_client import ckan_request, http_get_json
 
 
@@ -55,13 +55,13 @@ async def zurich_parking_live() -> str:
         ]
 
         for lot in sorted(lots, key=lambda x: x.get("name", "")):
-            name = lot.get("name", "?")
+            name = md_cell(lot.get("name", "?"))
             free = lot.get("free", 0)
             total = lot.get("total", 0)
             state = lot.get("state", "?")
             pct = round((1 - free / total) * 100) if total > 0 else 0
             status_icon = "🟢" if state == "open" else "🔴"
-            lines.append(f"| {name} | {free} | {total} | {pct}% | {status_icon} {state} |")
+            lines.append(f"| {name} | {free} | {total} | {pct}% | {status_icon} {md_cell(state)} |")
 
         lines.append(f"\n**Gesamt**: {len(lots)} Parkhäuser")
         return "\n".join(lines)
@@ -405,11 +405,11 @@ async def zurich_pedestrian_traffic(params: PedestrianInput) -> str:
         lines.append("| Zeitpunkt | Standort | Passanten | Temp. | Wetter |")
         lines.append("| --- | --- | ---: | ---: | --- |")
         for r in records:
-            ts = str(r.get("timestamp", "?"))[:16]
-            loc = str(r.get("location_name", "?"))
+            ts = md_cell(str(r.get("timestamp", "?"))[:16])
+            loc = md_cell(r.get("location_name", "?"))
             count = r.get("pedestrians_count", "?")
             temp = r.get("temperature", "?")
-            weather = str(r.get("weather_condition", "?"))
+            weather = md_cell(r.get("weather_condition", "?"))
             lines.append(f"| {ts} | {loc} | {count} | {temp}°C | {weather} |")
 
         lines.append("")

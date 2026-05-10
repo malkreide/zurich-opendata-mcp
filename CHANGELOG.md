@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- `USER_AGENT` is now sourced from `importlib.metadata.version()` instead of a
+  hard-coded string, and points at the correct repo URL
+  (`github.com/malkreide/zurich-opendata-mcp` — the previous
+  `github.com/schulamt-zurich` did not exist). Closes audit M-1 / L-4.
+- `tools/sparql.py`: removed ~50 lines of unreachable code after the disabled-
+  endpoint return; flipped `idempotentHint` to `True` (the function now
+  returns a constant) and `openWorldHint` to `False`. Behaviour for callers
+  is unchanged. Closes audit M-4.
+- `tools/realtime.py`: parking-lot names and pedestrian-traffic
+  `location_name` / `weather_condition` cells are now escaped via the new
+  `md_cell()` helper, so a `|` or newline in upstream data no longer breaks
+  the rendered Markdown table. Closes audit M-6.
+
+### Added
+- `formatters.md_cell()` — small helper that escapes `|` and collapses line
+  breaks for safe Markdown-table interpolation. Unit-tested in
+  `tests/test_server.py`.
+
 ### Documentation
 - Synced `README.md` and `README.de.md` with the post-refactor reality
   (audit findings M-2 / M-3 / L-14):

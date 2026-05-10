@@ -315,3 +315,67 @@ def test_strb_where_clause_empty_returns_true():
     from zurich_opendata_mcp.tools.strb import _strb_where_clause
 
     assert _strb_where_clause() == "TRUE"
+
+
+# ─── Markdown cell escaping (audit M-6) ──────────────────────────────────────
+
+
+def test_md_cell_escapes_pipe_and_newline():
+    from zurich_opendata_mcp.formatters import md_cell
+
+    assert md_cell("plain") == "plain"
+    assert md_cell("a|b") == "a\\|b"
+    assert md_cell("line1\nline2") == "line1 line2"
+    assert md_cell("line1\r\nline2") == "line1 line2"
+    assert md_cell("a\\b") == "a\\\\b"
+    # Stringifies non-strings.
+    assert md_cell(42) == "42"
+    assert md_cell(None) == "None"
+
+
+def test_md_cell_handles_real_world_breaks():
+    """Parking-lot names like 'Parkhaus | City' must not split the column."""
+    from zurich_opendata_mcp.formatters import md_cell
+
+    cell = md_cell("Parkhaus | City\nUntergeschoss")
+    assert "|" not in cell.replace("\\|", "")  # only escaped pipes survive
+    assert "\n" not in cell
+
+
+# ─── USER_AGENT format (audit M-1, L-4) ──────────────────────────────────────
+
+
+def test_user_agent_uses_real_repo_url():
+    from zurich_opendata_mcp.config import USER_AGENT
+
+    assert "schulamt-zurich" not in USER_AGENT
+    assert "github.com/malkreide/zurich-opendata-mcp" in USER_AGENT
+    assert USER_AGENT.startswith("ZurichOpenDataMCP/")
+
+
+def test_user_agent_version_matches_package():
+    """USER_AGENT version is sourced from importlib.metadata, not hard-coded."""
+    from importlib.metadata import PackageNotFoundError, version
+
+    from zurich_opendata_mcp.config import USER_AGENT
+
+    try:
+        expected = version("zurich-opendata-mcp")
+    except PackageNotFoundError:
+        expected = "0.0.0+local"
+    assert f"ZurichOpenDataMCP/{expected}" in USER_AGENT
+
+
+# ─── SPARQL tool is now constant (audit M-4) ─────────────────────────────────
+
+
+async def test_sparql_returns_disabled_notice_without_calling_endpoint():
+    from zurich_opendata_mcp.tools.sparql import SparqlQueryInput, zurich_sparql
+
+    result = await zurich_sparql(
+        SparqlQueryInput(query="SELECT * WHERE { ?s ?p ?o } LIMIT 1")
+    )
+    assert "nicht produktiv" in result
+    # The disabled notice should always cite the alternatives.
+    assert "zurich_search_datasets" in result
+    assert "zurich_datastore_query" in result

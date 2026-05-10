@@ -64,6 +64,20 @@ def format_resource_info(resource: dict[str, Any]) -> str:
     )
 
 
+def md_cell(value: object) -> str:
+    # Markdown table cells break on '|' and on line breaks. Upstream APIs
+    # (ParkenDD lot names, hystreet weather labels) occasionally return both,
+    # so escape pipes and collapse whitespace before interpolating.
+    return (
+        str(value)
+        .replace("\\", "\\\\")
+        .replace("|", "\\|")
+        .replace("\r\n", " ")
+        .replace("\n", " ")
+        .replace("\r", " ")
+    )
+
+
 def handle_api_error(e: Exception, context: str = "") -> str:
     """Consistent error formatting."""
     prefix = f"Fehler bei {context}: " if context else "Fehler: "
