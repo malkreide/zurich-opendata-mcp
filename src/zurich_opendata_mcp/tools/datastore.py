@@ -4,11 +4,35 @@ from __future__ import annotations
 
 import json
 
+import sqlparse
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..app import mcp
 from ..formatters import handle_api_error
 from ..http_client import ckan_request
+
+
+def _validate_select_only(sql: str) -> str | None:
+    # Defense-in-depth gate: CKAN's datastore_search_sql role is read-only,
+    # but we still want a friendly client-side error and to refuse stacked
+    # statements (`SELECT 1; DROP TABLE foo`) and non-read DDL/DML up front.
+    # sqlparse handles quoted strings, comments, and CTEs (`WITH … SELECT`
+    # is reported as type "SELECT").
+    statements = [s for s in sqlparse.parse(sql) if str(s).strip()]
+    if not statements:
+        return "Fehler: SQL-Abfrage ist leer."
+    if len(statements) > 1:
+        return (
+            "Fehler: Nur einzelne Statements sind erlaubt. "
+            "Mehrere durch ';' getrennte Anweisungen werden nicht akzeptiert."
+        )
+    if statements[0].get_type() != "SELECT":
+        return (
+            "Fehler: Nur SELECT-Abfragen sind erlaubt (CTEs mit WITH … SELECT "
+            "ebenfalls). DROP, INSERT, UPDATE, DELETE und andere Statements "
+            "sind nicht gestattet."
+        )
+    return None
 
 
 class DatastoreQueryInput(BaseModel):
@@ -143,11 +167,9 @@ async def zurich_datastore_sql(params: DatastoreSqlInput) -> str:
         JSON-Ergebnisse der SQL-Abfrage
     """
     try:
-        if not params.sql.strip().upper().startswith("SELECT"):
-            return (
-                "Fehler: Nur SELECT-Abfragen sind erlaubt. "
-                "DROP, INSERT, UPDATE, DELETE und andere Statements sind nicht gestattet."
-            )
+        validation_error = _validate_select_only(params.sql)
+        if validation_error:
+            return validation_error
 
         result = await ckan_request("datastore_search_sql", {"sql": params.sql})
         records = result.get("records", [])

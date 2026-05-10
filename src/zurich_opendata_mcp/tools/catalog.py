@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..app import mcp
@@ -292,7 +294,6 @@ async def zurich_analyze_datasets(params: AnalyzeDatasetInput) -> str:
         Umfassender Analyse-Report mit Relevanz, Aktualität und Struktur
     """
     try:
-        # Search
         result = await ckan_request(
             "package_search",
             {
@@ -307,32 +308,55 @@ async def zurich_analyze_datasets(params: AnalyzeDatasetInput) -> str:
         if not datasets:
             return f"Keine Datensätze gefunden für '{params.query}'."
 
+        # Pre-fetch per-dataset DataStore field info concurrently to avoid the
+        # original N+1 fan-out (one sequential datastore_search per dataset).
+        # The package_search response already contains `resources`, so the
+        # extra package_show call has been removed.
+        fields_per_ds: list[tuple[list[dict], int] | None]
+        if params.include_structure:
+            sem = asyncio.Semaphore(5)
+
+            async def _fetch_first_datastore_fields(
+                resources: list[dict],
+            ) -> tuple[list[dict], int] | None:
+                for res in resources:
+                    if not res.get("datastore_active"):
+                        continue
+                    async with sem:
+                        try:
+                            info = await ckan_request(
+                                "datastore_search",
+                                {"resource_id": res["id"], "limit": 0},
+                            )
+                        except Exception:
+                            return None
+                    return info.get("fields", []), info.get("total", 0)
+                return None
+
+            fields_per_ds = await asyncio.gather(
+                *(_fetch_first_datastore_fields(ds.get("resources") or []) for ds in datasets)
+            )
+        else:
+            fields_per_ds = [None] * len(datasets)
+
         lines = [
             f"## Analyse: '{params.query}'",
             f"**{total} Datensätze gefunden**, Top {len(datasets)} analysiert:\n",
         ]
 
-        for i, ds in enumerate(datasets, 1):
+        for i, (ds, fields_info) in enumerate(zip(datasets, fields_per_ds), 1):
             name = ds.get("name", "")
             title = ds.get("title", "?")
             modified = ds.get("metadata_modified", "?")[:10]
             interval = ds.get("updateInterval", ["unbekannt"])
-
-            # Fetch full resource details via package_show
-            try:
-                full_ds = await ckan_request("package_show", {"id": name})
-                resources = full_ds.get("resources", [])
-            except Exception:
-                resources = ds.get("resources", [])
-
-            formats = sorted(set(r.get("format", "?") for r in resources))
+            resources = ds.get("resources") or []
+            formats = sorted({r.get("format", "?") for r in resources})
 
             lines.append(f"### {i}. {title}")
             lines.append(f"- **ID**: `{name}`")
             lines.append(f"- **Formate**: {', '.join(formats)}")
             lines.append(f"- **Ressourcen**: {len(resources)}")
 
-            # List all resource UUIDs so downstream tools can use them
             for res in resources:
                 res_id = res.get("id", "")
                 res_name = res.get("name", "Unbenannt")
@@ -344,28 +368,17 @@ async def zurich_analyze_datasets(params: AnalyzeDatasetInput) -> str:
                 lines.append(f"- **Letzte Änderung**: {modified}")
                 lines.append(f"- **Aktualisierung**: {', '.join(interval)}")
 
-            if params.include_structure:
-                # Try to get field info from first datastore resource
-                for res in resources:
-                    if res.get("datastore_active"):
-                        try:
-                            ds_info = await ckan_request(
-                                "datastore_search",
-                                {
-                                    "resource_id": res["id"],
-                                    "limit": 0,
-                                },
-                            )
-                            fields = ds_info.get("fields", [])
-                            total_records = ds_info.get("total", 0)
-                            field_list = [f"`{f['id']}` ({f.get('type', '?')})" for f in fields if f["id"] != "_id"]
-                            lines.append(f"- **DataStore-Einträge**: {total_records:,}")
-                            lines.append(f"- **Felder**: {', '.join(field_list[:15])}")
-                            if len(field_list) > 15:
-                                lines.append(f"  *(und {len(field_list) - 15} weitere)*")
-                            break
-                        except Exception:
-                            pass
+            if params.include_structure and fields_info is not None:
+                fields, total_records = fields_info
+                field_list = [
+                    f"`{f['id']}` ({f.get('type', '?')})"
+                    for f in fields
+                    if f["id"] != "_id"
+                ]
+                lines.append(f"- **DataStore-Einträge**: {total_records:,}")
+                lines.append(f"- **Felder**: {', '.join(field_list[:15])}")
+                if len(field_list) > 15:
+                    lines.append(f"  *(und {len(field_list) - 15} weitere)*")
 
             lines.append(f"- **URL**: {CKAN_BASE_URL}/dataset/{name}\n")
 

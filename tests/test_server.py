@@ -379,3 +379,142 @@ async def test_sparql_returns_disabled_notice_without_calling_endpoint():
     # The disabled notice should always cite the alternatives.
     assert "zurich_search_datasets" in result
     assert "zurich_datastore_query" in result
+
+
+# ─── datastore_sql SELECT-only gate (audit M-8) ──────────────────────────────
+
+
+def test_select_gate_accepts_plain_select():
+    from zurich_opendata_mcp.tools.datastore import _validate_select_only
+
+    assert _validate_select_only('SELECT * FROM "abc" LIMIT 10') is None
+    assert _validate_select_only("  select 1  ") is None  # leading ws + lowercase
+
+
+def test_select_gate_accepts_cte_with_clause():
+    from zurich_opendata_mcp.tools.datastore import _validate_select_only
+
+    assert _validate_select_only(
+        'WITH counts AS (SELECT "Jahr" AS y, COUNT(*) AS c FROM "abc" GROUP BY 1) '
+        "SELECT * FROM counts ORDER BY c DESC"
+    ) is None
+
+
+def test_select_gate_rejects_stacked_statements():
+    from zurich_opendata_mcp.tools.datastore import _validate_select_only
+
+    err = _validate_select_only("SELECT 1; DROP TABLE foo")
+    assert err is not None
+    assert "einzelne Statements" in err
+
+
+def test_select_gate_rejects_drop():
+    from zurich_opendata_mcp.tools.datastore import _validate_select_only
+
+    err = _validate_select_only('DROP TABLE "abc"')
+    assert err is not None
+    assert "Nur SELECT" in err
+
+
+def test_select_gate_rejects_insert_update_delete():
+    from zurich_opendata_mcp.tools.datastore import _validate_select_only
+
+    for stmt in [
+        'INSERT INTO "abc" VALUES (1)',
+        'UPDATE "abc" SET x = 1',
+        'DELETE FROM "abc"',
+    ]:
+        err = _validate_select_only(stmt)
+        assert err is not None, f"should have rejected: {stmt}"
+
+
+def test_select_gate_rejects_empty():
+    from zurich_opendata_mcp.tools.datastore import _validate_select_only
+
+    err = _validate_select_only("   ")
+    assert err is not None
+    assert "leer" in err
+
+
+# ─── analyze_datasets parallelism (audit M-5) ────────────────────────────────
+
+
+async def test_analyze_datasets_does_not_call_package_show():
+    """Audit M-5: the package_show fan-out per dataset has been removed.
+    package_search already includes `resources`, and per-dataset
+    datastore_search calls now run concurrently via asyncio.gather."""
+    import zurich_opendata_mcp.http_client as http_client_module
+    from zurich_opendata_mcp.tools.catalog import (
+        AnalyzeDatasetInput,
+        zurich_analyze_datasets,
+    )
+
+    calls: list[tuple[str, dict]] = []
+
+    async def fake_ckan(action, params=None):
+        calls.append((action, params or {}))
+        if action == "package_search":
+            return {
+                "count": 2,
+                "results": [
+                    {
+                        "name": "ds-1",
+                        "title": "Dataset 1",
+                        "metadata_modified": "2026-01-01T00:00:00",
+                        "updateInterval": ["jährlich"],
+                        "resources": [
+                            {
+                                "id": "res-1",
+                                "name": "Resource 1",
+                                "format": "CSV",
+                                "datastore_active": True,
+                            }
+                        ],
+                    },
+                    {
+                        "name": "ds-2",
+                        "title": "Dataset 2",
+                        "metadata_modified": "2026-02-01T00:00:00",
+                        "updateInterval": ["monatlich"],
+                        "resources": [
+                            {
+                                "id": "res-2",
+                                "name": "Resource 2",
+                                "format": "JSON",
+                                "datastore_active": False,
+                            }
+                        ],
+                    },
+                ],
+            }
+        if action == "datastore_search":
+            return {
+                "fields": [
+                    {"id": "_id", "type": "int"},
+                    {"id": "Jahr", "type": "int"},
+                ],
+                "total": 100,
+            }
+        raise AssertionError(f"unexpected ckan_request action: {action}")
+
+    original = http_client_module.ckan_request
+    http_client_module.ckan_request = fake_ckan
+    # Patch the symbol that was imported at module load time too.
+    import zurich_opendata_mcp.tools.catalog as catalog_module
+    catalog_module.ckan_request = fake_ckan
+    try:
+        result = await zurich_analyze_datasets(
+            AnalyzeDatasetInput(query="x", max_datasets=2, include_structure=True)
+        )
+    finally:
+        http_client_module.ckan_request = original
+        catalog_module.ckan_request = original
+
+    actions = [c[0] for c in calls]
+    assert actions.count("package_show") == 0, "M-5: package_show must not be called"
+    assert actions.count("package_search") == 1
+    # Only the datastore-active resource (res-1) triggers a datastore_search.
+    assert actions.count("datastore_search") == 1
+    assert "Dataset 1" in result
+    assert "Dataset 2" in result
+    assert "DataStore-Einträge" in result  # field info rendered for ds-1

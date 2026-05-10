@@ -7,7 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- `zurich_analyze_datasets` no longer issues a redundant `package_show`
+  per dataset and runs the per-dataset `datastore_search` calls
+  concurrently (`asyncio.gather` with a `Semaphore(5)` cap). For
+  `max_datasets=20` this drops worst-case CKAN traffic from ~41 sequential
+  requests to 1 + up to 20 parallel. Closes audit M-5.
+- `zurich_datastore_sql`'s SELECT-only gate now uses `sqlparse`:
+  multi-statement payloads (`SELECT 1; DROP TABLE foo`) are rejected up
+  front, and CTEs (`WITH … SELECT …`) — previously misclassified as
+  non-SELECT — are now accepted. Closes audit M-8.
+
 ### Changed
+- `sqlparse>=0.4` added as a runtime dependency for the SELECT gate.
 - `USER_AGENT` is now sourced from `importlib.metadata.version()` instead of a
   hard-coded string, and points at the correct repo URL
   (`github.com/malkreide/zurich-opendata-mcp` — the previous
