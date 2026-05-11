@@ -8,6 +8,14 @@ from ..config import PARIS_API_URL
 from ..http_client import get_client
 
 
+def cql_escape(value: str) -> str:
+    # CQL string literals are wrapped in double quotes; escape backslashes
+    # first (so the new escapes we add are not double-escaped) and then
+    # double quotes. Without this, payloads like 'foo" OR Titel any "bar'
+    # break out of the literal and append a second predicate.
+    return value.replace("\\", "\\\\").replace('"', '\\"')
+
+
 async def paris_search(
     index: str,
     cql_query: str,

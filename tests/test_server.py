@@ -590,6 +590,103 @@ def test_live_data_tools_are_not_idempotent():
         )
 
 
+# ─── Paris CQL injection regression (audit rerun H-2) ────────────────────────
+
+
+def test_cql_escape_doubles_quotes_and_backslashes():
+    from zurich_opendata_mcp.clients.paris import cql_escape
+
+    assert cql_escape("foo") == "foo"
+    assert cql_escape('o"brien') == 'o\\"brien'
+    assert cql_escape('" OR Titel any "x') == '\\" OR Titel any \\"x'
+    assert cql_escape("a\\b") == "a\\\\b"
+    assert cql_escape('a\\"b') == 'a\\\\\\"b'
+
+
+def test_geschaeft_cql_neutralises_quote_injection():
+    """The injection payload's quotes are doubled, so the malicious
+    `OR Titel any "bar` text ends up inside the literal — searched for as
+    plain text rather than parsed as a CQL clause."""
+    from zurich_opendata_mcp.tools.parliament import _build_geschaeft_cql
+
+    cql = _build_geschaeft_cql(query='foo" OR Titel any "bar')
+
+    # No structural AND was injected (only the sortBy suffix is appended).
+    assert " AND " not in cql
+    # Exact structural equality — payload sits inside the escaped literal.
+    assert cql == (
+        'Titel any "foo\\" OR Titel any \\"bar"'
+        " sortBy beginn_start/sort.descending"
+    )
+
+
+def test_geschaeft_cql_escapes_department():
+    from zurich_opendata_mcp.tools.parliament import _build_geschaeft_cql
+
+    cql = _build_geschaeft_cql(query="x", department='SSD" OR Titel any "y')
+    # Exactly one structural AND (between the two intended predicates).
+    assert cql.count(" AND ") == 1
+    assert cql == (
+        'Titel any "x" AND '
+        'Departement any "SSD\\" OR Titel any \\"y"'
+        " sortBy beginn_start/sort.descending"
+    )
+
+
+def test_geschaeft_cql_dates_pass_through():
+    from zurich_opendata_mcp.tools.parliament import _build_geschaeft_cql
+
+    cql = _build_geschaeft_cql(query="Schule", year_from=2024, year_to=2025)
+    assert 'beginn_start > "2024-01-01 00:00:00"' in cql
+    assert 'beginn_start < "2026-01-01 00:00:00"' in cql
+    assert "sortBy beginn_start/sort.descending" in cql
+
+
+def test_behoerdenmandat_cql_neutralises_commission_injection():
+    from zurich_opendata_mcp.tools.parliament import _build_behoerdenmandat_cql
+
+    cql = _build_behoerdenmandat_cql(commission='GPK" OR gremium any "RPK')
+    # Exactly one structural AND (between the commission predicate and the
+    # active-only sentinel). Payload sits inside the escaped literal.
+    assert cql.count(" AND ") == 1
+    assert cql == (
+        'gremium any "GPK\\" OR gremium any \\"RPK"'
+        ' AND Dauer_end > "9999-12-31 00:00:00"'
+    )
+
+
+def test_behoerdenmandat_cql_escapes_name():
+    from zurich_opendata_mcp.tools.parliament import _build_behoerdenmandat_cql
+
+    cql = _build_behoerdenmandat_cql(commission="GPK", name='X" OR Name any "Y')
+    # Exactly two structural ANDs (commission, sentinel, name).
+    assert cql.count(" AND ") == 2
+    assert cql == (
+        'gremium any "GPK"'
+        ' AND Dauer_end > "9999-12-31 00:00:00"'
+        ' AND Name any "X\\" OR Name any \\"Y"'
+    )
+
+
+def test_kontakt_cql_escapes_name_and_party():
+    from zurich_opendata_mcp.tools.parliament import _build_kontakt_cql
+
+    cql = _build_kontakt_cql(
+        name='Marti" OR NameVorname any "X',
+        party='SP" OR Partei any "FDP',
+    )
+    assert 'NameVorname any "Marti\\" OR NameVorname any \\"X"' in cql
+    assert 'Partei any "SP\\" OR Partei any \\"FDP"' in cql
+
+
+def test_kontakt_cql_active_only_default():
+    from zurich_opendata_mcp.tools.parliament import _build_kontakt_cql
+
+    # Empty input should still produce the active-only filter, not an empty CQL.
+    cql = _build_kontakt_cql()
+    assert cql == 'AktivesRatsmitglied = "true"'
+
+
 async def test_analyze_datasets_does_not_call_package_show():
     """Audit M-5: the package_show fan-out per dataset has been removed.
     package_search already includes `resources`, and per-dataset

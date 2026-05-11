@@ -5,9 +5,63 @@ from __future__ import annotations
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..app import mcp
-from ..clients.paris import paris_extract_text, paris_get_num_hits, paris_search
+from ..clients.paris import (
+    cql_escape,
+    paris_extract_text,
+    paris_get_num_hits,
+    paris_search,
+)
 from ..config import PARIS_NAMESPACES
 from ..formatters import handle_api_error
+
+
+def _build_geschaeft_cql(
+    query: str,
+    year_from: int | None = None,
+    year_to: int | None = None,
+    department: str | None = None,
+) -> str:
+    # year_* are int-validated by Pydantic and cannot inject; the string
+    # fields go through cql_escape() to neutralise quote-closing payloads.
+    cql_parts = [f'Titel any "{cql_escape(query)}"']
+    if year_from:
+        cql_parts.append(f'beginn_start > "{year_from}-01-01 00:00:00"')
+    if year_to:
+        cql_parts.append(f'beginn_start < "{year_to + 1}-01-01 00:00:00"')
+    if department:
+        cql_parts.append(f'Departement any "{cql_escape(department)}"')
+    return " AND ".join(cql_parts) + " sortBy beginn_start/sort.descending"
+
+
+def _build_behoerdenmandat_cql(
+    commission: str,
+    active_only: bool = True,
+    name: str | None = None,
+) -> str:
+    cql_parts = [f'gremium any "{cql_escape(commission)}"']
+    if active_only:
+        # Paris-API idiom for "no end date set" — sentinel literal, no escape needed.
+        cql_parts.append('Dauer_end > "9999-12-31 00:00:00"')
+    if name:
+        cql_parts.append(f'Name any "{cql_escape(name)}"')
+    return " AND ".join(cql_parts)
+
+
+def _build_kontakt_cql(
+    name: str | None = None,
+    party: str | None = None,
+    active_only: bool = True,
+) -> str:
+    cql_parts: list[str] = []
+    if name:
+        cql_parts.append(f'NameVorname any "{cql_escape(name)}"')
+    if party:
+        cql_parts.append(f'Partei any "{cql_escape(party)}"')
+    if active_only:
+        cql_parts.append('AktivesRatsmitglied = "true"')
+    if not cql_parts:
+        cql_parts.append('AktivesRatsmitglied = "true"')
+    return " AND ".join(cql_parts)
 
 
 class ParliamentSearchInput(BaseModel):
@@ -66,16 +120,12 @@ async def zurich_parliament_search(params: ParliamentSearchInput) -> str:
         Markdown-Liste der gefundenen Gemeinderatsgeschäfte
     """
     try:
-        # Build CQL query
-        cql_parts = [f'Titel any "{params.query}"']
-        if params.year_from:
-            cql_parts.append(f'beginn_start > "{params.year_from}-01-01 00:00:00"')
-        if params.year_to:
-            cql_parts.append(f'beginn_start < "{params.year_to + 1}-01-01 00:00:00"')
-        if params.department:
-            cql_parts.append(f'Departement any "{params.department}"')
-
-        cql = " AND ".join(cql_parts) + " sortBy beginn_start/sort.descending"
+        cql = _build_geschaeft_cql(
+            query=params.query,
+            year_from=params.year_from,
+            year_to=params.year_to,
+            department=params.department,
+        )
 
         root = await paris_search("geschaeft", cql, max_results=params.max_results)
         num_hits = paris_get_num_hits(root)
@@ -185,12 +235,11 @@ async def zurich_parliament_members(params: ParliamentMembersInput) -> str:
 
         if params.commission:
             # Search via Behoerdenmandat index for commission members
-            cql_parts = [f'gremium any "{params.commission}"']
-            if params.active_only:
-                cql_parts.append('Dauer_end > "9999-12-31 00:00:00"')
-            if params.name:
-                cql_parts.append(f'Name any "{params.name}"')
-            cql = " AND ".join(cql_parts)
+            cql = _build_behoerdenmandat_cql(
+                commission=params.commission,
+                active_only=params.active_only,
+                name=params.name,
+            )
 
             root = await paris_search("behoerdenmandat", cql, max_results=params.max_results)
             num_hits = paris_get_num_hits(root)
@@ -227,18 +276,11 @@ async def zurich_parliament_members(params: ParliamentMembersInput) -> str:
 
         else:
             # Search via Kontakt index
-            cql_parts = []
-            if params.name:
-                cql_parts.append(f'NameVorname any "{params.name}"')
-            if params.party:
-                cql_parts.append(f'Partei any "{params.party}"')
-            if params.active_only:
-                cql_parts.append('AktivesRatsmitglied = "true"')
-
-            if not cql_parts:
-                cql_parts.append('AktivesRatsmitglied = "true"')
-
-            cql = " AND ".join(cql_parts)
+            cql = _build_kontakt_cql(
+                name=params.name,
+                party=params.party,
+                active_only=params.active_only,
+            )
 
             root = await paris_search("kontakt", cql, max_results=params.max_results)
             num_hits = paris_get_num_hits(root)

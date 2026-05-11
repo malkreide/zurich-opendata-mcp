@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+- Fixed CQL-injection in `tools/parliament.py` (audit rerun finding H-2).
+  Six f-string interpolations into Paris-API CQL queries
+  (`zurich_parliament_search`, `zurich_parliament_members`) were missing
+  escaping. Quote-closing payloads such as `query='foo" OR Titel any "bar'`
+  produced two predicates instead of one. Now neutralised by a small
+  `cql_escape()` helper in `clients/paris.py` (escapes `\` then `"` for
+  CQL string literals); int-typed `year_from`/`year_to` continue to bypass
+  escaping because Pydantic bounds them to safe ranges. Inline CQL
+  building was extracted into `_build_geschaeft_cql`,
+  `_build_behoerdenmandat_cql`, and `_build_kontakt_cql` so the escaping
+  is unit-testable. 8 regression tests added.
+
 ### Fixed
 - Console-script entry point now targets `main()` instead of the bound
   `mcp.run` method, so `zurich-opendata-mcp --http --port 8080` actually
