@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Bumped runtime and dev-dependency floors in `pyproject.toml` (#17,
+  Dependabot grouped update): `mcp[cli]>=1.27.1`, `httpx>=0.28.1`,
+  `pydantic>=2.13.4`, `uvicorn>=0.46.0`, `sqlparse>=0.5.5` (picks up
+  CVE-2024-4340 fix), and dev tools `pytest>=9.0.3`,
+  `pytest-asyncio>=1.3.0`, `pytest-cov>=7.1.0`, `respx>=0.23.1`,
+  `ruff>=0.15.12`. CI green on Python 3.11 / 3.12 / 3.13.
+
 ## [0.3.0] - 2026-05-11
 
 This release closes every finding from the
