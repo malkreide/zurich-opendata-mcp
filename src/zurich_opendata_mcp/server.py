@@ -92,14 +92,52 @@ from .tools.strb import (  # noqa: F401
 from .tools.tourism import TourismSearchInput, zurich_tourism  # noqa: F401
 
 
+def _port(value: str) -> int:
+    p = int(value)
+    if not 1 <= p <= 65535:
+        import argparse
+        raise argparse.ArgumentTypeError(f"port must be in 1..65535, got {p}")
+    return p
+
+
+def _parse_args(argv: list[str] | None = None):
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        prog="zurich-opendata-mcp",
+        description="Zurich Open Data MCP Server (stdio by default).",
+    )
+    parser.add_argument(
+        "--http",
+        action="store_true",
+        help="Run over Streamable HTTP instead of stdio.",
+    )
+    parser.add_argument(
+        "--port",
+        type=_port,
+        default=8000,
+        help="HTTP port (1-65535, default: 8000; only used with --http).",
+    )
+    return parser.parse_args(argv)
+
+
 def main() -> None:
     """Console entry point."""
+    import logging
+    import os
     import sys
 
-    if "--http" in sys.argv:
-        port_idx = sys.argv.index("--port") + 1 if "--port" in sys.argv else None
-        port = int(sys.argv[port_idx]) if port_idx else 8000
-        mcp.run(transport="streamable-http", port=port)
+    # Logs go to stderr so they don't collide with the MCP stdio framing on
+    # stdout. Level can be overridden via ZURICH_OPENDATA_LOG_LEVEL.
+    logging.basicConfig(
+        level=os.environ.get("ZURICH_OPENDATA_LOG_LEVEL", "WARNING").upper(),
+        stream=sys.stderr,
+        format="%(asctime)s %(name)s [%(levelname)s] %(message)s",
+    )
+
+    args = _parse_args()
+    if args.http:
+        mcp.run(transport="streamable-http", port=args.port)
     else:
         mcp.run()
 

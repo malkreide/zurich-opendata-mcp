@@ -561,6 +561,52 @@ def test_console_entry_point_targets_main():
     )
 
 
+# ─── argparse port validation (rerun L-B) ────────────────────────────────────
+
+
+def test_parse_args_default_is_stdio():
+    from zurich_opendata_mcp.server import _parse_args
+
+    args = _parse_args([])
+    assert args.http is False
+    assert args.port == 8000
+
+
+def test_parse_args_http_with_port():
+    from zurich_opendata_mcp.server import _parse_args
+
+    args = _parse_args(["--http", "--port", "9000"])
+    assert args.http is True
+    assert args.port == 9000
+
+
+def test_parse_args_rejects_non_numeric_port():
+    from zurich_opendata_mcp.server import _parse_args
+
+    with pytest.raises(SystemExit):
+        _parse_args(["--http", "--port", "abc"])
+
+
+def test_parse_args_rejects_out_of_range_port():
+    from zurich_opendata_mcp.server import _parse_args
+
+    with pytest.raises(SystemExit):
+        _parse_args(["--http", "--port", "0"])
+    with pytest.raises(SystemExit):
+        _parse_args(["--http", "--port", "65536"])
+    with pytest.raises(SystemExit):
+        _parse_args(["--http", "--port", "-1"])
+
+
+def test_parse_args_rejects_missing_port_value():
+    """argparse rejects `--port` with no value as opposed to silently
+    indexing past the end of argv."""
+    from zurich_opendata_mcp.server import _parse_args
+
+    with pytest.raises(SystemExit):
+        _parse_args(["--http", "--port"])
+
+
 def test_live_data_tools_are_not_idempotent():
     """Tools that return upstream timestamps (weather, air, water,
     pedestrian, VBZ, parking) cannot satisfy the MCP idempotent contract

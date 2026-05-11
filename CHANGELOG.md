@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- `server.main()` now uses `argparse` instead of hand-rolled `sys.argv`
+  parsing. `--port abc`, `--port 0`, `--port 65536` and a bare `--port`
+  with no value now fail with a clean usage message instead of
+  `ValueError` / `IndexError`. `--help` is auto-generated. Closes audit
+  rerun L-B.
+- Removed unreachable runtime layer-id check in `tools/geo.py` — Pydantic
+  `Literal` enforcement (#14) supersedes it; the branch was lowering
+  coverage for nothing. Closes audit rerun L-A.
+
+### Changed
+- `server.main()` now calls `logging.basicConfig(stream=stderr)` so the
+  `WARNING` records emitted by `formatters.handle_api_error` actually
+  surface in stdio deployments (stdout is reserved for MCP framing).
+  Level can be overridden via `ZURICH_OPENDATA_LOG_LEVEL`. Closes audit
+  rerun L-C.
+
 ### Security
 - Fixed CQL-injection in `tools/parliament.py` (audit rerun finding H-2).
   Six f-string interpolations into Paris-API CQL queries

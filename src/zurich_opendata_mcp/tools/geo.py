@@ -88,10 +88,9 @@ async def zurich_geo_features(params: GeoFeaturesInput) -> str:
         GeoJSON FeatureCollection mit Features und ihren Eigenschaften
     """
     try:
-        if params.layer_id not in GEOPORTAL_LAYERS:
-            available = ", ".join(sorted(GEOPORTAL_LAYERS.keys()))
-            return f"Unbekannter Layer `{params.layer_id}`. Verfügbar: {available}"
-
+        # `layer_id` is a `Literal` matching GEOPORTAL_LAYERS.keys() (enforced
+        # by Pydantic at validation time + a drift test in test_server.py),
+        # so a missing key here would be a programming error, not user input.
         service_name, typename, description = GEOPORTAL_LAYERS[params.layer_id]
 
         geojson = await wfs_get_features(
