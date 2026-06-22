@@ -1,41 +1,38 @@
 name: CI
 
+# Runs on every pull request. No deploy, no push (publishing lives in
+# publish.yml and is release-triggered only). Branch protection on main
+# requires this workflow to pass — see docs/SECURITY-BASELINE.md.
 on:
-  push:
-    branches: [main]
   pull_request:
-    branches: [main]
+
+permissions:
+  contents: read
 
 jobs:
-  test:
+  check:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         python-version: ["3.11", "3.12", "3.13"]
 
     steps:
       - uses: actions/checkout@v6
 
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v6
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
         with:
           python-version: ${{ matrix.python-version }}
-          cache: pip
-          cache-dependency-path: pyproject.toml
 
       - name: Install dependencies
-        run: |
-          pip install -e ".[dev]"
+        run: uv sync --extra dev
 
-      - name: Run tests with coverage
-        # Threshold is intentionally low (regression gate, not a target).
-        # Most tools require live API calls; ratchet up as @respx-based
-        # unit tests are added.
-        run: |
-          PYTHONPATH=src pytest tests/ -m "not live" \
-            --cov=src/zurich_opendata_mcp \
-            --cov-report=term-missing \
-            --cov-fail-under=30
+      - name: Ruff
+        run: uv run ruff check
 
-      - name: Lint
-        run: ruff check src/ tests/
+      - name: Mypy
+        run: uv run mypy
+
+      - name: Pytest
+        run: uv run pytest

@@ -44,6 +44,7 @@ dev = [
     "pytest-cov>=7.1.0",
     "respx>=0.23.1",
     "ruff>=0.15.12",
+    "mypy>=1.18.2",
 ]
 
 [project.scripts]
@@ -60,10 +61,37 @@ packages = ["src/zurich_opendata_mcp"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths    = ["tests"]
-addopts      = "-v --tb=short"
+addopts      = "-v --tb=short -m 'not live'"
 markers      = [
     "live: live API tests (skipped in CI by default)",
 ]
+
+[tool.mypy]
+python_version       = "3.11"
+files                = ["src", "tests"]
+ignore_missing_imports = true
+# Baseline configuration: type-checking runs in CI as a non-strict gate.
+# Tighten (disallow_untyped_defs, strict, …) in a follow-up once the
+# existing surface is annotated.
+
+# The modules below carry pre-existing type errors. They are excused here
+# so the CI gate is green from day one (otherwise branch protection blocks
+# every PR). This is a regression gate, not a target: any newly added
+# module is checked, and each entry should be removed in its own follow-up
+# PR as the module is annotated/fixed. Do NOT add new modules here.
+[[tool.mypy.overrides]]
+module = [
+    "zurich_opendata_mcp.server",
+    "zurich_opendata_mcp.tools.catalog",
+    "zurich_opendata_mcp.tools.datastore",
+    "zurich_opendata_mcp.tools.geo",
+    "zurich_opendata_mcp.tools.parliament",
+    "zurich_opendata_mcp.tools.realtime",
+    "zurich_opendata_mcp.tools.sparql",
+    "zurich_opendata_mcp.tools.strb",
+    "zurich_opendata_mcp.tools.tourism",
+]
+ignore_errors = true
 
 [tool.ruff]
 line-length    = 100
