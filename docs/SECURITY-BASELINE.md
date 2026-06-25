@@ -6,6 +6,52 @@ the access tokens used by automation, and the force-push prohibition.
 These controls are deliberately simple and should be treated as a floor,
 not a ceiling.
 
+## Applying these rules in the repository settings
+
+Branch protection is configured through the GitHub UI by a repository
+**admin** — it cannot be set by merging this document, and the default
+CI token cannot change it. The required status checks only appear in the
+picker **after the CI workflow has run at least once** (it has, on the
+PRs that introduced it).
+
+### Classic branch protection
+
+1. Open the repo and click **Settings** (admin access required).
+2. Sidebar → **Code and automation** → **Branches**.
+3. Next to **Branch protection rules**, click **Add classic branch
+   protection rule**.
+4. **Branch name pattern:** `main`.
+5. Enable, to match the policy below:
+   - **Require a pull request before merging** → **Require approvals**
+     `1`; **Dismiss stale approvals when new commits are pushed**;
+     **Require conversation resolution before merging**.
+   - **Require status checks to pass before merging** → **Require
+     branches to be up to date before merging**; then add the three
+     checks: `check (3.11)`, `check (3.12)`, `check (3.13)`.
+   - **Require linear history**.
+   - **Do not allow bypassing the above settings** (apply to admins too).
+   - Leave **Allow force pushes** unchecked (force-push prohibition).
+   - Leave **Allow deletions** unchecked (block branch deletion).
+6. **Create** / **Save changes**.
+
+### Rulesets (newer UI alternative)
+
+1. **Settings** → **Rules** → **Rulesets** → **New branch ruleset**.
+2. Name it (e.g. `main-protection`); **Enforcement status** → **Active**.
+3. **Target branches** → **Include default branch** (or pattern `main`).
+4. Enable the same rules: require a pull request (1 approval, dismiss
+   stale, require conversation resolution); require status checks (add
+   the three `check (3.x)` jobs and "require branches to be up to date");
+   require linear history; block force pushes; restrict deletions.
+5. Leave the **Bypass list** empty so the rules cannot be bypassed.
+6. **Create**.
+
+### Verify
+
+Open a throwaway PR (or inspect an open one): the three `check` jobs
+should be listed as **Required**, and merging blocked until they pass and
+one review approves.
+
 ## Required branch-protection rules on `main`
 
 Configure the following under **Settings → Branches → Branch protection
