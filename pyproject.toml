@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name        = "zurich-opendata-mcp"
-version     = "0.3.3"
+version     = "0.4.0"
 description = "MCP Server for City of Zurich Open Data — 20 tools for CKAN, geodata, parliament, tourism, SPARQL, and real-time data across 6 APIs"
 readme      = "README.md"
 license     = { file = "LICENSE" }
