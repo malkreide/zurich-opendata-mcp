@@ -14,52 +14,66 @@ CI token cannot change it. The required status checks only appear in the
 picker **after the CI workflow has run at least once** (it has, on the
 PRs that introduced it).
 
-### Classic branch protection
+> **Current state:** `main` is protected by a **ruleset** (the path
+> below). Because this is a single-maintainer repository, **required
+> approvals are set to `0`** — see "Solo maintainer" below. All other
+> controls (PR required, status checks, linear history, no force-push, no
+> deletion) are active.
 
-1. Open the repo and click **Settings** (admin access required).
-2. Sidebar → **Code and automation** → **Branches**.
-3. Next to **Branch protection rules**, click **Add classic branch
-   protection rule**.
-4. **Branch name pattern:** `main`.
-5. Enable, to match the policy below:
-   - **Require a pull request before merging** → **Require approvals**
-     `1`; **Dismiss stale approvals when new commits are pushed**;
-     **Require conversation resolution before merging**.
-   - **Require status checks to pass before merging** → **Require
-     branches to be up to date before merging**; then add the three
-     checks: `check (3.11)`, `check (3.12)`, `check (3.13)`.
-   - **Require linear history**.
-   - **Do not allow bypassing the above settings** (apply to admins too).
-   - Leave **Allow force pushes** unchecked (force-push prohibition).
-   - Leave **Allow deletions** unchecked (block branch deletion).
-6. **Create** / **Save changes**.
-
-### Rulesets (newer UI alternative)
+### Rulesets (current setup)
 
 1. **Settings** → **Rules** → **Rulesets** → **New branch ruleset**.
-2. Name it (e.g. `main-protection`); **Enforcement status** → **Active**.
+2. Name it (e.g. `main-protection`); **Enforcement status** → **Active**
+   (not "Evaluate" — that only logs and does not block).
 3. **Target branches** → **Include default branch** (or pattern `main`).
-4. Enable the same rules: require a pull request (1 approval, dismiss
-   stale, require conversation resolution); require status checks (add
-   the three `check (3.x)` jobs and "require branches to be up to date");
-   require linear history; block force pushes; restrict deletions.
-5. Leave the **Bypass list** empty so the rules cannot be bypassed.
+4. Enable, to match the policy below:
+   - **Require a pull request before merging** → **Required approvals**
+     (`0` for a solo repo, `1`+ once there are other reviewers); **Dismiss
+     stale approvals**; **Require conversation resolution before merging**.
+   - **Require status checks to pass** → add the three jobs
+     `check (3.11)`, `check (3.12)`, `check (3.13)` (pick them from the
+     autocomplete — a bare `check` never reports and stays stuck); enable
+     **Require branches to be up to date before merging**.
+   - **Require linear history**.
+   - **Block force pushes**.
+   - **Restrict deletions**.
+5. Leave the **Bypass list** empty so the rules apply to everyone,
+   including admins.
 6. **Create**.
+
+### Classic branch protection (alternative)
+
+If you use classic rules instead of a ruleset: **Settings** → **Branches**
+→ **Add classic branch protection rule**, branch pattern `main`, then
+enable the same controls — *Require a pull request* (approvals `0`/`1`,
+dismiss stale, require conversation resolution); *Require status checks*
+(`check (3.11)`/`(3.12)`/`(3.13)` + up-to-date); *Require linear history*;
+*Do not allow bypassing the above settings*; leave *Allow force pushes*
+and *Allow deletions* unchecked.
+
+### Solo maintainer
+
+For a single-maintainer repository, keep **Required approvals at `0`**: a
+PR cannot approve itself, so any non-zero value makes every PR
+un-mergeable by the sole maintainer while still keeping the valuable gates
+(PR required, CI must pass, linear history, no force-push). Raise it to
+`1`+ as soon as there is a second person with write access.
 
 ### Verify
 
 Open a throwaway PR (or inspect an open one): the three `check` jobs
-should be listed as **Required**, and merging blocked until they pass and
-one review approves.
+should be listed as **Required** and merging blocked until they pass; a
+direct push or force-push to `main` should be rejected.
 
 ## Required branch-protection rules on `main`
 
-Configure the following under **Settings → Branches → Branch protection
-rules** (or the equivalent ruleset) for the `main` branch:
+Configure the following via a **ruleset** (or classic branch protection)
+for the `main` branch:
 
 - **Require a pull request before merging.** Direct pushes to `main` are
   not permitted; all changes land through a PR.
-  - Require at least **1 approving review**.
+  - **Required approvals:** `1`+ for a team; `0` for a solo repo (see
+    "Solo maintainer" above). This repository currently uses `0`.
   - **Dismiss stale approvals** when new commits are pushed.
   - Require **conversation resolution** before merging.
 - **Require status checks to pass before merging**, and require branches
