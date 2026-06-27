@@ -39,12 +39,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   model layer (`to_dataset_summary`, `to_resource_info`) and a renderer
   (`render_dataset_summary`); `format_dataset_summary` is retained as a
   thin wrapper for the remaining Markdown-only tools.
+
+## [0.3.3] - 2026-06-07
+
+### Changed
+- Moved the MCP Registry name declaration (`io.github.malkreide/zurich-opendata-mcp`)
+  from `pyproject.toml` into `README.md` to establish MCP Registry / PyPI
+  ownership.
+
+## [0.3.2] - 2026-06-07
+
+(0.3.1 was never released — the version went straight from 0.3.0 to 0.3.2.)
+
+### Added
+- `mcp-name` metadata in `pyproject.toml` to claim MCP Registry ownership.
+
+### Changed
 - Bumped runtime and dev-dependency floors in `pyproject.toml` (#17,
   Dependabot grouped update): `mcp[cli]>=1.27.1`, `httpx>=0.28.1`,
   `pydantic>=2.13.4`, `uvicorn>=0.46.0`, `sqlparse>=0.5.5` (picks up
   CVE-2024-4340 fix), and dev tools `pytest>=9.0.3`,
   `pytest-asyncio>=1.3.0`, `pytest-cov>=7.1.0`, `respx>=0.23.1`,
   `ruff>=0.15.12`. CI green on Python 3.11 / 3.12 / 3.13.
+- Bumped GitHub Actions versions (Dependabot actions group, 3 updates).
+- Aligned the repository docs with the portfolio structure (English README
+  primary, German README/CONTRIBUTING/SECURITY linked).
 
 ## [0.3.0] - 2026-05-11
 
