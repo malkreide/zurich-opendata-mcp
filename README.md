@@ -240,7 +240,8 @@ zurich-opendata-mcp/
 │   ├── server.py            # Console entry + back-compat re-exports
 │   ├── config.py            # Endpoints, layer maps, resource IDs
 │   ├── http_client.py       # Shared httpx client + CKAN wrapper
-│   ├── formatters.py        # Markdown + error formatting
+│   ├── formatters.py        # CKAN→model mapping + Markdown rendering
+│   ├── models.py            # Pydantic structured-output models
 │   ├── clients/             # API clients: paris, sparql, tourism, wfs
 │   └── tools/               # @mcp.tool implementations:
 │                            #   catalog, datastore, geo, parliament,

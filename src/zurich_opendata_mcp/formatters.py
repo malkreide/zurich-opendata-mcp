@@ -8,52 +8,70 @@ from typing import Any
 import httpx
 
 from .config import CKAN_BASE_URL
+from .models import DatasetSummary, ResourceInfo
 
 logger = logging.getLogger(__name__)
 
 
-def format_dataset_summary(dataset: dict[str, Any]) -> str:
-    """Format a CKAN dataset into a readable Markdown summary."""
-    title = dataset.get("title", "Unbekannt")
+def to_resource_info(resource: dict[str, Any]) -> ResourceInfo:
+    """Map a CKAN resource dict onto the structured ``ResourceInfo`` model."""
+    return ResourceInfo(
+        id=resource.get("id", ""),
+        name=resource.get("name") or "Unbenannt",
+        format=resource.get("format") or "?",
+        datastore_active=bool(resource.get("datastore_active")),
+        url=resource.get("url") or None,
+    )
+
+
+def to_dataset_summary(dataset: dict[str, Any]) -> DatasetSummary:
+    """Map a CKAN dataset dict onto the structured ``DatasetSummary`` model."""
     name = dataset.get("name", "")
-    author = dataset.get("author", "Unbekannt")
-    notes = (dataset.get("notes") or "")[:300]
-    license_title = dataset.get("license_title", "Unbekannt")
-    num_resources = dataset.get("num_resources", 0)
-    modified = dataset.get("metadata_modified", "")[:10]
-    update_interval = dataset.get("updateInterval", [])
-    groups = [g.get("title", g.get("name", "")) for g in dataset.get("groups", [])]
-    tags = [t.get("display_name", t.get("name", "")) for t in dataset.get("tags", [])]
-    resources = dataset.get("resources", [])
+    return DatasetSummary(
+        id=name,
+        title=dataset.get("title") or "Unbekannt",
+        author=dataset.get("author") or None,
+        license=dataset.get("license_title") or None,
+        num_resources=dataset.get("num_resources", 0),
+        modified=(dataset.get("metadata_modified") or "")[:10] or None,
+        update_interval=list(dataset.get("updateInterval") or []),
+        groups=[g.get("title", g.get("name", "")) for g in dataset.get("groups", [])],
+        tags=[t.get("display_name", t.get("name", "")) for t in dataset.get("tags", [])],
+        resources=[to_resource_info(r) for r in dataset.get("resources", [])],
+        notes=((dataset.get("notes") or "")[:300]) or None,
+        url=f"{CKAN_BASE_URL}/dataset/{name}",
+    )
 
-    url = f"{CKAN_BASE_URL}/dataset/{name}"
 
+def render_dataset_summary(ds: DatasetSummary) -> str:
+    """Render a ``DatasetSummary`` model as a readable Markdown summary."""
     lines = [
-        f"### {title}",
-        f"- **ID**: `{name}`",
-        f"- **Autor**: {author}",
-        f"- **Lizenz**: {license_title}",
-        f"- **Ressourcen**: {num_resources}",
-        f"- **Letzte Änderung**: {modified}",
+        f"### {ds.title}",
+        f"- **ID**: `{ds.id}`",
+        f"- **Autor**: {ds.author or 'Unbekannt'}",
+        f"- **Lizenz**: {ds.license or 'Unbekannt'}",
+        f"- **Ressourcen**: {ds.num_resources}",
+        f"- **Letzte Änderung**: {ds.modified or ''}",
     ]
-    if update_interval:
-        lines.append(f"- **Aktualisierung**: {', '.join(update_interval)}")
-    if groups:
-        lines.append(f"- **Kategorien**: {', '.join(groups)}")
-    if tags:
-        lines.append(f"- **Tags**: {', '.join(tags[:10])}")
-    if resources:
-        for res in resources:
-            res_id = res.get("id", "")
-            res_name = res.get("name", "Unbenannt")
-            res_format = res.get("format", "?")
-            ds_active = " ✔ DataStore" if res.get("datastore_active") else ""
-            lines.append(f"  - `{res_id}` — {res_name} ({res_format}){ds_active}")
-    if notes:
-        lines.append(f"- **Beschreibung**: {notes}...")
-    lines.append(f"- **URL**: {url}")
+    if ds.update_interval:
+        lines.append(f"- **Aktualisierung**: {', '.join(ds.update_interval)}")
+    if ds.groups:
+        lines.append(f"- **Kategorien**: {', '.join(ds.groups)}")
+    if ds.tags:
+        lines.append(f"- **Tags**: {', '.join(ds.tags[:10])}")
+    for res in ds.resources:
+        ds_active = " ✔ DataStore" if res.datastore_active else ""
+        lines.append(f"  - `{res.id}` — {res.name} ({res.format}){ds_active}")
+    if ds.notes:
+        lines.append(f"- **Beschreibung**: {ds.notes}...")
+    lines.append(f"- **URL**: {ds.url}")
 
     return "\n".join(lines)
+
+
+def format_dataset_summary(dataset: dict[str, Any]) -> str:
+    """Format a CKAN dataset into a readable Markdown summary."""
+    return render_dataset_summary(to_dataset_summary(dataset))
 
 
 def format_resource_info(resource: dict[str, Any]) -> str:

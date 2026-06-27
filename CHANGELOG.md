@@ -7,7 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Structured (JSON) output for the three ID-bearing catalog tools —
+  `zurich_search_datasets`, `zurich_get_dataset` and
+  `zurich_analyze_datasets`. Each now returns both a Markdown `content`
+  block (human-readable fallback) and a validated `structuredContent`
+  payload via `Annotated[CallToolResult, Model]`, so dataset and resource
+  IDs travel machine-readably into follow-up calls instead of being parsed
+  out of prose. New Pydantic output models live in
+  `zurich_opendata_mcp/models.py` (`SearchResult`, `GetDatasetResult`,
+  `AnalysisResult` and friends); MCP clients now see an `outputSchema` for
+  these tools. Added `respx`-backed tests covering the dual output, the
+  empty-result case, and the schema-valid error path.
+
 ### Changed
+- Split the CKAN-dict → Markdown formatting in `formatters.py` into a
+  model layer (`to_dataset_summary`, `to_resource_info`) and a renderer
+  (`render_dataset_summary`); `format_dataset_summary` is retained as a
+  thin wrapper for the remaining Markdown-only tools.
 - Bumped runtime and dev-dependency floors in `pyproject.toml` (#17,
   Dependabot grouped update): `mcp[cli]>=1.27.1`, `httpx>=0.28.1`,
   `pydantic>=2.13.4`, `uvicorn>=0.46.0`, `sqlparse>=0.5.5` (picks up

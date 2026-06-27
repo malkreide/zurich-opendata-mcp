@@ -3,13 +3,30 @@
 from __future__ import annotations
 
 import asyncio
+from typing import Annotated
 
+from mcp.types import CallToolResult
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..app import mcp
 from ..config import CKAN_BASE_URL, ZURICH_GROUPS, ZurichGroup
-from ..formatters import format_dataset_summary, format_resource_info, handle_api_error
+from ..formatters import (
+    format_dataset_summary,
+    format_resource_info,
+    handle_api_error,
+    render_dataset_summary,
+    to_dataset_summary,
+    to_resource_info,
+)
 from ..http_client import ckan_request
+from ..models import (
+    AnalysisResult,
+    DatasetAnalysis,
+    FieldInfo,
+    GetDatasetResult,
+    SearchResult,
+    tool_result,
+)
 
 
 class SearchDatasetsInput(BaseModel):
@@ -46,14 +63,17 @@ class SearchDatasetsInput(BaseModel):
         "openWorldHint": True,
     },
 )
-async def zurich_search_datasets(params: SearchDatasetsInput) -> str:
+async def zurich_search_datasets(
+    params: SearchDatasetsInput,
+) -> Annotated[CallToolResult, SearchResult]:
     """Durchsucht den Open-Data-Katalog der Stadt Zürich nach Datensätzen.
 
     Nutzt die CKAN-Suchmaschine (Solr) für Volltextsuche über Titel,
     Beschreibung, Tags und Metadaten aller 900+ Datensätze.
 
     Returns:
-        Markdown-formatierte Liste mit Datensatz-Zusammenfassungen
+        Strukturiertes ``SearchResult`` (JSON, IDs maschinenlesbar zum
+        Verketten mit ``zurich_get_dataset``) plus lesbares Markdown.
     """
     try:
         # Solr behandelt q=* anders als q=*:* – nur letzteres liefert alle Datensätze
@@ -71,26 +91,41 @@ async def zurich_search_datasets(params: SearchDatasetsInput) -> str:
 
         result = await ckan_request("package_search", api_params)
         total = result["count"]
-        datasets = result["results"]
+        summaries = [to_dataset_summary(ds) for ds in result["results"]]
 
-        if not datasets:
-            return f"Keine Datensätze gefunden für '{params.query}'."
+        next_offset = (
+            params.offset + len(summaries)
+            if total > params.offset + len(summaries)
+            else None
+        )
+        model = SearchResult(
+            query=params.query,
+            total=total,
+            count=len(summaries),
+            offset=params.offset,
+            next_offset=next_offset,
+            datasets=summaries,
+        )
+
+        if not summaries:
+            return tool_result(f"Keine Datensätze gefunden für '{params.query}'.", model)
 
         lines = [
             f"## Suchergebnis: {total} Datensätze für '{params.query}'",
-            f"Zeige {len(datasets)} von {total} (Offset: {params.offset})\n",
+            f"Zeige {len(summaries)} von {total} (Offset: {params.offset})\n",
         ]
-        for ds in datasets:
-            lines.append(format_dataset_summary(ds))
+        for ds in summaries:
+            lines.append(render_dataset_summary(ds))
             lines.append("")
 
-        if total > params.offset + len(datasets):
-            lines.append(f"*→ Weitere Ergebnisse mit offset={params.offset + len(datasets)}*")
+        if next_offset is not None:
+            lines.append(f"*→ Weitere Ergebnisse mit offset={next_offset}*")
 
-        return "\n".join(lines)
+        return tool_result("\n".join(lines), model)
 
     except Exception as e:
-        return handle_api_error(e, "Datensatzsuche")
+        msg = handle_api_error(e, "Datensatzsuche")
+        return tool_result(msg, SearchResult(query=params.query, offset=params.offset, error=msg), is_error=True)
 
 
 class GetDatasetInput(BaseModel):
@@ -115,34 +150,44 @@ class GetDatasetInput(BaseModel):
         "openWorldHint": True,
     },
 )
-async def zurich_get_dataset(params: GetDatasetInput) -> str:
+async def zurich_get_dataset(
+    params: GetDatasetInput,
+) -> Annotated[CallToolResult, GetDatasetResult]:
     """Ruft vollständige Metadaten und Ressourcen eines Datensatzes ab.
 
     Gibt Titel, Beschreibung, Autor, Lizenz, Aktualisierungsintervall,
     alle verfügbaren Dateiformate und Download-URLs zurück.
 
     Returns:
-        Detaillierte Markdown-Ansicht des Datensatzes mit allen Ressourcen
+        Strukturiertes ``GetDatasetResult`` (JSON mit Ressourcen-IDs zum
+        Verketten mit ``zurich_datastore_query``) plus lesbares Markdown.
     """
     try:
         result = await ckan_request("package_show", {"id": params.dataset_id})
+        summary = to_dataset_summary(result)
 
-        lines = [format_dataset_summary(result), "\n#### Ressourcen / Downloads\n"]
+        # Extra metadata (skip CKAN harvester bookkeeping)
+        extras = {
+            e["key"]: e["value"]
+            for e in result.get("extras", [])
+            if not e["key"].startswith("harvest")
+        }
+        model = GetDatasetResult(dataset=summary, extras=extras)
+
+        lines = [render_dataset_summary(summary), "\n#### Ressourcen / Downloads\n"]
         for res in result.get("resources", []):
             lines.append(format_resource_info(res))
 
-        # Extra metadata
-        extras = {e["key"]: e["value"] for e in result.get("extras", [])}
         if extras:
             lines.append("\n#### Zusätzliche Metadaten")
             for k, v in extras.items():
-                if not k.startswith("harvest"):
-                    lines.append(f"- **{k}**: {v}")
+                lines.append(f"- **{k}**: {v}")
 
-        return "\n".join(lines)
+        return tool_result("\n".join(lines), model)
 
     except Exception as e:
-        return handle_api_error(e, "Datensatz-Details")
+        msg = handle_api_error(e, "Datensatz-Details")
+        return tool_result(msg, GetDatasetResult(error=msg), is_error=True)
 
 
 class ListGroupInput(BaseModel):
@@ -283,7 +328,9 @@ class AnalyzeDatasetInput(BaseModel):
         "openWorldHint": True,
     },
 )
-async def zurich_analyze_datasets(params: AnalyzeDatasetInput) -> str:
+async def zurich_analyze_datasets(
+    params: AnalyzeDatasetInput,
+) -> Annotated[CallToolResult, AnalysisResult]:
     """Analysiert Datensätze umfassend: Relevanz, Aktualität und Datenstruktur.
 
     Kombiniert Suche mit Analyse der Update-Frequenz und Feld-Schemas.
@@ -291,7 +338,8 @@ async def zurich_analyze_datasets(params: AnalyzeDatasetInput) -> str:
     und wie aktuell/vollständig sie sind.
 
     Returns:
-        Umfassender Analyse-Report mit Relevanz, Aktualität und Struktur
+        Strukturiertes ``AnalysisResult`` (JSON mit Feldern, Ressourcen-IDs
+        und DataStore-Zählungen) plus lesbarer Markdown-Report.
     """
     try:
         result = await ckan_request(
@@ -306,7 +354,10 @@ async def zurich_analyze_datasets(params: AnalyzeDatasetInput) -> str:
         total = result["count"]
 
         if not datasets:
-            return f"Keine Datensätze gefunden für '{params.query}'."
+            return tool_result(
+                f"Keine Datensätze gefunden für '{params.query}'.",
+                AnalysisResult(query=params.query, total=0, analyzed=0),
+            )
 
         # Pre-fetch per-dataset DataStore field info concurrently to avoid the
         # original N+1 fan-out (one sequential datastore_search per dataset).
@@ -344,13 +395,24 @@ async def zurich_analyze_datasets(params: AnalyzeDatasetInput) -> str:
             f"**{total} Datensätze gefunden**, Top {len(datasets)} analysiert:\n",
         ]
 
+        analyses: list[DatasetAnalysis] = []
         for i, (ds, fields_info) in enumerate(zip(datasets, fields_per_ds), 1):
             name = ds.get("name", "")
             title = ds.get("title", "?")
             modified = ds.get("metadata_modified", "?")[:10]
             interval = ds.get("updateInterval", ["unbekannt"])
-            resources = ds.get("resources") or []
-            formats = sorted({r.get("format", "?") for r in resources})
+            resources = [to_resource_info(r) for r in (ds.get("resources") or [])]
+            formats = sorted({r.format for r in resources})
+
+            analysis = DatasetAnalysis(
+                id=name,
+                title=title,
+                formats=formats,
+                resources=resources,
+                modified=modified if params.include_freshness else None,
+                update_interval=interval if params.include_freshness else [],
+                url=f"{CKAN_BASE_URL}/dataset/{name}",
+            )
 
             lines.append(f"### {i}. {title}")
             lines.append(f"- **ID**: `{name}`")
@@ -358,11 +420,8 @@ async def zurich_analyze_datasets(params: AnalyzeDatasetInput) -> str:
             lines.append(f"- **Ressourcen**: {len(resources)}")
 
             for res in resources:
-                res_id = res.get("id", "")
-                res_name = res.get("name", "Unbenannt")
-                res_format = res.get("format", "?")
-                ds_active = "✔ DataStore" if res.get("datastore_active") else ""
-                lines.append(f"  - `{res_id}` — {res_name} ({res_format}) {ds_active}")
+                ds_active = "✔ DataStore" if res.datastore_active else ""
+                lines.append(f"  - `{res.id}` — {res.name} ({res.format}) {ds_active}")
 
             if params.include_freshness:
                 lines.append(f"- **Letzte Änderung**: {modified}")
@@ -370,22 +429,32 @@ async def zurich_analyze_datasets(params: AnalyzeDatasetInput) -> str:
 
             if params.include_structure and fields_info is not None:
                 fields, total_records = fields_info
-                field_list = [
-                    f"`{f['id']}` ({f.get('type', '?')})"
+                analysis.datastore_records = total_records
+                analysis.fields = [
+                    FieldInfo(id=f["id"], type=f.get("type", "?"))
                     for f in fields
                     if f["id"] != "_id"
                 ]
+                field_list = [f"`{fi.id}` ({fi.type})" for fi in analysis.fields]
                 lines.append(f"- **DataStore-Einträge**: {total_records:,}")
                 lines.append(f"- **Felder**: {', '.join(field_list[:15])}")
                 if len(field_list) > 15:
                     lines.append(f"  *(und {len(field_list) - 15} weitere)*")
 
             lines.append(f"- **URL**: {CKAN_BASE_URL}/dataset/{name}\n")
+            analyses.append(analysis)
 
-        return "\n".join(lines)
+        model = AnalysisResult(
+            query=params.query,
+            total=total,
+            analyzed=len(analyses),
+            datasets=analyses,
+        )
+        return tool_result("\n".join(lines), model)
 
     except Exception as e:
-        return handle_api_error(e, "Datensatz-Analyse")
+        msg = handle_api_error(e, "Datensatz-Analyse")
+        return tool_result(msg, AnalysisResult(query=params.query, error=msg), is_error=True)
 
 
 @mcp.tool(

@@ -6,9 +6,12 @@ Run all tests:           PYTHONPATH=src pytest tests/ -m live
 Run only non-live (CI):  PYTHONPATH=src pytest tests/ -m "not live"
 """
 
+import httpx
 import pytest
+import respx
 
 import zurich_opendata_mcp.server as server_module
+from zurich_opendata_mcp.config import CKAN_API_URL
 from zurich_opendata_mcp.server import (
     AirQualityInput,
     AnalyzeDatasetInput,
@@ -62,14 +65,20 @@ def test_server_module_exposes_mcp_instance():
 @pytest.mark.live
 async def test_search_datasets():
     result = await zurich_search_datasets(SearchDatasetsInput(query="Schule", rows=3))
-    assert "Datensätze" in result
-    assert "Schul" in result
+    markdown = result.content[0].text
+    assert "Datensätze" in markdown
+    assert "Schul" in markdown
+    # Structured output exposes dataset IDs for chaining.
+    assert result.structuredContent["total"] >= 1
+    assert all(ds["id"] for ds in result.structuredContent["datasets"])
 
 
 @pytest.mark.live
 async def test_get_dataset():
     result = await zurich_get_dataset(GetDatasetInput(dataset_id="ssd_schulferien"))
-    assert "Ferien" in result or "Schulferien" in result
+    markdown = result.content[0].text
+    assert "Ferien" in markdown or "Schulferien" in markdown
+    assert result.structuredContent["dataset"]["id"] == "ssd_schulferien"
 
 
 @pytest.mark.live
@@ -188,7 +197,8 @@ async def test_analyze_datasets():
     result = await zurich_analyze_datasets(
         AnalyzeDatasetInput(query="Verkehr", max_datasets=3, include_structure=True)
     )
-    assert "Analyse" in result
+    assert "Analyse" in result.content[0].text
+    assert result.structuredContent["query"] == "Verkehr"
 
 
 @pytest.mark.live
@@ -809,6 +819,166 @@ async def test_analyze_datasets_does_not_call_package_show():
     assert actions.count("package_search") == 1
     # Only the datastore-active resource (res-1) triggers a datastore_search.
     assert actions.count("datastore_search") == 1
-    assert "Dataset 1" in result
-    assert "Dataset 2" in result
-    assert "DataStore-Einträge" in result  # field info rendered for ds-1
+
+    # Markdown content block.
+    markdown = result.content[0].text
+    assert "Dataset 1" in markdown
+    assert "Dataset 2" in markdown
+    assert "DataStore-Einträge" in markdown  # field info rendered for ds-1
+
+    # Structured content carries machine-readable IDs and field info.
+    structured = result.structuredContent
+    assert structured["total"] == 2
+    assert structured["analyzed"] == 2
+    ds1, ds2 = structured["datasets"]
+    assert ds1["id"] == "ds-1"
+    assert ds1["resources"][0]["id"] == "res-1"
+    assert ds1["datastore_records"] == 100
+    assert [f["id"] for f in ds1["fields"]] == ["Jahr"]  # _id is filtered out
+    # ds-2 has no datastore-active resource, so no field info was fetched.
+    assert ds2["datastore_records"] is None
+    assert ds2["fields"] is None
+
+
+# ─── Structured output: dual Markdown + JSON (catalog tools) ──────────────────
+
+
+def _ckan_ok(result):
+    return httpx.Response(200, json={"success": True, "result": result})
+
+
+@respx.mock
+async def test_search_datasets_returns_markdown_and_structured():
+    respx.get(f"{CKAN_API_URL}/package_search").mock(
+        return_value=_ckan_ok(
+            {
+                "count": 3,
+                "results": [
+                    {
+                        "name": "geo_schulanlagen",
+                        "title": "Schulanlagen",
+                        "author": "Schulamt",
+                        "license_title": "CC0",
+                        "num_resources": 1,
+                        "metadata_modified": "2026-01-15T10:00:00",
+                        "resources": [
+                            {
+                                "id": "res-abc",
+                                "name": "GeoJSON",
+                                "format": "GeoJSON",
+                                "datastore_active": True,
+                            }
+                        ],
+                    }
+                ],
+            }
+        )
+    )
+
+    result = await zurich_search_datasets(SearchDatasetsInput(query="Schule", rows=1))
+
+    # Markdown fallback for humans.
+    markdown = result.content[0].text
+    assert "## Suchergebnis" in markdown
+    assert "`geo_schulanlagen`" in markdown
+
+    # Structured content for machine chaining.
+    s = result.structuredContent
+    assert s["total"] == 3
+    assert s["count"] == 1
+    assert s["next_offset"] == 1  # 3 total > offset 0 + 1 shown
+    ds = s["datasets"][0]
+    assert ds["id"] == "geo_schulanlagen"
+    assert ds["resources"][0]["id"] == "res-abc"
+    assert ds["resources"][0]["datastore_active"] is True
+    assert result.isError is False
+
+
+@respx.mock
+async def test_search_datasets_empty_is_not_an_error():
+    respx.get(f"{CKAN_API_URL}/package_search").mock(
+        return_value=_ckan_ok({"count": 0, "results": []})
+    )
+
+    result = await zurich_search_datasets(SearchDatasetsInput(query="zzz", rows=5))
+
+    assert "Keine Datensätze" in result.content[0].text
+    assert result.structuredContent["total"] == 0
+    assert result.structuredContent["datasets"] == []
+    assert result.structuredContent["error"] is None
+    assert result.isError is False
+
+
+@respx.mock
+async def test_get_dataset_structured_and_extras():
+    respx.get(f"{CKAN_API_URL}/package_show").mock(
+        return_value=_ckan_ok(
+            {
+                "name": "ssd_schulferien",
+                "title": "Schulferien",
+                "resources": [
+                    {"id": "r1", "name": "CSV", "format": "CSV", "url": "http://x/c.csv"}
+                ],
+                "extras": [
+                    {"key": "dateLastUpdated", "value": "2026-01-01"},
+                    {"key": "harvest_object_id", "value": "should-be-skipped"},
+                ],
+            }
+        )
+    )
+
+    result = await zurich_get_dataset(GetDatasetInput(dataset_id="ssd_schulferien"))
+
+    s = result.structuredContent
+    assert s["dataset"]["id"] == "ssd_schulferien"
+    assert s["dataset"]["resources"][0]["id"] == "r1"
+    # harvest_* extras are filtered out of the structured payload.
+    assert "dateLastUpdated" in s["extras"]
+    assert "harvest_object_id" not in s["extras"]
+
+
+@respx.mock
+async def test_search_datasets_error_path_is_schema_valid():
+    respx.get(f"{CKAN_API_URL}/package_search").mock(
+        return_value=httpx.Response(500, json={"error": "boom"})
+    )
+
+    result = await zurich_search_datasets(SearchDatasetsInput(query="x"))
+
+    assert result.isError is True
+    assert "Fehler" in result.content[0].text
+    # Even on failure the structured payload validates against SearchResult.
+    assert result.structuredContent["error"]
+    assert result.structuredContent["datasets"] == []
+
+
+async def test_catalog_tools_advertise_output_schema():
+    """The converted tools must expose an output schema so clients know the
+    structured shape, and a round-trip through the tool manager must yield
+    both a content block and validated structuredContent."""
+    from zurich_opendata_mcp.app import mcp
+
+    tools = {t.name: t for t in mcp._tool_manager.list_tools()}
+    for name in ("zurich_search_datasets", "zurich_get_dataset", "zurich_analyze_datasets"):
+        schema = tools[name].output_schema
+        assert schema is not None, f"{name} has no output schema"
+        assert "datasets" in schema.get("properties", {}) or "dataset" in schema.get(
+            "properties", {}
+        )
+
+    with respx.mock:
+        respx.get(f"{CKAN_API_URL}/package_search").mock(
+            return_value=_ckan_ok(
+                {
+                    "count": 1,
+                    "results": [{"name": "ds-x", "title": "X", "resources": []}],
+                }
+            )
+        )
+        out = await mcp._tool_manager.call_tool(
+            "zurich_search_datasets", {"params": {"query": "x"}}, convert_result=True
+        )
+
+    # convert_result validated structuredContent against the output model.
+    assert out.structuredContent["datasets"][0]["id"] == "ds-x"
+    assert out.content[0].text.startswith("## Suchergebnis")
