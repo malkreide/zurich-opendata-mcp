@@ -36,6 +36,9 @@ async def ckan_request(action: str, params: dict[str, Any] | None = None) -> dic
 async def http_get_json(url: str, params: dict[str, Any] | None = None) -> Any:
     """Generic JSON GET request for non-CKAN APIs."""
     async with get_client() as client:
-        response = await client.get(url, params=params or {})
+        # Pass params through as-is: httpx treats an *empty* dict as "replace
+        # the query string", which would strip a query already baked into the
+        # URL (e.g. zt_get_data's `?id=<category>`). `None` leaves it intact.
+        response = await client.get(url, params=params)
         response.raise_for_status()
         return response.json()

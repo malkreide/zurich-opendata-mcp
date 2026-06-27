@@ -19,6 +19,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `AnalysisResult` and friends); MCP clients now see an `outputSchema` for
   these tools. Added `respx`-backed tests covering the dual output, the
   empty-result case, and the schema-valid error path.
+- `respx`-backed unit tests for `tools/parliament.py`, `tools/realtime.py`
+  and `tools/tourism.py` (audit M-7 continuation), covering the full
+  HTTP round-trip — request building, response rendering, empty results
+  and error handling — without network access.
+
+### Fixed
+- `http_get_json` dropped any query string baked into the request URL: it
+  passed an empty `dict` to httpx, which httpx interprets as "replace the
+  query params", stripping e.g. the tourism client's `?id=<category>`. As a
+  result `zurich_tourism` ignored the requested category and always hit the
+  default endpoint. Now passes `params` through as `None` so the URL's own
+  query is preserved. Regression test added.
 
 ### Changed
 - Split the CKAN-dict → Markdown formatting in `formatters.py` into a

@@ -16,9 +16,19 @@ Every code change must include a matching entry in `CHANGELOG.md` under the
 
 ## Audit follow-ups
 
-The audit (`audits/zurich-opendata-mcp-audit.md`) lists open findings.
-Phase 1 (H-1, SQL injection in `tools/strb.py`) is fixed.
-Remaining work — README/structure sweep, `zurich_sparql` dead code,
-N+1 in `zurich_analyze_datasets`, Markdown-cell escaping, unit tests
-with `respx`, Pydantic `Literal` tightening — should each land as its
-own PR with a CHANGELOG entry.
+Both audits (`audits/zurich-opendata-mcp-audit.md` and
+`audits/zurich-opendata-mcp-audit-rerun.md`) are effectively closed:
+
+- All v1 findings (H-1 SQL injection, the 8 Mediums and 11 Lows) shipped
+  across PRs #9, #11–#15.
+- Rerun findings are closed too: H-2 (CQL injection in `parliament.py`),
+  L-A (dead layer check in `geo.py`), L-B (`--port` validation), L-C
+  (logging config in `server.py:main()`).
+
+Remaining: the M-7 *coverage* goal — keep widening `respx` test coverage
+(catalog, parliament, realtime and tourism tools now have round-trip
+tests) and ratchet `--cov-fail-under` upward as it grows. The ILIKE
+wildcard note (rerun §2.3) is documentation-only, not a defect.
+
+Each substantive change should still land as its own PR with a CHANGELOG
+entry, referencing the finding ID where one applies.
