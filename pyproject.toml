@@ -64,7 +64,7 @@ testpaths    = ["tests"]
 # Coverage gate (audit M-7): freeze the current floor and ratchet it upward
 # as `respx` round-trip coverage grows. Measured on the non-live suite, so it
 # excludes the `live`-marked API tests.
-addopts      = "-v --tb=short -m 'not live' --cov=zurich_opendata_mcp --cov-report=term-missing --cov-fail-under=93"
+addopts      = "-v --tb=short -m 'not live' --cov=zurich_opendata_mcp --cov-report=term-missing --cov-fail-under=100"
 markers      = [
     "live: live API tests (skipped in CI by default)",
 ]

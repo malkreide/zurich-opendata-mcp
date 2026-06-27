@@ -262,3 +262,92 @@ async def test_vbz_passengers_json_block_and_fields():
     assert "**Felder**: Linienname, Einsteiger" in result
     assert "```json" in result
     assert '"Linienname": "4"' in result
+
+
+# ─── Coverage: empty + error + filter branches ───────────────────────────────
+
+
+@respx.mock
+async def test_weather_error_path():
+    respx.get(_DATASTORE).mock(return_value=httpx.Response(500))
+    result = await zurich_weather_live(WeatherLiveInput())
+    assert "Fehler bei Wetterdaten" in result
+
+
+@respx.mock
+async def test_air_quality_filters_and_empty():
+    route = respx.get(_DATASTORE).mock(return_value=_ckan({"total": 0, "records": []}))
+    result = await zurich_air_quality(
+        AirQualityInput(station="Zch_Kaserne", parameter="NO2")
+    )
+    # station+parameter populate the filters payload.
+    sent = dict(route.calls[0].request.url.params)
+    assert '"Standort": "Zch_Kaserne"' in sent["filters"]
+    assert '"Parameter": "NO2"' in sent["filters"]
+    assert "Keine Luftqualitätsdaten gefunden." == result
+
+
+@respx.mock
+async def test_air_quality_error_path():
+    respx.get(_DATASTORE).mock(return_value=httpx.Response(500))
+    result = await zurich_air_quality(AirQualityInput())
+    assert "Fehler bei Luftqualität" in result
+
+
+@respx.mock
+async def test_water_empty_and_error():
+    respx.get(_DATASTORE).mock(return_value=_ckan({"total": 0, "records": []}))
+    empty = await zurich_water_weather(WaterWeatherInput(station="mythenquai"))
+    assert "Keine Daten für Station Mythenquai gefunden." == empty
+
+
+@respx.mock
+async def test_water_error_path():
+    respx.get(_DATASTORE).mock(return_value=httpx.Response(500))
+    result = await zurich_water_weather(WaterWeatherInput())
+    assert "Fehler bei Wasserwetter" in result
+
+
+@respx.mock
+async def test_pedestrian_empty_and_error():
+    respx.get(_DATASTORE).mock(return_value=_ckan({"total": 0, "records": []}))
+    result = await zurich_pedestrian_traffic(PedestrianInput())
+    assert "Keine Passantenfrequenz-Daten gefunden." == result
+
+
+@respx.mock
+async def test_pedestrian_error_path():
+    respx.get(_DATASTORE).mock(return_value=httpx.Response(500))
+    result = await zurich_pedestrian_traffic(PedestrianInput())
+    assert "Fehler bei Passantenfrequenzen" in result
+
+
+@respx.mock
+async def test_vbz_query_and_pagination():
+    route = respx.get(_DATASTORE).mock(
+        return_value=_ckan(
+            {
+                "total": 100,
+                "fields": [{"id": "_id", "type": "int"}, {"id": "Linie", "type": "text"}],
+                "records": [{"_id": 1, "Linie": "4"}],
+            }
+        )
+    )
+    result = await zurich_vbz_passengers(VBZPassengersInput(query="Paradeplatz", limit=20))
+    # Full-text query reaches the wire; total>limit shows the pagination hint.
+    assert dict(route.calls[0].request.url.params)["q"] == "Paradeplatz"
+    assert "weitere Einträge verfügbar" in result
+
+
+@respx.mock
+async def test_vbz_empty_and_error():
+    respx.get(_DATASTORE).mock(return_value=_ckan({"total": 0, "records": [], "fields": []}))
+    empty = await zurich_vbz_passengers(VBZPassengersInput())
+    assert "Keine VBZ-Fahrgastzahlen gefunden." == empty
+
+
+@respx.mock
+async def test_vbz_error_path():
+    respx.get(_DATASTORE).mock(return_value=httpx.Response(500))
+    result = await zurich_vbz_passengers(VBZPassengersInput())
+    assert "Fehler bei VBZ-Fahrgastzahlen" in result

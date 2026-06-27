@@ -17,7 +17,7 @@ REQUEST_TIMEOUT = 30.0
 
 try:
     _PACKAGE_VERSION = version("zurich-opendata-mcp")
-except PackageNotFoundError:
+except PackageNotFoundError:  # pragma: no cover - only when running from a non-installed tree
     _PACKAGE_VERSION = "0.0.0+local"
 
 USER_AGENT = (

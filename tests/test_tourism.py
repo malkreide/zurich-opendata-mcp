@@ -135,3 +135,15 @@ async def test_tourism_http_error():
     result = await zurich_tourism(TourismSearchInput(category="restaurants"))
 
     assert "Fehler bei Zürich Tourismus" in result
+
+
+@respx.mock
+async def test_tourism_custom_type_takes_precedence():
+    item = _item("Kornhaus")
+    item["@customType"] = "Sehenswürdigkeit"
+    respx.get(ZT_API_URL).mock(return_value=httpx.Response(200, json=[item]))
+
+    result = await zurich_tourism(TourismSearchInput(category="restaurants"))
+
+    # @customType wins over @type for the rendered Typ line.
+    assert "- **Typ**: Sehenswürdigkeit" in result

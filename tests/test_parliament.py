@@ -182,3 +182,82 @@ async def test_parliament_members_empty():
     result = await zurich_parliament_members(ParliamentMembersInput())
 
     assert "Keine Ratsmitglieder gefunden." == result
+
+
+# ─── Coverage: branch + error paths ──────────────────────────────────────────
+
+from zurich_opendata_mcp.tools.parliament import _build_kontakt_cql  # noqa: E402
+
+# A Geschaeft hit with no Erstunterzeichner element (else-branch), plus an
+# empty Hit with no g:Geschaeft (continue-branch).
+_GESCHAEFT_NO_ERST = """
+<sr:Hit></sr:Hit>
+<sr:Hit>
+  <g:Geschaeft>
+    <g:GRNr>2024/9</g:GRNr>
+    <g:Titel>Ohne Erstunterzeichner</g:Titel>
+    <g:Geschaeftsart>Postulat</g:Geschaeftsart>
+    <g:Geschaeftsstatus>erledigt</g:Geschaeftsstatus>
+  </g:Geschaeft>
+</sr:Hit>
+"""
+
+
+def test_build_kontakt_cql_empty_falls_back_to_active_filter():
+    # No name/party and active_only=False → still emits the active sentinel.
+    assert _build_kontakt_cql(active_only=False) == 'AktivesRatsmitglied = "true"'
+
+
+@respx.mock
+async def test_parliament_search_skips_empty_hit_and_missing_signer():
+    respx.get(_url("geschaeft")).mock(return_value=_response(2, _GESCHAEFT_NO_ERST))
+
+    result = await zurich_parliament_search(ParliamentSearchInput(query="x"))
+
+    assert "2024/9: Ohne Erstunterzeichner" in result
+    # The signer line is omitted when Erstunterzeichner is absent.
+    assert "Eingereicht von" not in result
+
+
+@respx.mock
+async def test_parliament_members_commission_empty():
+    respx.get(_url("behoerdenmandat")).mock(return_value=_response(0, ""))
+
+    result = await zurich_parliament_members(
+        ParliamentMembersInput(commission="GPK")
+    )
+
+    assert "Keine Mitglieder gefunden für Kommission 'GPK'." == result
+
+
+@respx.mock
+async def test_parliament_members_commission_skips_empty_hit():
+    # Hit without b:Behordenmandat → continue; numHits keeps the section header.
+    respx.get(_url("behoerdenmandat")).mock(
+        return_value=_response(1, "<sr:Hit></sr:Hit>")
+    )
+
+    result = await zurich_parliament_members(
+        ParliamentMembersInput(commission="GPK")
+    )
+
+    assert "## Kommission: GPK" in result
+
+
+@respx.mock
+async def test_parliament_members_kontakt_skips_empty_hit():
+    # Hit without k:Kontakt → continue.
+    respx.get(_url("kontakt")).mock(return_value=_response(1, "<sr:Hit></sr:Hit>"))
+
+    result = await zurich_parliament_members(ParliamentMembersInput(party="SP"))
+
+    assert "## Gemeinderatsmitglieder" in result
+
+
+@respx.mock
+async def test_parliament_members_error_path():
+    respx.get(_url("kontakt")).mock(return_value=httpx.Response(500))
+
+    result = await zurich_parliament_members(ParliamentMembersInput())
+
+    assert "Fehler bei Mitgliedersuche Gemeinderat" in result
