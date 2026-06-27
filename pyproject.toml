@@ -61,7 +61,10 @@ packages = ["src/zurich_opendata_mcp"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths    = ["tests"]
-addopts      = "-v --tb=short -m 'not live'"
+# Coverage gate (audit M-7): freeze the current floor and ratchet it upward
+# as `respx` round-trip coverage grows. Measured on the non-live suite, so it
+# excludes the `live`-marked API tests.
+addopts      = "-v --tb=short -m 'not live' --cov=zurich_opendata_mcp --cov-report=term-missing --cov-fail-under=74"
 markers      = [
     "live: live API tests (skipped in CI by default)",
 ]
