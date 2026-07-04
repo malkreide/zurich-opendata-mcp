@@ -7,13 +7,18 @@ Covers the ParkenDD JSON source and the CKAN DataStore-backed tools
 from __future__ import annotations
 
 import json
+import time
 
 import httpx
+import pytest
 import respx
 
+from zurich_opendata_mcp import resolver
 from zurich_opendata_mcp.config import (
+    AIR_QUALITY_DATASET_SLUG,
     AIR_QUALITY_RESOURCE_ID,
     CKAN_API_URL,
+    METEO_DATASET_SLUG,
     METEO_RESOURCE_ID,
     PARKENDD_URL,
     WATER_TIEFENBRUNNEN_ID,
@@ -37,6 +42,18 @@ _DATASTORE = f"{CKAN_API_URL}/datastore_search"
 
 def _ckan(result: dict) -> httpx.Response:
     return httpx.Response(200, json={"success": True, "result": result})
+
+
+@pytest.fixture(autouse=True)
+def _seed_resolver_cache():
+    """Pin the yearly UGZ resource IDs so the weather/air tests exercise only
+    the datastore round-trip. Resolver behaviour (package_show lookup, year
+    picking, fallback) is covered in test_resolver.py."""
+    deadline = time.monotonic() + 3600
+    resolver._cache[METEO_DATASET_SLUG] = (METEO_RESOURCE_ID, deadline)
+    resolver._cache[AIR_QUALITY_DATASET_SLUG] = (AIR_QUALITY_RESOURCE_ID, deadline)
+    yield
+    resolver.clear_cache()
 
 
 # ─── http_get_json query-string preservation (regression) ────────────────────
@@ -134,6 +151,38 @@ async def test_weather_live_groups_and_labels():
     assert "🌡️ Temperatur" in result
     assert "21.4 °C" in result
     assert "⚠️" not in result
+
+
+@respx.mock
+async def test_weather_live_queries_resolved_yearly_resource():
+    """End-to-end wiring: the datastore call uses the resource ID resolved
+    from package_show, not the pinned fallback constant."""
+    resolver.clear_cache()  # bypass the seeded cache from the autouse fixture
+    respx.get(f"{CKAN_API_URL}/package_show").mock(
+        return_value=_ckan(
+            {
+                "resources": [
+                    # Years in the past on purpose: the test must not depend
+                    # on the wall-clock year, so the newest one wins.
+                    {
+                        "id": "meteo-2020",
+                        "name": "ugz_ogd_meteo_h1_2020.csv",
+                        "datastore_active": True,
+                    },
+                    {
+                        "id": "meteo-2021",
+                        "name": "ugz_ogd_meteo_h1_2021.csv",
+                        "datastore_active": True,
+                    },
+                ]
+            }
+        )
+    )
+    route = respx.get(_DATASTORE).mock(return_value=_ckan({"total": 0, "records": []}))
+
+    await zurich_weather_live(WeatherLiveInput())
+
+    assert dict(route.calls[0].request.url.params)["resource_id"] == "meteo-2021"
 
 
 @respx.mock

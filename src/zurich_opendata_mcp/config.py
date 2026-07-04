@@ -89,7 +89,14 @@ ZT_CATEGORIES = {
 }
 
 # --- Resource IDs for realtime DataStore sources ---
+# The two UGZ datasets publish one resource per calendar year, so their IDs
+# are resolved at runtime via resolver.resolve_yearly_resource(). The pinned
+# IDs below are only the fallback for when CKAN itself is unreachable.
+METEO_DATASET_SLUG = "ugz_meteodaten_stundenmittelwerte"
+METEO_RESOURCE_PREFIX = "ugz_ogd_meteo_h1_"
 METEO_RESOURCE_ID = "f9aa1373-404f-443b-b623-03ff02d2d0b7"  # ugz_ogd_meteo_h1_2026
+AIR_QUALITY_DATASET_SLUG = "ugz_luftschadstoffmessung_stundenwerte"
+AIR_QUALITY_RESOURCE_PREFIX = "ugz_ogd_air_h1_"
 AIR_QUALITY_RESOURCE_ID = "90410203-4b4f-4a65-9015-1fca2792e04d"  # ugz_ogd_air_h1_2026
 WATER_TIEFENBRUNNEN_ID = "f86b3581-6fbc-4337-ab1a-b6ead9d15daf"
 WATER_MYTHENQUAI_ID = "61e26c94-c521-473f-b7bf-bb0d73f21e9f"

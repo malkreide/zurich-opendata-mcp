@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Upstream calls are now retried on transient failures: connect errors
+  are retried at the httpx transport layer (`retries=2`), and the new
+  central `http_client.http_get()` helper retries once (1s backoff) when
+  an upstream answers 502/503/504. All requests are idempotent GETs, so
+  retries are safe; 4xx and plain 500 responses are never retried. All
+  API clients (CKAN, ParkenDD, Paris, WFS, Tourism) route through the
+  helper. (Solution-review finding F-3.)
+
+### Changed
+- All upstream HTTP calls now share one process-wide `httpx.AsyncClient`
+  (pooled TCP/TLS connections) instead of creating and closing a client
+  per request; the pool is closed on shutdown via a FastMCP lifespan hook
+  in `app.py`. `http_client.get_client()` now returns the shared client
+  and `close_client()` disposes it. The STRB tools additionally run their
+  data and COUNT(*) queries concurrently via `asyncio.gather`, halving
+  the round-trip latency of `search_stadtratsbeschluesse` and
+  `get_beschluesse_by_departement`. (Solution-review finding F-2.)
+
+### Fixed
+- `zurich_weather_live` and `zurich_air_quality` were pinned to the 2026
+  resource UUIDs of the per-year UGZ datasets (`ugz_ogd_meteo_h1_2026`,
+  `ugz_ogd_air_h1_2026`) and would have silently served stale data from
+  January 2027 on. The resource ID is now resolved at call time from the
+  dataset's resource list (new `resolver.resolve_yearly_resource()`):
+  prefer the current calendar year, else the newest year available, with
+  a 24h in-process cache and the pinned IDs kept as fallback when CKAN is
+  unreachable. Adds `respx` tests for the resolver and the tool wiring,
+  plus a `live`-marked stale alarm that fails if the UGZ naming scheme
+  changes. (Solution-review finding F-1.)
+
 ## [0.4.0] - 2026-06-27
 
 ### Added

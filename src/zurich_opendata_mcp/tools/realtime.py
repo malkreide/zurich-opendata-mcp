@@ -8,8 +8,12 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from ..app import mcp
 from ..config import (
+    AIR_QUALITY_DATASET_SLUG,
     AIR_QUALITY_RESOURCE_ID,
+    AIR_QUALITY_RESOURCE_PREFIX,
+    METEO_DATASET_SLUG,
     METEO_RESOURCE_ID,
+    METEO_RESOURCE_PREFIX,
     PARKENDD_URL,
     PEDESTRIAN_RESOURCE_ID,
     VBZ_HALTESTELLEN_ID,
@@ -21,6 +25,7 @@ from ..config import (
 )
 from ..formatters import handle_api_error, md_cell
 from ..http_client import ckan_request, http_get_json
+from ..resolver import resolve_yearly_resource
 
 
 @mcp.tool(
@@ -115,8 +120,11 @@ async def zurich_weather_live(params: WeatherLiveInput) -> str:
         Aktuelle Temperatur, Luftfeuchte, Luftdruck, Regendauer je Station
     """
     try:
+        resource_id = await resolve_yearly_resource(
+            METEO_DATASET_SLUG, METEO_RESOURCE_PREFIX, METEO_RESOURCE_ID
+        )
         api_params: dict = {
-            "resource_id": METEO_RESOURCE_ID,
+            "resource_id": resource_id,
             "sort": "Datum desc",
             "limit": params.limit,
         }
@@ -216,8 +224,11 @@ async def zurich_air_quality(params: AirQualityInput) -> str:
         Aktuelle Schadstoffwerte je Station mit Einheiten
     """
     try:
+        resource_id = await resolve_yearly_resource(
+            AIR_QUALITY_DATASET_SLUG, AIR_QUALITY_RESOURCE_PREFIX, AIR_QUALITY_RESOURCE_ID
+        )
         api_params: dict = {
-            "resource_id": AIR_QUALITY_RESOURCE_ID,
+            "resource_id": resource_id,
             "sort": "Datum desc",
             "limit": params.limit,
         }
