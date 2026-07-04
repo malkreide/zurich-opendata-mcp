@@ -282,7 +282,7 @@ ruff check src/ tests/
 - **Read-only:** All tools perform HTTP GET requests only — no data is written, modified, or deleted.
 - **No personal data:** The APIs return open civic datasets (parking occupancy, weather readings, parliamentary proceedings). No personally identifiable information (PII) is processed or stored by this server.
 - **Rate limits:** CKAN Solr search and ParkenDD are public APIs without documented rate limits; use `rows` and `limit` parameters conservatively. The server enforces a 30s timeout per request.
-- **Data freshness:** Real-time tools (parking, weather, air quality) reflect the upstream source at query time. No caching is performed by this server.
+- **Data freshness:** Real-time tools (parking, weather, air quality) reflect the upstream source at query time. Measurement data is never cached; only the lookup of the current per-year UGZ resource ID (weather/air quality) is cached in-process for 24h.
 - **Terms of service:** Data is subject to the ToS of each source — [data.stadt-zuerich.ch](https://data.stadt-zuerich.ch), [ParkenDD](https://github.com/offenesdresden/ParkAPI), [gemeinderat-zuerich.ch](https://www.gemeinderat-zuerich.ch). All City of Zurich data is published under CC0 (Open by Default since 2021).
 - **No guarantees:** This server is a community project, not affiliated with the City of Zurich or any of the API providers. Availability depends on upstream APIs.
 

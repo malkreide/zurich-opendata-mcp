@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- `zurich_weather_live` and `zurich_air_quality` were pinned to the 2026
+  resource UUIDs of the per-year UGZ datasets (`ugz_ogd_meteo_h1_2026`,
+  `ugz_ogd_air_h1_2026`) and would have silently served stale data from
+  January 2027 on. The resource ID is now resolved at call time from the
+  dataset's resource list (new `resolver.resolve_yearly_resource()`):
+  prefer the current calendar year, else the newest year available, with
+  a 24h in-process cache and the pinned IDs kept as fallback when CKAN is
+  unreachable. Adds `respx` tests for the resolver and the tool wiring,
+  plus a `live`-marked stale alarm that fails if the UGZ naming scheme
+  changes. (Solution-review finding F-1.)
+
 ## [0.4.0] - 2026-06-27
 
 ### Added
