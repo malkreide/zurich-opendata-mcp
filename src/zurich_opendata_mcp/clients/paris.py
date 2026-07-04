@@ -5,7 +5,7 @@ from __future__ import annotations
 import xml.etree.ElementTree as ET
 
 from ..config import PARIS_API_URL
-from ..http_client import get_client
+from ..http_client import http_get
 
 
 def cql_escape(value: str) -> str:
@@ -30,9 +30,7 @@ async def paris_search(
         "s": str(start),
         "m": str(max_results),
     }
-    client = get_client()
-    response = await client.get(url, params=params, follow_redirects=True)
-    response.raise_for_status()
+    response = await http_get(url, params=params)
     return ET.fromstring(response.content)
 
 

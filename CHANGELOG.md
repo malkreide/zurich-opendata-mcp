@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- Upstream calls are now retried on transient failures: connect errors
+  are retried at the httpx transport layer (`retries=2`), and the new
+  central `http_client.http_get()` helper retries once (1s backoff) when
+  an upstream answers 502/503/504. All requests are idempotent GETs, so
+  retries are safe; 4xx and plain 500 responses are never retried. All
+  API clients (CKAN, ParkenDD, Paris, WFS, Tourism) route through the
+  helper. (Solution-review finding F-3.)
+
+### Changed
 - All upstream HTTP calls now share one process-wide `httpx.AsyncClient`
   (pooled TCP/TLS connections) instead of creating and closing a client
   per request; the pool is closed on shutdown via a FastMCP lifespan hook

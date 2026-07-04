@@ -1,10 +1,13 @@
-"""Tests for the shared HTTP client lifecycle (connection reuse + lifespan)."""
+"""Tests for the shared HTTP client lifecycle (connection reuse + lifespan)
+and the http_get retry behaviour."""
 
 from __future__ import annotations
 
 import asyncio
 
+import httpx
 import pytest
+import respx
 
 from zurich_opendata_mcp import http_client
 
@@ -71,3 +74,39 @@ async def test_lifespan_closes_shared_client():
         assert not client.is_closed
 
     assert client.is_closed
+
+
+# ─── http_get retry behaviour ────────────────────────────────────────────────
+
+
+@respx.mock
+async def test_http_get_retries_once_on_503_then_succeeds():
+    route = respx.get("https://example.test/x").mock(
+        side_effect=[httpx.Response(503), httpx.Response(200, json={"ok": True})]
+    )
+
+    response = await http_client.http_get("https://example.test/x")
+
+    assert response.status_code == 200
+    assert route.call_count == 2
+
+
+@respx.mock
+async def test_http_get_gives_up_after_one_retry():
+    route = respx.get("https://example.test/x").mock(return_value=httpx.Response(503))
+
+    with pytest.raises(httpx.HTTPStatusError):
+        await http_client.http_get("https://example.test/x")
+
+    assert route.call_count == 2
+
+
+@respx.mock
+async def test_http_get_does_not_retry_deterministic_errors():
+    # 4xx and plain 500 are answers, not transient gateway hiccups.
+    route = respx.get("https://example.test/x").mock(return_value=httpx.Response(404))
+
+    with pytest.raises(httpx.HTTPStatusError):
+        await http_client.http_get("https://example.test/x")
+
+    assert route.call_count == 1

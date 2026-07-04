@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from ..config import WFS_BASE_URL
-from ..http_client import get_client
+from ..http_client import http_get
 
 
 async def wfs_get_features(
@@ -33,7 +33,5 @@ async def wfs_get_features(
     if cql_filter:
         params["CQL_FILTER"] = cql_filter
 
-    client = get_client()
-    response = await client.get(url, params=params)
-    response.raise_for_status()
+    response = await http_get(url, params=params)
     return response.json()
