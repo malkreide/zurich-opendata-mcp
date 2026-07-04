@@ -88,6 +88,9 @@ from .tools.strb import (  # noqa: F401
     get_beschluesse_by_departement,
     get_stadtratsbeschluss_detail,
     search_stadtratsbeschluesse,
+    zurich_strb_by_department,
+    zurich_strb_detail,
+    zurich_strb_search,
 )
 from .tools.tourism import TourismSearchInput, zurich_tourism  # noqa: F401
 

@@ -54,9 +54,11 @@ MCP (Model Context Protocol) Server für den KI-gestützten Zugriff auf **Open D
 - **`zurich_sparql`** – 📊 SPARQL-Abfragen auf dem statistischen Linked Data Endpoint *(zurzeit deaktiviert — Endpunkt noch nicht produktiv)*
 
 ### Stadtratsbeschlüsse
-- **`search_stadtratsbeschluesse`** – 📜 Volltextsuche in öffentlichen Stadtratsbeschlüssen (Titel, Departement, Datumsbereich)
-- **`get_beschluesse_by_departement`** – 📜 Alle Beschlüsse eines Departements (z.B. `SSD`, `FD`, `PRD`)
-- **`get_stadtratsbeschluss_detail`** – 📜 Einzelner Beschluss anhand der `NNNN/JJJJ`-Nummer
+- **`zurich_strb_search`** – 📜 Volltextsuche in öffentlichen Stadtratsbeschlüssen (Titel, Departement, Datumsbereich)
+- **`zurich_strb_by_department`** – 📜 Alle Beschlüsse eines Departements (z.B. `SSD`, `FD`, `PRD`)
+- **`zurich_strb_detail`** – 📜 Einzelner Beschluss anhand der `NNNN/JJJJ`-Nummer
+
+*(Die bisherigen Namen `search_stadtratsbeschluesse`, `get_beschluesse_by_departement` und `get_stadtratsbeschluss_detail` bleiben bis zur nächsten Major-Version als deprecated Aliase verfügbar.)*
 
 ### Analyse-Tools
 - **`zurich_analyze_datasets`** – Umfassende Analyse: Relevanz, Aktualität, Datenstruktur
@@ -166,9 +168,9 @@ Nach der Konfiguration kannst du in Claude fragen:
 - *«Welche Ratsmitglieder gehören der SP an?»* → `zurich_parliament_members`
 
 ### Stadtratsbeschlüsse
-- *«Such Stadtratsbeschlüsse zur Volksschule aus 2025»* → `search_stadtratsbeschluesse`
-- *«Liste alle SSD-Beschlüsse im Jahr 2025»* → `get_beschluesse_by_departement`
-- *«Zeig Stadtratsbeschluss 1203/2025»* → `get_stadtratsbeschluss_detail`
+- *«Such Stadtratsbeschlüsse zur Volksschule aus 2025»* → `zurich_strb_search`
+- *«Liste alle SSD-Beschlüsse im Jahr 2025»* → `zurich_strb_by_department`
+- *«Zeig Stadtratsbeschluss 1203/2025»* → `zurich_strb_detail`
 
 ### Tourismus & Statistik
 - *«Welche Restaurants empfiehlt Zürich Tourismus?»* → `zurich_tourism`

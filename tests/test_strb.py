@@ -20,6 +20,9 @@ from zurich_opendata_mcp.tools.strb import (
     get_beschluesse_by_departement,
     get_stadtratsbeschluss_detail,
     search_stadtratsbeschluesse,
+    zurich_strb_by_department,
+    zurich_strb_detail,
+    zurich_strb_search,
 )
 
 _SQL = f"{CKAN_API_URL}/datastore_search_sql"
@@ -166,8 +169,11 @@ async def test_strb_detail_found():
         GetSTRBDetailInput(beschlussnummer="1203/2025")
     )
 
-    # The exact beschlussnummer is filtered server-side.
-    assert "1203/2025" in dict(route.calls[0].request.url.params)["filters"]
+    # The exact beschlussnummer is filtered server-side — and the filter must
+    # be valid JSON on the wire (a dict's Python repr gets a CKAN 409).
+    assert json.loads(dict(route.calls[0].request.url.params)["filters"]) == {
+        "Beschlussnummer": "1203/2025"
+    }
     assert "## Stadtratsbeschluss 1203/2025" in result
     assert "**Titel:** Tagesschule 2025 Ausbau" in result
     assert "**Departement:** Schul- und Sportdepartement (SSD)" in result
@@ -193,3 +199,41 @@ async def test_strb_detail_http_error():
     )
 
     assert "Fehler bei STRB-Detail 1203/2025" in result
+
+
+# ─── zurich_strb_* names + deprecated aliases ────────────────────────────────
+
+
+def test_strb_tools_registered_under_new_and_old_names():
+    from zurich_opendata_mcp.app import mcp
+
+    tools = {t.name: t for t in mcp._tool_manager.list_tools()}
+    pairs = {
+        "zurich_strb_search": "search_stadtratsbeschluesse",
+        "zurich_strb_by_department": "get_beschluesse_by_departement",
+        "zurich_strb_detail": "get_stadtratsbeschluss_detail",
+    }
+    for new_name, old_name in pairs.items():
+        assert new_name in tools, f"missing new tool name: {new_name}"
+        assert old_name in tools, f"missing alias: {old_name}"
+        # The alias advertises its deprecation to clients in both the
+        # description and the human-readable title.
+        assert "Deprecated" in (tools[old_name].description or "")
+        assert "deprecated" in tools[old_name].annotations.title
+        assert "deprecated" not in (tools[new_name].annotations.title or "")
+
+
+@respx.mock
+async def test_new_names_behave_like_old_ones():
+    respx.get(_SQL).mock(side_effect=_sql_side_effect([_REC], total=1))
+    respx.get(_SEARCH).mock(return_value=_ckan({"records": [_REC]}))
+
+    assert "«Tagesschule»" in await zurich_strb_search(
+        SearchSTRBInput(query="Tagesschule")
+    )
+    assert "[1203/2025]" in await zurich_strb_by_department(
+        BeschluesseDepartementInput(departement="SSD")
+    )
+    assert "## Stadtratsbeschluss 1203/2025" in await zurich_strb_detail(
+        GetSTRBDetailInput(beschlussnummer="1203/2025")
+    )

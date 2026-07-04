@@ -54,9 +54,11 @@ An MCP (Model Context Protocol) server providing AI-powered access to **Open Dat
 - **`zurich_sparql`** – 📊 SPARQL queries on the statistical linked data endpoint *(currently disabled — endpoint not productive yet)*
 
 ### Stadtratsbeschlüsse (Council Resolutions)
-- **`search_stadtratsbeschluesse`** – 📜 Full-text search of public council resolutions (title, department, date range)
-- **`get_beschluesse_by_departement`** – 📜 List all resolutions of a department (e.g. `SSD`, `FD`, `PRD`)
-- **`get_stadtratsbeschluss_detail`** – 📜 Single resolution by `NNNN/YYYY` number
+- **`zurich_strb_search`** – 📜 Full-text search of public council resolutions (title, department, date range)
+- **`zurich_strb_by_department`** – 📜 List all resolutions of a department (e.g. `SSD`, `FD`, `PRD`)
+- **`zurich_strb_detail`** – 📜 Single resolution by `NNNN/YYYY` number
+
+*(The former names `search_stadtratsbeschluesse`, `get_beschluesse_by_departement` and `get_stadtratsbeschluss_detail` remain available as deprecated aliases until the next major release.)*
 
 ### Analysis Tools
 - **`zurich_analyze_datasets`** – Comprehensive analysis: relevance, recency, data structure
@@ -166,9 +168,9 @@ Once configured, you can ask Claude:
 - *"Which council members belong to the SP party?"* → `zurich_parliament_members`
 
 ### Council Resolutions (Stadtratsbeschlüsse)
-- *"Find council resolutions about Volksschule from 2025"* → `search_stadtratsbeschluesse`
-- *"List all SSD resolutions in 2025"* → `get_beschluesse_by_departement`
-- *"Show council resolution 1203/2025"* → `get_stadtratsbeschluss_detail`
+- *"Find council resolutions about Volksschule from 2025"* → `zurich_strb_search`
+- *"List all SSD resolutions in 2025"* → `zurich_strb_by_department`
+- *"Show council resolution 1203/2025"* → `zurich_strb_detail`
 
 ### Tourism & Statistics
 - *"What restaurants does Zurich Tourism recommend?"* → `zurich_tourism`

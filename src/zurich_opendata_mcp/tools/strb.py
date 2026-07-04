@@ -137,7 +137,7 @@ class SearchSTRBInput(BaseModel):
 
 
 @mcp.tool(
-    name="search_stadtratsbeschluesse",
+    name="zurich_strb_search",
     annotations={
         "title": "Stadtratsbeschlüsse durchsuchen",
         "readOnlyHint": True,
@@ -146,7 +146,7 @@ class SearchSTRBInput(BaseModel):
         "openWorldHint": False,
     },
 )
-async def search_stadtratsbeschluesse(params: SearchSTRBInput) -> str:
+async def zurich_strb_search(params: SearchSTRBInput) -> str:
     """Durchsucht die öffentlichen Stadtratsbeschlüsse (STRB) der Stadt Zürich per Volltext.
 
     Nutzt den CKAN Datastore SQL-Endpoint für flexible ILIKE-Suche im Beschlusstitel
@@ -208,6 +208,24 @@ async def search_stadtratsbeschluesse(params: SearchSTRBInput) -> str:
         return handle_api_error(e, "Stadtratsbeschlüsse-Suche")
 
 
+@mcp.tool(
+    name="search_stadtratsbeschluesse",
+    annotations={
+        "title": "Stadtratsbeschlüsse durchsuchen (deprecated)",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": False,
+    },
+)
+async def search_stadtratsbeschluesse(params: SearchSTRBInput) -> str:
+    """Deprecated: alter Name von ``zurich_strb_search`` — bitte das neue Tool
+    verwenden. Dieser Alias verhält sich identisch und wird mit der nächsten
+    Major-Version entfernt.
+    """
+    return await zurich_strb_search(params)
+
+
 class BeschluesseDepartementInput(BaseModel):
     """Input für Beschlüsse-Abfrage nach Departement."""
 
@@ -255,7 +273,7 @@ class BeschluesseDepartementInput(BaseModel):
 
 
 @mcp.tool(
-    name="get_beschluesse_by_departement",
+    name="zurich_strb_by_department",
     annotations={
         "title": "STRB nach Departement abrufen",
         "readOnlyHint": True,
@@ -264,7 +282,7 @@ class BeschluesseDepartementInput(BaseModel):
         "openWorldHint": False,
     },
 )
-async def get_beschluesse_by_departement(params: BeschluesseDepartementInput) -> str:
+async def zurich_strb_by_department(params: BeschluesseDepartementInput) -> str:
     """Gibt alle öffentlichen Stadtratsbeschlüsse eines Departements zurück.
 
     Ideal für institutionelle Analysen, z.B. alle Beschlüsse des Schul- und
@@ -315,6 +333,24 @@ async def get_beschluesse_by_departement(params: BeschluesseDepartementInput) ->
         return handle_api_error(e, "STRB Departement-Abfrage")
 
 
+@mcp.tool(
+    name="get_beschluesse_by_departement",
+    annotations={
+        "title": "STRB nach Departement abrufen (deprecated)",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": False,
+    },
+)
+async def get_beschluesse_by_departement(params: BeschluesseDepartementInput) -> str:
+    """Deprecated: alter Name von ``zurich_strb_by_department`` — bitte das
+    neue Tool verwenden. Dieser Alias verhält sich identisch und wird mit der
+    nächsten Major-Version entfernt.
+    """
+    return await zurich_strb_by_department(params)
+
+
 class GetSTRBDetailInput(BaseModel):
     """Input für den Abruf eines einzelnen Stadtratsbeschlusses."""
 
@@ -333,7 +369,7 @@ class GetSTRBDetailInput(BaseModel):
 
 
 @mcp.tool(
-    name="get_stadtratsbeschluss_detail",
+    name="zurich_strb_detail",
     annotations={
         "title": "Einzelnen Stadtratsbeschluss abrufen",
         "readOnlyHint": True,
@@ -342,7 +378,7 @@ class GetSTRBDetailInput(BaseModel):
         "openWorldHint": False,
     },
 )
-async def get_stadtratsbeschluss_detail(params: GetSTRBDetailInput) -> str:
+async def zurich_strb_detail(params: GetSTRBDetailInput) -> str:
     """Gibt die Metadaten eines einzelnen Stadtratsbeschlusses anhand der Beschlussnummer zurück.
 
     Liefert Titel, Datum, Departement und den direkten Link zum vollständigen
@@ -361,7 +397,9 @@ async def get_stadtratsbeschluss_detail(params: GetSTRBDetailInput) -> str:
             "datastore_search",
             {
                 "resource_id": STRB_RESOURCE_ID,
-                "filters": {"Beschlussnummer": params.beschlussnummer},
+                # Must be a JSON string: a raw dict would be urlencoded as its
+                # Python repr (single quotes), which CKAN rejects with a 409.
+                "filters": json.dumps({"Beschlussnummer": params.beschlussnummer}),
                 "limit": 1,
             },
         )
@@ -388,3 +426,21 @@ async def get_stadtratsbeschluss_detail(params: GetSTRBDetailInput) -> str:
 
     except Exception as e:
         return handle_api_error(e, f"STRB-Detail {params.beschlussnummer}")
+
+
+@mcp.tool(
+    name="get_stadtratsbeschluss_detail",
+    annotations={
+        "title": "Einzelnen Stadtratsbeschluss abrufen (deprecated)",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": False,
+    },
+)
+async def get_stadtratsbeschluss_detail(params: GetSTRBDetailInput) -> str:
+    """Deprecated: alter Name von ``zurich_strb_detail`` — bitte das neue Tool
+    verwenden. Dieser Alias verhält sich identisch und wird mit der nächsten
+    Major-Version entfernt.
+    """
+    return await zurich_strb_detail(params)

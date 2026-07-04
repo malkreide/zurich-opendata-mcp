@@ -8,6 +8,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- The three Stadtratsbeschlüsse tools now follow the `zurich_` naming
+  convention of the rest of the tool surface: `zurich_strb_search`,
+  `zurich_strb_by_department` and `zurich_strb_detail`. Behaviour,
+  input models and output are unchanged. (Solution-review finding F-4.)
+
+### Fixed
+- `zurich_strb_detail` (formerly `get_stadtratsbeschluss_detail`) always
+  failed against the live CKAN API with HTTP 409: the `filters` value
+  was passed as a Python dict, which httpx urlencodes as its `repr()`
+  (single quotes) instead of JSON. The filter is now serialised with
+  `json.dumps`, and the regression test asserts the wire format is
+  valid JSON. Found during the live verification of the F-4 rename.
+
+### Deprecated
+- The former STRB tool names `search_stadtratsbeschluesse`,
+  `get_beschluesse_by_departement` and `get_stadtratsbeschluss_detail`
+  remain registered as fully functional aliases, marked as deprecated in
+  their descriptions/titles. They will be removed in the next major
+  release.
+
+### Changed
 - Upstream calls are now retried on transient failures: connect errors
   are retried at the httpx transport layer (`retries=2`), and the new
   central `http_client.http_get()` helper retries once (1s backoff) when
