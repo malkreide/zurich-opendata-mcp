@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -51,8 +52,10 @@ async def _strb_query(where: str, limit: int) -> tuple[list[dict], int]:
     sql_count = (
         f'SELECT COUNT(*) AS cnt FROM "{STRB_RESOURCE_ID}" WHERE {where}'
     )
-    result_data = await ckan_request("datastore_search_sql", {"sql": sql_data})
-    result_count = await ckan_request("datastore_search_sql", {"sql": sql_count})
+    result_data, result_count = await asyncio.gather(
+        ckan_request("datastore_search_sql", {"sql": sql_data}),
+        ckan_request("datastore_search_sql", {"sql": sql_count}),
+    )
 
     records = result_data.get("records", [])
     total = int(result_count["records"][0]["cnt"]) if result_count.get("records") else 0

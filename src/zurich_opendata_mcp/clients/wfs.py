@@ -33,7 +33,7 @@ async def wfs_get_features(
     if cql_filter:
         params["CQL_FILTER"] = cql_filter
 
-    async with get_client() as client:
-        response = await client.get(url, params=params)
-        response.raise_for_status()
-        return response.json()
+    client = get_client()
+    response = await client.get(url, params=params)
+    response.raise_for_status()
+    return response.json()

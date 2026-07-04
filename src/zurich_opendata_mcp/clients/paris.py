@@ -30,10 +30,10 @@ async def paris_search(
         "s": str(start),
         "m": str(max_results),
     }
-    async with get_client() as client:
-        response = await client.get(url, params=params, follow_redirects=True)
-        response.raise_for_status()
-        return ET.fromstring(response.content)
+    client = get_client()
+    response = await client.get(url, params=params, follow_redirects=True)
+    response.raise_for_status()
+    return ET.fromstring(response.content)
 
 
 def paris_extract_text(element: ET.Element | None, default: str = "") -> str:

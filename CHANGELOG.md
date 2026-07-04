@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- All upstream HTTP calls now share one process-wide `httpx.AsyncClient`
+  (pooled TCP/TLS connections) instead of creating and closing a client
+  per request; the pool is closed on shutdown via a FastMCP lifespan hook
+  in `app.py`. `http_client.get_client()` now returns the shared client
+  and `close_client()` disposes it. The STRB tools additionally run their
+  data and COUNT(*) queries concurrently via `asyncio.gather`, halving
+  the round-trip latency of `search_stadtratsbeschluesse` and
+  `get_beschluesse_by_departement`. (Solution-review finding F-2.)
+
 ### Fixed
 - `zurich_weather_live` and `zurich_air_quality` were pinned to the 2026
   resource UUIDs of the per-year UGZ datasets (`ugz_ogd_meteo_h1_2026`,
