@@ -1,18 +1,31 @@
-"""SPARQL tool — currently disabled.
+"""SPARQL tool — opt-in via environment flag, endpoint not productive yet.
 
 The Linked-Data endpoint at ``ld.stadt-zuerich.ch`` is reachable but not yet
-populated with productive data. The tool is kept registered (so existing
-clients keep discovering it) but always returns a static notice. When the
-endpoint goes live, restore the implementation from git history (pre-Phase-3)
-and flip ``idempotentHint`` back to ``False``.
+populated with productive data, so the tool only returns a static notice. To
+stop it from occupying tool-list context (and inviting useless calls) in
+every MCP client, it is no longer registered by default: set
+``ZURICH_OPENDATA_ENABLE_SPARQL=1`` to register it. When the endpoint goes
+live, restore the implementation from git history (pre-Phase-3), flip
+``idempotentHint`` back to ``False`` and register it unconditionally again.
 """
 
 from __future__ import annotations
+
+import os
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..app import mcp
 from ..config import SPARQL_URL
+
+
+def sparql_enabled() -> bool:
+    """True when the opt-in flag for the (non-productive) SPARQL tool is set."""
+    return os.environ.get("ZURICH_OPENDATA_ENABLE_SPARQL", "").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+    )
 
 
 class SparqlQueryInput(BaseModel):
@@ -33,16 +46,6 @@ class SparqlQueryInput(BaseModel):
     )
 
 
-@mcp.tool(
-    name="zurich_sparql",
-    annotations={
-        "title": "SPARQL-Abfrage (Linked Data)",
-        "readOnlyHint": True,
-        "destructiveHint": False,
-        "idempotentHint": True,
-        "openWorldHint": False,
-    },
-)
 async def zurich_sparql(params: SparqlQueryInput) -> str:
     """⚠️ NICHT PRODUKTIV – Der Linked-Data-Endpunkt (ld.stadt-zuerich.ch) ist
     noch nicht mit echten Daten befüllt. Abfragen liefern leere oder
@@ -61,3 +64,27 @@ async def zurich_sparql(params: SparqlQueryInput) -> str:
         "- `zurich_datastore_query` – Tabellarische Daten per Resource-UUID abfragen\n"
         "- `zurich_datastore_sql` – SQL-Abfragen auf DataStore-Ressourcen"
     )
+
+
+def register_sparql_tool() -> bool:
+    """Register ``zurich_sparql`` on the shared FastMCP instance if enabled.
+
+    Split out of import time so tests can exercise both paths regardless of
+    the environment the suite runs in. Returns whether it registered.
+    """
+    if not sparql_enabled():
+        return False
+    mcp.tool(
+        name="zurich_sparql",
+        annotations={
+            "title": "SPARQL-Abfrage (Linked Data)",
+            "readOnlyHint": True,
+            "destructiveHint": False,
+            "idempotentHint": True,
+            "openWorldHint": False,
+        },
+    )(zurich_sparql)
+    return True
+
+
+register_sparql_tool()

@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+- `zurich_sparql` is no longer registered by default. The Linked-Data
+  endpoint is still not productive, so the tool only ever returned a
+  static notice while occupying tool-list context in every MCP client
+  and inviting useless calls. It can be re-enabled with
+  `ZURICH_OPENDATA_ENABLE_SPARQL=1`; the implementation and the
+  `server.py` re-export remain in place. (Solution-review finding F-6.)
+
 ### Added
 - `format: 'markdown' | 'json'` parameter (default `markdown`) for the
   parliament, geo and tourism tools — `zurich_parliament_search`,

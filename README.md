@@ -51,7 +51,7 @@ An MCP (Model Context Protocol) server providing AI-powered access to **Open Dat
 - **`zurich_tourism`** – 🏨 Attractions, restaurants, hotels, events (Schema.org data, 4 languages)
 
 ### Linked Data (SPARQL)
-- **`zurich_sparql`** – 📊 SPARQL queries on the statistical linked data endpoint *(currently disabled — endpoint not productive yet)*
+- **`zurich_sparql`** – 📊 SPARQL queries on the statistical linked data endpoint *(endpoint not productive yet — the tool is **not registered by default**; opt in with the environment variable `ZURICH_OPENDATA_ENABLE_SPARQL=1`)*
 
 ### Stadtratsbeschlüsse (Council Resolutions)
 - **`zurich_strb_search`** – 📜 Full-text search of public council resolutions (title, department, date range)
@@ -172,9 +172,8 @@ Once configured, you can ask Claude:
 - *"List all SSD resolutions in 2025"* → `zurich_strb_by_department`
 - *"Show council resolution 1203/2025"* → `zurich_strb_detail`
 
-### Tourism & Statistics
+### Tourism
 - *"What restaurants does Zurich Tourism recommend?"* → `zurich_tourism`
-- *"How has Zurich's population evolved?"* → `zurich_sparql`
 
 ## 🔗 Data Sources
 

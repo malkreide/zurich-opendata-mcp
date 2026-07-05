@@ -51,7 +51,7 @@ MCP (Model Context Protocol) Server für den KI-gestützten Zugriff auf **Open D
 - **`zurich_tourism`** – 🏨 Attraktionen, Restaurants, Hotels, Events (Schema.org-Daten, 4 Sprachen)
 
 ### Linked Data (SPARQL)
-- **`zurich_sparql`** – 📊 SPARQL-Abfragen auf dem statistischen Linked Data Endpoint *(zurzeit deaktiviert — Endpunkt noch nicht produktiv)*
+- **`zurich_sparql`** – 📊 SPARQL-Abfragen auf dem statistischen Linked Data Endpoint *(Endpunkt noch nicht produktiv — das Tool ist **standardmässig nicht registriert**; Opt-in via Umgebungsvariable `ZURICH_OPENDATA_ENABLE_SPARQL=1`)*
 
 ### Stadtratsbeschlüsse
 - **`zurich_strb_search`** – 📜 Volltextsuche in öffentlichen Stadtratsbeschlüssen (Titel, Departement, Datumsbereich)
@@ -172,9 +172,8 @@ Nach der Konfiguration kannst du in Claude fragen:
 - *«Liste alle SSD-Beschlüsse im Jahr 2025»* → `zurich_strb_by_department`
 - *«Zeig Stadtratsbeschluss 1203/2025»* → `zurich_strb_detail`
 
-### Tourismus & Statistik
+### Tourismus
 - *«Welche Restaurants empfiehlt Zürich Tourismus?»* → `zurich_tourism`
-- *«Wie hat sich die Bevölkerung Zürichs entwickelt?»* → `zurich_sparql`
 
 ## 🔗 Datenquellen
 
