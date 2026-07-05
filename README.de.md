@@ -2,7 +2,7 @@
 
 # 🏙️ Zurich Open Data MCP Server
 
-![Version](https://img.shields.io/badge/version-0.3.0-blue)
+[![PyPI](https://img.shields.io/pypi/v/zurich-opendata-mcp)](https://pypi.org/project/zurich-opendata-mcp/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![MCP](https://img.shields.io/badge/MCP-Model%20Context%20Protocol-purple)](https://modelcontextprotocol.io/)
@@ -13,7 +13,7 @@
 
 MCP (Model Context Protocol) Server für den KI-gestützten Zugriff auf **Open Data der Stadt Zürich**.
 
-> Ermöglicht Claude, ChatGPT und anderen MCP-kompatiblen KI-Assistenten den direkten Zugriff auf 900+ Datensätze, Geodaten, Parlamentsgeschäfte, Stadtratsbeschlüsse, Tourismusdaten, Linked Data und Echtzeit-Umwelt-/Mobilitätsinformationen der Stadt Zürich. **24 Tools, 5 Resources, 6 APIs.**
+> Ermöglicht Claude, ChatGPT und anderen MCP-kompatiblen KI-Assistenten den direkten Zugriff auf 900+ Datensätze, Geodaten, Parlamentsgeschäfte, Stadtratsbeschlüsse, Tourismusdaten, Linked Data und Echtzeit-Umwelt-/Mobilitätsinformationen der Stadt Zürich. **23 Tools (+3 deprecated Aliase), 5 Resources, 6 APIs.**
 
 ### Demo
 
@@ -30,7 +30,7 @@ MCP (Model Context Protocol) Server für den KI-gestützten Zugriff auf **Open D
 - **`zurich_list_tags`** – Tags für thematische Suche
 
 ### Echtzeit-Umweltdaten
-- **`zurich_weather_live`** – 🌤️ Aktuelle Wetterdaten (Temperatur, Feuchte, Druck, Regen) von 5 UGZ-Stationen
+- **`zurich_weather_live`** – 🌤️ Aktuelle Wetterdaten (Temperatur, Feuchte, Druck, Regen) von 4 UGZ-Stationen
 - **`zurich_air_quality`** – 🌬️ Live-Luftqualität (NO₂, O₃, PM10, PM2.5) mit WHO-Grenzwerten
 - **`zurich_water_weather`** – 🌊 Zürichsee-Daten (Wassertemperatur, Pegel, Wind) alle 10 Min.
 
@@ -247,8 +247,7 @@ zurich-opendata-mcp/
 │                            #   catalog, datastore, geo, parliament,
 │                            #   realtime, sparql, strb, tourism,
 │                            #   resources (zurich:// URIs)
-├── tests/
-│   └── test_server.py       # Pydantic- + Integrationstests (live-markiert)
+├── tests/                   # respx-Round-Trip-, Unit- und live-markierte Tests
 ├── audits/                  # Audit-Reports
 ├── .github/workflows/       # ci.yml + publish.yml (Trusted Publisher)
 ├── pyproject.toml
@@ -309,4 +308,4 @@ Hayal Oezkan · [malkreide](https://github.com/malkreide)
 
 ---
 
-*Powered by [Model Context Protocol](https://modelcontextprotocol.io/) • 6 APIs • 24 Tools • 5 Resources*
+*Powered by [Model Context Protocol](https://modelcontextprotocol.io/) • 6 APIs • 23 Tools • 5 Resources*

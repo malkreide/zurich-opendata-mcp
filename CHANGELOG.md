@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Package description in `pyproject.toml` corrected from "20 tools" to
+  the actual 23 (and mentions council resolutions instead of the
+  opt-in SPARQL tool). Accompanying docs-only fixes: PyPI-driven
+  version badge instead of the hardcoded 0.3.0 badge, tool/resource
+  counts in README and SECURITY aligned with the registered surface
+  (23 tools + 3 deprecated aliases, 5 resources), UGZ station count
+  corrected to 4, stale "v0.2.0" removed from the `server.py`
+  docstring. Two new drift-guard tests pin the registered tool and
+  resource counts so future changes must update the docs in the same
+  PR. (Solution-review finding F-12.)
+
 ### Security
 - Paris-API XML responses are now parsed with `defusedxml` instead of
   stdlib `xml.etree`: DTDs, entity expansion (billion laughs) and

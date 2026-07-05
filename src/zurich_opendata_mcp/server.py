@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Zurich Open Data MCP Server — v0.2.0
+Zurich Open Data MCP Server
 
 AI-nativer Zugang zu Open Data der Stadt Zürich:
   · CKAN:       data.stadt-zuerich.ch — 900+ offene Datensätze

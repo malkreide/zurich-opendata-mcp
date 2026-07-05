@@ -15,8 +15,8 @@ vulnerabilities.
 
 ## Posture summary
 
-This is a **read-only**, **no-PII**, **public-open-data** MCP server. All 24
-tools only issue HTTP GET / SPARQL `SELECT` requests against a fixed set of
+This is a **read-only**, **no-PII**, **public-open-data** MCP server. All 23
+tools (plus three deprecated STRB aliases) only issue HTTP GET requests against a fixed set of
 City-of-Zurich and partner open-data endpoints (CKAN, Geoportal WFS, Paris,
 Zürich Tourism, SPARQL, ParkenDD — see `README.md`). Hardening already in place:
 

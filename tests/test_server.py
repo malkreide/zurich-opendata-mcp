@@ -1004,3 +1004,34 @@ async def test_catalog_tools_advertise_output_schema():
     # convert_result validated structuredContent against the output model.
     assert out.structuredContent["datasets"][0]["id"] == "ds-x"
     assert out.content[0].text.startswith("## Suchergebnis")
+
+
+# ─── Doc-count drift guard (F-12) ────────────────────────────────────────────
+
+
+def test_registered_tool_count_matches_docs():
+    """README/SECURITY advertise "23 Tools (+3 deprecated aliases)" and
+    5 resources. This guard fails when the tool surface changes, so the
+    docs get updated in the same PR instead of drifting."""
+    from zurich_opendata_mcp.app import mcp
+
+    tools = {t.name for t in mcp._tool_manager.list_tools()}
+    aliases = {
+        "search_stadtratsbeschluesse",
+        "get_beschluesse_by_departement",
+        "get_stadtratsbeschluss_detail",
+    }
+    # zurich_sparql is opt-in (F-6); exclude it in case a flag test left it
+    # registered in this process.
+    primary = tools - aliases - {"zurich_sparql"}
+
+    assert len(primary) == 23, sorted(primary)
+    assert aliases <= tools
+
+
+async def test_registered_resource_count_matches_docs():
+    from zurich_opendata_mcp.app import mcp
+
+    resources = await mcp.list_resources()
+    templates = await mcp.list_resource_templates()
+    assert len(resources) + len(templates) == 5

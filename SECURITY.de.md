@@ -16,7 +16,7 @@ ausnutzbare Schwachstellen nicht über öffentliche Issues.
 ## Statusübersicht
 
 Dies ist ein **Nur-Lese-**, **PII-freier**, **Public-Open-Data**-MCP-Server.
-Alle 24 Tools stellen ausschliesslich HTTP-GET-/SPARQL-`SELECT`-Anfragen an
+Alle 23 Tools (plus drei deprecated STRB-Aliase) stellen ausschliesslich HTTP-GET-Anfragen an
 eine feste Menge von Open-Data-Endpunkten der Stadt Zürich und ihrer Partner
 (CKAN, Geoportal WFS, Paris, Zürich Tourismus, SPARQL, ParkenDD — siehe
 `README.md`). Bereits umgesetzte Härtung:
