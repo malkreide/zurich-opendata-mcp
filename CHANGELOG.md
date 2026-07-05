@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- The `line` and `stop` parameters of `zurich_vbz_passengers` were
+  declared but never used — only `query` ever reached the API, so
+  line/stop filtering silently returned unfiltered data. `line` now
+  filters on `Linienname`; `stop` is resolved via the VBZ
+  Haltestellen directory (the REISENDE table only carries
+  `Haltestellen_Id`) and filters on the matching ID list. Unknown stop
+  names return a clear message instead of unfiltered results; resolved
+  stop names are shown in the output (`haltestellen` in JSON). Found
+  during the F-5 review; verified live (line 7 @ Paradeplatz).
+
 ### Changed
 - Package description in `pyproject.toml` corrected from "20 tools" to
   the actual 23 (and mentions council resolutions instead of the

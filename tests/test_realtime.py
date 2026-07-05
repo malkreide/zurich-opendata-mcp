@@ -21,6 +21,7 @@ from zurich_opendata_mcp.config import (
     METEO_DATASET_SLUG,
     METEO_RESOURCE_ID,
     PARKENDD_URL,
+    VBZ_HALTESTELLEN_ID,
     WATER_TIEFENBRUNNEN_ID,
 )
 from zurich_opendata_mcp.tools.realtime import (
@@ -581,3 +582,88 @@ async def test_live_ugz_literals_match_distinct_values():
     assert await distinct(meteo_id, "Parameter") == METEO_PARAMETERS
     assert await distinct(air_id, "Standort") == UGZ_STATIONS
     assert await distinct(air_id, "Parameter") == AIR_PARAMETERS
+
+
+# ─── VBZ line/stop filters (previously dead parameters) ─────────────────────
+
+
+@respx.mock
+async def test_vbz_line_filter_reaches_the_wire():
+    route = respx.get(_DATASTORE).mock(
+        return_value=_ckan(
+            {"total": 1, "fields": [], "records": [{"Linienname": "4", "Einsteiger": 9}]}
+        )
+    )
+
+    result = await zurich_vbz_passengers(VBZPassengersInput(line="4", limit=5))
+
+    sent = dict(route.calls[0].request.url.params)
+    assert json.loads(sent["filters"]) == {"Linienname": "4"}
+    assert "**Linie**: 4" in result
+
+
+@respx.mock
+async def test_vbz_stop_resolves_haltestellen_ids():
+    def handler(request: httpx.Request) -> httpx.Response:
+        p = dict(request.url.params)
+        if p["resource_id"] == VBZ_HALTESTELLEN_ID:
+            assert p["q"] == "Paradeplatz"
+            return _ckan(
+                {
+                    "records": [
+                        {
+                            "Haltestellen_Id": "206",
+                            "Haltestellenlangname": "Zürich, Paradeplatz",
+                        }
+                    ]
+                }
+            )
+        # Second call: REISENDE filtered by the resolved ID list.
+        assert json.loads(p["filters"]) == {"Haltestellen_Id": ["206"]}
+        return _ckan(
+            {"total": 2, "fields": [{"id": "Linienname", "type": "text"}], "records": [{"Linienname": "7"}]}
+        )
+
+    respx.get(_DATASTORE).mock(side_effect=handler)
+
+    result = await zurich_vbz_passengers(VBZPassengersInput(stop="Paradeplatz"))
+
+    assert "**Haltestelle(n)**: Zürich, Paradeplatz" in result
+
+
+@respx.mock
+async def test_vbz_unknown_stop_short_circuits():
+    route = respx.get(_DATASTORE).mock(return_value=_ckan({"records": []}))
+
+    result = await zurich_vbz_passengers(VBZPassengersInput(stop="Nirgendwo"))
+
+    assert "Keine VBZ-Haltestelle gefunden für 'Nirgendwo'" in result
+    # The REISENDE query is never sent.
+    assert route.call_count == 1
+
+
+@respx.mock
+async def test_vbz_many_stops_truncate_and_json_payload():
+    stops = [
+        {"Haltestellen_Id": str(i), "Haltestellenlangname": f"Halt {i}"} for i in range(7)
+    ]
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        p = dict(request.url.params)
+        if p["resource_id"] == VBZ_HALTESTELLEN_ID:
+            return _ckan({"records": stops})
+        return _ckan({"total": 1, "fields": [], "records": [{"Einsteiger": 1}]})
+
+    respx.get(_DATASTORE).mock(side_effect=handler)
+
+    md = await zurich_vbz_passengers(VBZPassengersInput(stop="Halt"))
+    assert "(+2 weitere)" in md
+
+    payload = json.loads(
+        await zurich_vbz_passengers(
+            VBZPassengersInput(stop="Halt", line="4", format="json")
+        )
+    )
+    assert payload["line"] == "4"
+    assert payload["haltestellen"][0] == "Halt 0"
+    assert len(payload["haltestellen"]) == 7

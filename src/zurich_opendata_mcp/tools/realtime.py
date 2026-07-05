@@ -519,12 +519,16 @@ class VBZPassengersInput(BaseModel):
 
     line: str | None = Field(
         default=None,
-        description=("Liniennummer filtern, z.B. '4' (Tram 4), '33' (Bus 33). Leer = alle Linien."),
+        description=(
+            "Liniennummer filtern (exakter Linienname), z.B. '4' (Tram 4), '33' (Bus 33). "
+            "Leer = alle Linien."
+        ),
     )
     stop: str | None = Field(
         default=None,
         description=(
-            "Haltestelle filtern (Name oder Teilname), z.B. 'Paradeplatz', 'Central', 'Bellevue'. Leer = alle."
+            "Haltestelle filtern (Name oder Teilname), z.B. 'Paradeplatz', 'Central', "
+            "'Bellevue'. Wird über das Haltestellenverzeichnis aufgelöst. Leer = alle."
         ),
     )
     query: str | None = Field(
@@ -559,6 +563,32 @@ async def zurich_vbz_passengers(params: VBZPassengersInput) -> str:
             "resource_id": VBZ_REISENDE_ID,
             "limit": params.limit,
         }
+
+        filters: dict = {}
+        if params.line:
+            filters["Linienname"] = params.line
+        stop_names: list[str] = []
+        if params.stop:
+            # The REISENDE table only carries Haltestellen_Id; resolve the
+            # human-readable stop name via the HALTESTELLEN directory first.
+            hst = await ckan_request(
+                "datastore_search",
+                {
+                    "resource_id": VBZ_HALTESTELLEN_ID,
+                    "q": params.stop,
+                    "limit": 50,
+                },
+            )
+            hst_records = hst.get("records", [])
+            if not hst_records:
+                return (
+                    f"Keine VBZ-Haltestelle gefunden für '{params.stop}'. "
+                    "Namen oder Teilnamen prüfen, z.B. 'Paradeplatz'."
+                )
+            filters["Haltestellen_Id"] = [r["Haltestellen_Id"] for r in hst_records]
+            stop_names = [r.get("Haltestellenlangname", "?") for r in hst_records]
+        if filters:
+            api_params["filters"] = json.dumps(filters)
         if params.query:
             api_params["q"] = params.query
 
@@ -572,17 +602,26 @@ async def zurich_vbz_passengers(params: VBZPassengersInput) -> str:
         field_names = [f["id"] for f in fields if f["id"] != "_id"]
 
         if params.format == "json":
-            return _json_out(
-                {
-                    "total": result.get("total", 0),
-                    "count": len(records),
-                    "fields": field_names,
-                    "records": _strip_ids(records),
-                }
-            )
+            payload: dict = {
+                "total": result.get("total", 0),
+                "count": len(records),
+                "fields": field_names,
+                "records": _strip_ids(records),
+            }
+            if params.line:
+                payload["line"] = params.line
+            if stop_names:
+                payload["haltestellen"] = stop_names
+            return _json_out(payload)
 
         lines = ["## 🚊 VBZ Fahrgastzahlen\n"]
         lines.append(f"*Verkehrsbetriebe Zürich – {result.get('total', '?')} Einträge*\n")
+        if params.line:
+            lines.append(f"**Linie**: {params.line}\n")
+        if stop_names:
+            shown = ", ".join(stop_names[:5])
+            more = f" (+{len(stop_names) - 5} weitere)" if len(stop_names) > 5 else ""
+            lines.append(f"**Haltestelle(n)**: {shown}{more}\n")
         lines.append(f"**Felder**: {', '.join(field_names)}\n")
 
         # Render data
