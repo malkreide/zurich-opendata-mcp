@@ -207,7 +207,7 @@ async def test_air_quality_groups_by_station():
                 "records": [
                     {
                         "Datum": "2026-06-27T09:00",
-                        "Standort": "Zch_Kaserne",
+                        "Standort": "Zch_Rosengartenstrasse",
                         "Parameter": "NO2",
                         "Wert": 18,
                         "Einheit": "µg/m³",
@@ -221,7 +221,7 @@ async def test_air_quality_groups_by_station():
 
     assert AIR_QUALITY_RESOURCE_ID in str(route.calls[0].request.url)
     assert "## 🌬️ Luftqualität Zürich" in result
-    assert "**Zch_Kaserne**: NO2=18 µg/m³" in result
+    assert "**Zch_Rosengartenstrasse**: NO2=18 µg/m³" in result
 
 
 # ─── Water weather (DataStore) ───────────────────────────────────────────────
@@ -328,11 +328,11 @@ async def test_weather_error_path():
 async def test_air_quality_filters_and_empty():
     route = respx.get(_DATASTORE).mock(return_value=_ckan({"total": 0, "records": []}))
     result = await zurich_air_quality(
-        AirQualityInput(station="Zch_Kaserne", parameter="NO2")
+        AirQualityInput(station="Zch_Rosengartenstrasse", parameter="NO2")
     )
     # station+parameter populate the filters payload.
     sent = dict(route.calls[0].request.url.params)
-    assert '"Standort": "Zch_Kaserne"' in sent["filters"]
+    assert '"Standort": "Zch_Rosengartenstrasse"' in sent["filters"]
     assert '"Parameter": "NO2"' in sent["filters"]
     assert "Keine Luftqualitätsdaten gefunden." == result
 
@@ -514,3 +514,70 @@ async def test_vbz_json_format_includes_fields():
 
     assert payload["fields"] == ["Linienname"]
     assert payload["records"] == [{"Linienname": "4"}]
+
+
+# ─── UGZ station/parameter Literals (F-7) ────────────────────────────────────
+
+from typing import get_args  # noqa: E402
+
+from pydantic import ValidationError  # noqa: E402
+
+from zurich_opendata_mcp.config import (  # noqa: E402
+    AIR_PARAMETERS,
+    METEO_PARAMETERS,
+    UGZ_STATIONS,
+    AirParameter,
+    MeteoParameter,
+    UgzStation,
+)
+
+
+def test_ugz_literals_match_runtime_lists():
+    assert list(get_args(UgzStation)) == UGZ_STATIONS
+    assert list(get_args(MeteoParameter)) == METEO_PARAMETERS
+    assert list(get_args(AirParameter)) == AIR_PARAMETERS
+
+
+def test_invalid_station_and_parameter_rejected_upfront():
+    # Previously documented-but-nonexistent values (Zch_Kaserne, SO2) used to
+    # slip through and return "Keine Daten gefunden"; now Pydantic rejects
+    # them before any HTTP call.
+    with pytest.raises(ValidationError):
+        WeatherLiveInput(station="Zch_Kaserne")
+    with pytest.raises(ValidationError):
+        WeatherLiveInput(parameter="XY")
+    with pytest.raises(ValidationError):
+        AirQualityInput(parameter="SO2")
+
+
+@pytest.mark.live
+async def test_live_ugz_literals_match_distinct_values():
+    """Drift alarm: fails when the UGZ measurement network or parameter set
+    changes, so the Literal types can be updated."""
+    from zurich_opendata_mcp import resolver
+    from zurich_opendata_mcp.config import (
+        AIR_QUALITY_DATASET_SLUG,
+        AIR_QUALITY_RESOURCE_PREFIX,
+        METEO_DATASET_SLUG,
+        METEO_RESOURCE_PREFIX,
+    )
+    from zurich_opendata_mcp.http_client import ckan_request
+
+    async def distinct(resource_id: str, column: str) -> list[str]:
+        result = await ckan_request(
+            "datastore_search_sql",
+            {"sql": f'SELECT DISTINCT "{column}" FROM "{resource_id}"'},
+        )
+        return sorted(rec[column] for rec in result["records"] if rec[column])
+
+    meteo_id = await resolver.resolve_yearly_resource(
+        METEO_DATASET_SLUG, METEO_RESOURCE_PREFIX, METEO_RESOURCE_ID
+    )
+    air_id = await resolver.resolve_yearly_resource(
+        AIR_QUALITY_DATASET_SLUG, AIR_QUALITY_RESOURCE_PREFIX, AIR_QUALITY_RESOURCE_ID
+    )
+
+    assert await distinct(meteo_id, "Standort") == UGZ_STATIONS
+    assert await distinct(meteo_id, "Parameter") == METEO_PARAMETERS
+    assert await distinct(air_id, "Standort") == UGZ_STATIONS
+    assert await distinct(air_id, "Parameter") == AIR_PARAMETERS

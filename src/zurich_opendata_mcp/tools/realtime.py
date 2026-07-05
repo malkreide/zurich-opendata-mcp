@@ -16,12 +16,16 @@ from ..config import (
     METEO_RESOURCE_PREFIX,
     PARKENDD_URL,
     PEDESTRIAN_RESOURCE_ID,
+    UGZ_STATIONS,
     VBZ_HALTESTELLEN_ID,
     VBZ_LINIE_ID,
     VBZ_REISENDE_ID,
     WATER_MYTHENQUAI_ID,
     WATER_TIEFENBRUNNEN_ID,
+    AirParameter,
+    MeteoParameter,
     OutputFormat,
+    UgzStation,
     WaterStation,
 )
 from ..formatters import FORMAT_FIELD_DESC as _FORMAT_FIELD_DESC
@@ -104,19 +108,20 @@ class WeatherLiveInput(BaseModel):
 
     model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
 
-    station: str | None = Field(
+    station: UgzStation | None = Field(
         default=None,
         description=(
-            "Messstation filtern (z.B. 'Zch_Stampfenbachstrasse', "
-            "'Zch_Schimmelstrasse', 'Zch_Rosengartenstrasse'). "
+            "Messstation filtern. Verfügbar: " + ", ".join(UGZ_STATIONS) + ". "
             "Leer = alle Stationen."
         ),
     )
-    parameter: str | None = Field(
+    parameter: MeteoParameter | None = Field(
         default=None,
         description=(
             "Messparameter filtern: 'T' (Temperatur °C), 'Hr' (Luftfeuchte %), "
-            "'p' (Luftdruck hPa), 'RainDur' (Regendauer min). Leer = alle."
+            "'p' (Luftdruck hPa), 'RainDur' (Regendauer min), "
+            "'StrGlo' (Globalstrahlung W/m²), 'WD' (Windrichtung °), "
+            "'WVs'/'WVv' (Windgeschwindigkeit m/s). Leer = alle."
         ),
     )
     limit: int = Field(default=20, description="Anzahl Messwerte (max. 100)", ge=1, le=100)
@@ -138,7 +143,7 @@ async def zurich_weather_live(params: WeatherLiveInput) -> str:
 
     Datenquelle: Umwelt- und Gesundheitsschutz Stadt Zürich (UGZ).
     Messstationen: Stampfenbachstrasse, Schimmelstrasse, Rosengartenstrasse,
-    Heubeeribüel, Kaserne.
+    Heubeeribüel.
 
     Returns:
         Aktuelle Temperatur, Luftfeuchte, Luftdruck, Regendauer je Station
@@ -198,9 +203,22 @@ async def zurich_weather_live(params: WeatherLiveInput) -> str:
                     "Hr": "💧 Luftfeuchte",
                     "p": "📊 Luftdruck",
                     "RainDur": "🌧️ Regendauer",
+                    "StrGlo": "☀️ Globalstrahlung",
+                    "WD": "🧭 Windrichtung",
+                    "WVs": "💨 Windgeschwindigkeit (Skalar)",
+                    "WVv": "💨 Windgeschwindigkeit (Vektor)",
                 }
                 display = param_names.get(param, param)
-                unit = {"T": "°C", "Hr": "%", "p": "hPa", "RainDur": "min"}.get(param, "")
+                unit = {
+                    "T": "°C",
+                    "Hr": "%",
+                    "p": "hPa",
+                    "RainDur": "min",
+                    "StrGlo": "W/m²",
+                    "WD": "°",
+                    "WVs": "m/s",
+                    "WVv": "m/s",
+                }.get(param, "")
                 status_str = f" ⚠️ {status}" if status and status != "provisorisch" else ""
 
                 lines.append(f"- **{station}** – {display}: **{value} {unit}**{status_str}")
@@ -219,19 +237,17 @@ class AirQualityInput(BaseModel):
 
     model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
 
-    station: str | None = Field(
+    station: UgzStation | None = Field(
         default=None,
         description=(
-            "Messstation: 'Zch_Stampfenbachstrasse', 'Zch_Schimmelstrasse', "
-            "'Zch_Rosengartenstrasse', 'Zch_Heubeeribüel', 'Zch_Kaserne'. "
-            "Leer = alle."
+            "Messstation filtern. Verfügbar: " + ", ".join(UGZ_STATIONS) + ". Leer = alle."
         ),
     )
-    parameter: str | None = Field(
+    parameter: AirParameter | None = Field(
         default=None,
         description=(
             "Schadstoff: 'NO2' (Stickstoffdioxid), 'O3' (Ozon), "
-            "'PM10' (Feinstaub), 'PM2.5', 'NOx', 'SO2', 'CO'. Leer = alle."
+            "'PM10' (Feinstaub), 'PM2.5', 'NO', 'NOx'. Leer = alle."
         ),
     )
     limit: int = Field(default=30, description="Anzahl Messwerte (max. 100)", ge=1, le=100)
@@ -252,7 +268,7 @@ async def zurich_air_quality(params: AirQualityInput) -> str:
     """Liefert stündlich aktualisierte Luftqualitätsmessungen aus Zürich.
 
     Datenquelle: Umwelt- und Gesundheitsschutz Stadt Zürich (UGZ).
-    Parameter: NO2, O3, PM10, PM2.5, NOx, SO2, CO u.a.
+    Parameter: NO, NO2, NOx, O3, PM10, PM2.5.
 
     Returns:
         Aktuelle Schadstoffwerte je Station mit Einheiten

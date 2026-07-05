@@ -105,6 +105,19 @@ VBZ_REISENDE_ID = "38b0c1e5-1f4e-444d-975c-61a462aa8ca6"
 VBZ_LINIE_ID = "463f92e0-5b20-44b3-b27f-59499e331e8d"
 VBZ_HALTESTELLEN_ID = "948b6347-8988-4705-9b08-45f0208a15da"
 
+# UGZ measurement network (shared by the meteo and air-quality datasets).
+# Values verified against SELECT DISTINCT on the live current-year resources;
+# a live-marked drift test in tests/test_realtime.py alarms when the
+# measurement network or parameter set changes. Keep the lists sorted.
+UGZ_STATIONS = [
+    "Zch_Heubeeribüel",
+    "Zch_Rosengartenstrasse",
+    "Zch_Schimmelstrasse",
+    "Zch_Stampfenbachstrasse",
+]
+METEO_PARAMETERS = ["Hr", "RainDur", "StrGlo", "T", "WD", "WVs", "WVv", "p"]
+AIR_PARAMETERS = ["NO", "NO2", "NOx", "O3", "PM10", "PM2.5"]
+
 # Stadtratsbeschlüsse (STRB)
 STRB_RESOURCE_ID = "35c97bec-f8de-4521-814e-704dc98f71a2"
 
@@ -163,6 +176,15 @@ GeoLayerId = Literal[
     "velopruefstrecken",
     "familienberatung",
 ]
+
+UgzStation = Literal[
+    "Zch_Heubeeribüel",
+    "Zch_Rosengartenstrasse",
+    "Zch_Schimmelstrasse",
+    "Zch_Stampfenbachstrasse",
+]
+MeteoParameter = Literal["Hr", "RainDur", "StrGlo", "T", "WD", "WVs", "WVv", "p"]
+AirParameter = Literal["NO", "NO2", "NOx", "O3", "PM10", "PM2.5"]
 
 WaterStation = Literal["tiefenbrunnen", "mythenquai"]
 TourismLanguage = Literal["de", "en", "fr", "it"]

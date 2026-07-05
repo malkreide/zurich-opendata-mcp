@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- `station` and `parameter` on `zurich_weather_live` and
+  `zurich_air_quality` are now `Literal`-typed against the actual UGZ
+  measurement network (verified via `SELECT DISTINCT` on the live
+  current-year resources): stations Heubeeribüel, Rosengartenstrasse,
+  Schimmelstrasse, Stampfenbachstrasse; meteo parameters incl. the
+  previously undocumented `StrGlo`/`WD`/`WVs`/`WVv`; air parameters
+  `NO`/`NO2`/`NOx`/`O3`/`PM10`/`PM2.5`. Typos and stale values that the
+  docstrings used to advertise (`Zch_Kaserne`, `SO2`, `CO` do not exist
+  in the current data) are now rejected by Pydantic with the list of
+  valid values instead of silently returning "Keine Daten gefunden".
+  A `live`-marked drift test alarms when the measurement network
+  changes. (Solution-review finding F-7.)
+
 ### Removed
 - `zurich_sparql` is no longer registered by default. The Linked-Data
   endpoint is still not productive, so the tool only ever returned a
