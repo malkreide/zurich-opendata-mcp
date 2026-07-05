@@ -16,19 +16,25 @@ Every code change must include a matching entry in `CHANGELOG.md` under the
 
 ## Audit follow-ups
 
-Both audits (`audits/zurich-opendata-mcp-audit.md` and
-`audits/zurich-opendata-mcp-audit-rerun.md`) are effectively closed:
+All known review backlogs are closed:
 
-- All v1 findings (H-1 SQL injection, the 8 Mediums and 11 Lows) shipped
-  across PRs #9, #11–#15.
-- Rerun findings are closed too: H-2 (CQL injection in `parliament.py`),
-  L-A (dead layer check in `geo.py`), L-B (`--port` validation), L-C
-  (logging config in `server.py:main()`).
+- Both audits (`audits/zurich-opendata-mcp-audit.md` and its rerun) shipped
+  across PRs #9, #11–#15: H-1 SQL injection, H-2 CQL injection, all Mediums
+  and Lows. The M-7 coverage goal is complete — the suite gates at
+  `--cov-fail-under=100`.
+- The July 2026 solution review (F-1 – F-13) shipped across PRs #40–#54 and
+  was released as `0.5.0`: runtime resolution of year-bound UGZ resource
+  IDs, shared HTTP client + retries, `zurich_` naming with deprecated STRB
+  aliases, `format=json` on every data-bearing tool, SPARQL opt-in flag,
+  Literal-typed UGZ filters, ILIKE wildcard escaping (rerun §2.3 — fixed,
+  no longer documentation-only), defusedxml, SHA-pinned CI + pip-audit,
+  metadata drift guards, and a mypy gate with zero per-module exemptions.
 
-Remaining: the M-7 *coverage* goal — keep widening `respx` test coverage
-(catalog, parliament, realtime and tourism tools now have round-trip
-tests) and ratchet `--cov-fail-under` upward as it grows. The ILIKE
-wildcard note (rerun §2.3) is documentation-only, not a defect.
+Invariants to preserve in new work: coverage stays at 100%, mypy has no
+`ignore_errors` exemptions, doc counts are pinned by drift-guard tests
+(update docs and tests together when the tool surface changes), and the
+live-marked drift alarms (UGZ yearly resources, UGZ measurement network)
+should be run before cutting a release.
 
 Each substantive change should still land as its own PR with a CHANGELOG
 entry, referencing the finding ID where one applies.
