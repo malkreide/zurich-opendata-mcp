@@ -27,7 +27,7 @@ eine feste Menge von Open-Data-Endpunkten der Stadt Zürich und ihrer Partner
 | TLS | Zertifikatsprüfung standardmässig aktiv (httpx-Default); nie deaktiviert (SEC-005) |
 | Binding | Standardmässig stdio-Transport; der optionale `--http`-Transport bindet an den SDK-Default `127.0.0.1` (SEC-016 / SDK-004) |
 | Eingaben | Strikte Pydantic-v2-Validierung (`extra="forbid"`, Whitespace-Trimming) auf jedem Tool-Eingabemodell (SEC-008/018) |
-| Injection | SQL-String-Literal-Escaping in `tools/strb.py` (H-1) und CQL-Escaping in `clients/paris.py` (H-2); Datums-/ID-Felder werden upstream per Regex validiert (SEC-018) |
+| Injection | SQL-String-Literal- und ILIKE-Wildcard-Escaping in `tools/strb.py` (H-1, Rerun §2.3) und CQL-Escaping in `clients/paris.py` (H-2); Datums-/ID-Felder werden upstream per Regex validiert (SEC-018) |
 | Tools | Jedes Tool setzt `readOnlyHint: True`; es existieren keine Schreib-, Mutations- oder Löschpfade (ARCH) |
 | Secrets | Keine erforderlich — der Server nutzt keinen API-Key und keine Credentials; nichts Geheimes wird gespeichert oder geloggt (ARCH-005/SEC-013) |
 | Fehler | Upstream-Fehlerbodies werden nur nach stderr geloggt; das Modell erhält eine generische, nicht-leckende Meldung (OBS-002) |

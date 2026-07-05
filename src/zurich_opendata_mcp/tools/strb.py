@@ -14,10 +14,20 @@ from ..http_client import ckan_request
 
 
 def _sql_escape(value: str) -> str:
-    # PostgreSQL string literals: double the single quote and escape backslashes.
-    # Dates do not flow through here because they are regex-validated at the
-    # Pydantic layer (^\d{4}-\d{2}-\d{2}$) and therefore cannot contain quotes.
-    return value.replace("\\", "\\\\").replace("'", "''")
+    # Escapes for use inside an ILIKE '%…%' ESCAPE '!' pattern literal:
+    # backslash and single quote for the string literal, then '!' (the
+    # ESCAPE character — CKAN's SQL endpoint rejects a backslash ESCAPE
+    # clause with 409, hence '!') and finally the LIKE wildcards % and _
+    # so user input always matches literally (audit rerun §2.3). Dates do
+    # not flow through here because they are regex-validated at the
+    # Pydantic layer (^\d{4}-\d{2}-\d{2}$) and cannot contain any of these.
+    return (
+        value.replace("\\", "\\\\")
+        .replace("'", "''")
+        .replace("!", "!!")
+        .replace("%", "!%")
+        .replace("_", "!_")
+    )
 
 
 def _strb_where_clause(
@@ -29,9 +39,11 @@ def _strb_where_clause(
     """Erstellt die WHERE-Klausel für STRB-SQL-Queries."""
     conditions: list[str] = []
     if query:
-        conditions.append(f"\"Titel\" ILIKE '%{_sql_escape(query)}%'")
+        conditions.append(f"\"Titel\" ILIKE '%{_sql_escape(query)}%' ESCAPE '!'")
     if departement:
-        conditions.append(f"\"Federfuhrendes Departement\" ILIKE '%{_sql_escape(departement)}%'")
+        conditions.append(
+            f"\"Federfuhrendes Departement\" ILIKE '%{_sql_escape(departement)}%' ESCAPE '!'"
+        )
     if datum_von:
         conditions.append(f"\"Beschlussdatum\" >= '{datum_von}'")
     if datum_bis:

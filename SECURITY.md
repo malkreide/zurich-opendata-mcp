@@ -26,7 +26,7 @@ Zürich Tourism, SPARQL, ParkenDD — see `README.md`). Hardening already in pla
 | TLS | Certificate verification on by default (httpx default); never disabled (SEC-005) |
 | Binding | stdio transport by default; the optional `--http` transport binds to the SDK default of `127.0.0.1` (SEC-016 / SDK-004) |
 | Input | Pydantic v2 strict validation (`extra="forbid"`, whitespace stripping) on every tool input model (SEC-008/018) |
-| Injection | SQL string-literal escaping in `tools/strb.py` (H-1) and CQL escaping in `clients/paris.py` (H-2); date/ID fields are regex-validated upstream (SEC-018) |
+| Injection | SQL string-literal + ILIKE-wildcard escaping in `tools/strb.py` (H-1, rerun §2.3) and CQL escaping in `clients/paris.py` (H-2); date/ID fields are regex-validated upstream (SEC-018) |
 | Tools | Every tool sets `readOnlyHint: True`; no write, mutate, or delete paths exist (ARCH) |
 | Secrets | None required — the server uses no API key or credentials; nothing secret is stored or logged (ARCH-005/SEC-013) |
 | Errors | Upstream error bodies are logged to stderr only; the model receives a generic, non-leaking message (OBS-002) |

@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+- STRB search terms containing the LIKE wildcards `%`/`_` no longer act
+  as wildcards (audit rerun §2.3): `_sql_escape` now also escapes `%`,
+  `_` and the escape character itself, and the ILIKE conditions carry
+  `ESCAPE '!'`. A bare `%` used to match every resolution; it now
+  matches only titles containing a literal `%`. `!` was chosen as the
+  escape character because CKAN's SQL endpoint rejects a backslash
+  `ESCAPE` clause with HTTP 409 (verified live). (Solution-review
+  finding F-8.)
+
 ### Changed
 - `station` and `parameter` on `zurich_weather_live` and
   `zurich_air_quality` are now `Literal`-typed against the actual UGZ

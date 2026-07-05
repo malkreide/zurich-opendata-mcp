@@ -267,6 +267,17 @@ def test_sql_escape_doubles_single_quotes():
     assert _sql_escape("a\\'b") == "a\\\\''b"
 
 
+def test_sql_escape_neutralises_like_wildcards():
+    """Audit rerun §2.3: %, _ and the '!' ESCAPE character itself are escaped
+    so user input matches literally inside the ILIKE pattern."""
+    from zurich_opendata_mcp.tools.strb import _sql_escape
+
+    assert _sql_escape("100%") == "100!%"
+    assert _sql_escape("a_b") == "a!_b"
+    assert _sql_escape("wow!") == "wow!!"
+    assert _sql_escape("100%_!") == "100!%!_!!"
+
+
 def test_strb_where_clause_neutralises_quote_injection():
     """The classic 'close-the-string' payload must end up inside the literal,
     not break out of it. The doubled quote ('') is a single literal apostrophe
@@ -281,8 +292,8 @@ def test_strb_where_clause_neutralises_quote_injection():
     # Exactly one ILIKE comparison — no extra clauses leaked into the WHERE.
     assert where.count(" ILIKE ") == 1
     assert " AND " not in where
-    # Every single quote from the payload is doubled.
-    assert where == "\"Titel\" ILIKE '%x%'' OR 1=1 OR ''%%'"
+    # Every single quote from the payload is doubled, wildcards escaped.
+    assert where == "\"Titel\" ILIKE '%x!%'' OR 1=1 OR ''!%%' ESCAPE '!'"
 
 
 def test_strb_where_clause_neutralises_departement_injection():
@@ -295,8 +306,19 @@ def test_strb_where_clause_neutralises_departement_injection():
     # Payload sits inside the literal with the quote doubled.
     assert where == (
         "\"Federfuhrendes Departement\" ILIKE "
-        "'%SSD'' UNION SELECT 1,2,3 --%'"
+        "'%SSD'' UNION SELECT 1,2,3 --%' ESCAPE '!'"
     )
+
+
+def test_strb_where_clause_escapes_ilike_wildcards():
+    """A literal % or _ in the search term must not act as a wildcard
+    (audit rerun §2.3): with ESCAPE '!', !% and !_ match the literal
+    characters. CKAN's SQL endpoint rejects a backslash ESCAPE clause
+    with 409, hence '!' as the escape character."""
+    from zurich_opendata_mcp.tools.strb import _strb_where_clause
+
+    where = _strb_where_clause(query="100%_Zuschuss")
+    assert where == "\"Titel\" ILIKE '%100!%!_Zuschuss%' ESCAPE '!'"
 
 
 def test_strb_where_clause_dates_pass_through_unescaped():
