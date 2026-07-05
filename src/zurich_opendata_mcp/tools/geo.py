@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from mcp.types import ToolAnnotations
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..app import mcp
@@ -20,13 +21,13 @@ class GeoLayersInput(BaseModel):
 
 @mcp.tool(
     name="zurich_geo_layers",
-    annotations={
-        "title": "Verfügbare Geodaten-Layer",
-        "readOnlyHint": True,
-        "destructiveHint": False,
-        "idempotentHint": True,
-        "openWorldHint": False,
-    },
+    annotations=ToolAnnotations(
+        title="Verfügbare Geodaten-Layer",
+        readOnlyHint=True,
+        destructiveHint=False,
+        idempotentHint=True,
+        openWorldHint=False,
+    ),
 )
 async def zurich_geo_layers(params: GeoLayersInput | None = None) -> str:
     """Listet alle verfügbaren WFS-Layer des Geoportals der Stadt Zürich auf.
@@ -99,13 +100,13 @@ class GeoFeaturesInput(BaseModel):
 
 @mcp.tool(
     name="zurich_geo_features",
-    annotations={
-        "title": "Geodaten abrufen (GeoJSON)",
-        "readOnlyHint": True,
-        "destructiveHint": False,
-        "idempotentHint": True,
-        "openWorldHint": True,
-    },
+    annotations=ToolAnnotations(
+        title="Geodaten abrufen (GeoJSON)",
+        readOnlyHint=True,
+        destructiveHint=False,
+        idempotentHint=True,
+        openWorldHint=True,
+    ),
 )
 async def zurich_geo_features(params: GeoFeaturesInput) -> str:
     """Ruft Geodaten aus dem WFS-Geoportal der Stadt Zürich als GeoJSON ab.

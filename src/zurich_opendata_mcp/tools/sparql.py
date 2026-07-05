@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import os
 
+from mcp.types import ToolAnnotations
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..app import mcp
@@ -76,13 +77,13 @@ def register_sparql_tool() -> bool:
         return False
     mcp.tool(
         name="zurich_sparql",
-        annotations={
-            "title": "SPARQL-Abfrage (Linked Data)",
-            "readOnlyHint": True,
-            "destructiveHint": False,
-            "idempotentHint": True,
-            "openWorldHint": False,
-        },
+        annotations=ToolAnnotations(
+            title="SPARQL-Abfrage (Linked Data)",
+            readOnlyHint=True,
+            destructiveHint=False,
+            idempotentHint=True,
+            openWorldHint=False,
+        ),
     )(zurich_sparql)
     return True
 

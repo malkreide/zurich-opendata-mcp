@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 
 import sqlparse
+from mcp.types import ToolAnnotations
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..app import mcp
@@ -63,13 +64,13 @@ class DatastoreQueryInput(BaseModel):
 
 @mcp.tool(
     name="zurich_datastore_query",
-    annotations={
-        "title": "Tabellarische Daten abfragen",
-        "readOnlyHint": True,
-        "destructiveHint": False,
-        "idempotentHint": True,
-        "openWorldHint": True,
-    },
+    annotations=ToolAnnotations(
+        title="Tabellarische Daten abfragen",
+        readOnlyHint=True,
+        destructiveHint=False,
+        idempotentHint=True,
+        openWorldHint=True,
+    ),
 )
 async def zurich_datastore_query(params: DatastoreQueryInput) -> str:
     """Fragt tabellarische Daten direkt aus dem CKAN DataStore ab.
@@ -149,13 +150,13 @@ class DatastoreSqlInput(BaseModel):
 
 @mcp.tool(
     name="zurich_datastore_sql",
-    annotations={
-        "title": "SQL-Abfrage auf DataStore",
-        "readOnlyHint": True,
-        "destructiveHint": False,
-        "idempotentHint": False,
-        "openWorldHint": True,
-    },
+    annotations=ToolAnnotations(
+        title="SQL-Abfrage auf DataStore",
+        readOnlyHint=True,
+        destructiveHint=False,
+        idempotentHint=False,
+        openWorldHint=True,
+    ),
 )
 async def zurich_datastore_sql(params: DatastoreSqlInput) -> str:
     """Führt eine SQL-Abfrage auf dem CKAN DataStore aus.

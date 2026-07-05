@@ -142,7 +142,8 @@ def main() -> None:
 
     args = _parse_args()
     if args.http:
-        mcp.run(transport="streamable-http", port=args.port)
+        mcp.settings.port = args.port
+        mcp.run(transport="streamable-http")
     else:
         mcp.run()
 

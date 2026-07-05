@@ -111,7 +111,10 @@ def test_main_runs_http_with_port(monkeypatch):
     calls: list[tuple] = []
     monkeypatch.setattr(srv.mcp, "run", lambda *a, **k: calls.append((a, k)))
     monkeypatch.setattr(sys, "argv", ["zurich-opendata-mcp", "--http", "--port", "9001"])
+    monkeypatch.setattr(srv.mcp.settings, "port", 8000)
 
     srv.main()
 
-    assert calls == [((), {"transport": "streamable-http", "port": 9001})]
+    # FastMCP.run() takes no port kwarg — the port travels via settings.
+    assert calls == [((), {"transport": "streamable-http"})]
+    assert srv.mcp.settings.port == 9001

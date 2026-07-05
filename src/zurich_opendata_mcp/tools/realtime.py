@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 
+from mcp.types import ToolAnnotations
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..app import mcp
@@ -50,13 +51,13 @@ class ParkingLiveInput(BaseModel):
 
 @mcp.tool(
     name="zurich_parking_live",
-    annotations={
-        "title": "Echtzeit-Parkplatzdaten Zürich",
-        "readOnlyHint": True,
-        "destructiveHint": False,
-        "idempotentHint": False,
-        "openWorldHint": True,
-    },
+    annotations=ToolAnnotations(
+        title="Echtzeit-Parkplatzdaten Zürich",
+        readOnlyHint=True,
+        destructiveHint=False,
+        idempotentHint=False,
+        openWorldHint=True,
+    ),
 )
 async def zurich_parking_live(params: ParkingLiveInput | None = None) -> str:
     """Ruft Echtzeit-Parkplatz-Belegungsdaten für die Stadt Zürich ab.
@@ -130,13 +131,13 @@ class WeatherLiveInput(BaseModel):
 
 @mcp.tool(
     name="zurich_weather_live",
-    annotations={
-        "title": "Aktuelle Wetterdaten Zürich",
-        "readOnlyHint": True,
-        "destructiveHint": False,
-        "idempotentHint": False,
-        "openWorldHint": True,
-    },
+    annotations=ToolAnnotations(
+        title="Aktuelle Wetterdaten Zürich",
+        readOnlyHint=True,
+        destructiveHint=False,
+        idempotentHint=False,
+        openWorldHint=True,
+    ),
 )
 async def zurich_weather_live(params: WeatherLiveInput) -> str:
     """Liefert stündlich aktualisierte Wetterdaten der UGZ-Messstationen Zürich.
@@ -157,7 +158,7 @@ async def zurich_weather_live(params: WeatherLiveInput) -> str:
             "sort": "Datum desc",
             "limit": params.limit,
         }
-        filters = {}
+        filters: dict[str, str] = {}
         if params.station:
             filters["Standort"] = params.station
         if params.parameter:
@@ -256,13 +257,13 @@ class AirQualityInput(BaseModel):
 
 @mcp.tool(
     name="zurich_air_quality",
-    annotations={
-        "title": "Luftqualität Zürich (Echtzeit)",
-        "readOnlyHint": True,
-        "destructiveHint": False,
-        "idempotentHint": False,
-        "openWorldHint": True,
-    },
+    annotations=ToolAnnotations(
+        title="Luftqualität Zürich (Echtzeit)",
+        readOnlyHint=True,
+        destructiveHint=False,
+        idempotentHint=False,
+        openWorldHint=True,
+    ),
 )
 async def zurich_air_quality(params: AirQualityInput) -> str:
     """Liefert stündlich aktualisierte Luftqualitätsmessungen aus Zürich.
@@ -282,7 +283,7 @@ async def zurich_air_quality(params: AirQualityInput) -> str:
             "sort": "Datum desc",
             "limit": params.limit,
         }
-        filters = {}
+        filters: dict[str, str] = {}
         if params.station:
             filters["Standort"] = params.station
         if params.parameter:
@@ -360,13 +361,13 @@ class WaterWeatherInput(BaseModel):
 
 @mcp.tool(
     name="zurich_water_weather",
-    annotations={
-        "title": "See-/Wasserwetter Zürich",
-        "readOnlyHint": True,
-        "destructiveHint": False,
-        "idempotentHint": False,
-        "openWorldHint": True,
-    },
+    annotations=ToolAnnotations(
+        title="See-/Wasserwetter Zürich",
+        readOnlyHint=True,
+        destructiveHint=False,
+        idempotentHint=False,
+        openWorldHint=True,
+    ),
 )
 async def zurich_water_weather(params: WaterWeatherInput) -> str:
     """Liefert Echtzeit-Wetterdaten der Wasserschutzpolizei Zürich.
@@ -449,13 +450,13 @@ class PedestrianInput(BaseModel):
 
 @mcp.tool(
     name="zurich_pedestrian_traffic",
-    annotations={
-        "title": "Passantenfrequenzen Bahnhofstrasse",
-        "readOnlyHint": True,
-        "destructiveHint": False,
-        "idempotentHint": False,
-        "openWorldHint": True,
-    },
+    annotations=ToolAnnotations(
+        title="Passantenfrequenzen Bahnhofstrasse",
+        readOnlyHint=True,
+        destructiveHint=False,
+        idempotentHint=False,
+        openWorldHint=True,
+    ),
 )
 async def zurich_pedestrian_traffic(params: PedestrianInput) -> str:
     """Liefert stündliche Passantenfrequenzen an der Zürcher Bahnhofstrasse.
@@ -541,13 +542,13 @@ class VBZPassengersInput(BaseModel):
 
 @mcp.tool(
     name="zurich_vbz_passengers",
-    annotations={
-        "title": "VBZ Fahrgastzahlen",
-        "readOnlyHint": True,
-        "destructiveHint": False,
-        "idempotentHint": False,
-        "openWorldHint": True,
-    },
+    annotations=ToolAnnotations(
+        title="VBZ Fahrgastzahlen",
+        readOnlyHint=True,
+        destructiveHint=False,
+        idempotentHint=False,
+        openWorldHint=True,
+    ),
 )
 async def zurich_vbz_passengers(params: VBZPassengersInput) -> str:
     """Fragt Fahrgastzahlen der Verkehrsbetriebe Zürich (VBZ) ab.

@@ -8,6 +8,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- The `--http` transport crashed on startup with a `TypeError`:
+  `FastMCP.run()` accepts no `port` keyword — the port must be set via
+  `mcp.settings.port`. The only test for this path monkeypatched
+  `mcp.run` and asserted the (invalid) kwarg, hiding the bug. Found by
+  the mypy ratchet below; verified end-to-end (server boots on the
+  configured port and answers an MCP `initialize` with HTTP 200).
+
+### Changed
+- mypy now checks the entire source surface: the per-module
+  `ignore_errors` exemption list in `pyproject.toml` (9 modules) is
+  gone. All 33 outstanding errors fixed: tool `annotations` are passed
+  as `mcp.types.ToolAnnotations` instances instead of plain dicts,
+  `ckan_request` is honestly typed `Any` (CKAN returns lists for
+  `group_list`/`tag_list`), and the weather/air filter dicts carry
+  explicit types. (Solution-review finding F-13.)
+
+### Fixed
 - The `line` and `stop` parameters of `zurich_vbz_passengers` were
   declared but never used — only `query` ever reached the API, so
   line/stop filtering silently returned unfiltered data. `line` now

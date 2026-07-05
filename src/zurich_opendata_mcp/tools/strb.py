@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 
+from mcp.types import ToolAnnotations
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..app import mcp
@@ -150,13 +151,13 @@ class SearchSTRBInput(BaseModel):
 
 @mcp.tool(
     name="zurich_strb_search",
-    annotations={
-        "title": "Stadtratsbeschlüsse durchsuchen",
-        "readOnlyHint": True,
-        "destructiveHint": False,
-        "idempotentHint": True,
-        "openWorldHint": False,
-    },
+    annotations=ToolAnnotations(
+        title="Stadtratsbeschlüsse durchsuchen",
+        readOnlyHint=True,
+        destructiveHint=False,
+        idempotentHint=True,
+        openWorldHint=False,
+    ),
 )
 async def zurich_strb_search(params: SearchSTRBInput) -> str:
     """Durchsucht die öffentlichen Stadtratsbeschlüsse (STRB) der Stadt Zürich per Volltext.
@@ -222,13 +223,13 @@ async def zurich_strb_search(params: SearchSTRBInput) -> str:
 
 @mcp.tool(
     name="search_stadtratsbeschluesse",
-    annotations={
-        "title": "Stadtratsbeschlüsse durchsuchen (deprecated)",
-        "readOnlyHint": True,
-        "destructiveHint": False,
-        "idempotentHint": True,
-        "openWorldHint": False,
-    },
+    annotations=ToolAnnotations(
+        title="Stadtratsbeschlüsse durchsuchen (deprecated)",
+        readOnlyHint=True,
+        destructiveHint=False,
+        idempotentHint=True,
+        openWorldHint=False,
+    ),
 )
 async def search_stadtratsbeschluesse(params: SearchSTRBInput) -> str:
     """Deprecated: alter Name von ``zurich_strb_search`` — bitte das neue Tool
@@ -286,13 +287,13 @@ class BeschluesseDepartementInput(BaseModel):
 
 @mcp.tool(
     name="zurich_strb_by_department",
-    annotations={
-        "title": "STRB nach Departement abrufen",
-        "readOnlyHint": True,
-        "destructiveHint": False,
-        "idempotentHint": True,
-        "openWorldHint": False,
-    },
+    annotations=ToolAnnotations(
+        title="STRB nach Departement abrufen",
+        readOnlyHint=True,
+        destructiveHint=False,
+        idempotentHint=True,
+        openWorldHint=False,
+    ),
 )
 async def zurich_strb_by_department(params: BeschluesseDepartementInput) -> str:
     """Gibt alle öffentlichen Stadtratsbeschlüsse eines Departements zurück.
@@ -347,13 +348,13 @@ async def zurich_strb_by_department(params: BeschluesseDepartementInput) -> str:
 
 @mcp.tool(
     name="get_beschluesse_by_departement",
-    annotations={
-        "title": "STRB nach Departement abrufen (deprecated)",
-        "readOnlyHint": True,
-        "destructiveHint": False,
-        "idempotentHint": True,
-        "openWorldHint": False,
-    },
+    annotations=ToolAnnotations(
+        title="STRB nach Departement abrufen (deprecated)",
+        readOnlyHint=True,
+        destructiveHint=False,
+        idempotentHint=True,
+        openWorldHint=False,
+    ),
 )
 async def get_beschluesse_by_departement(params: BeschluesseDepartementInput) -> str:
     """Deprecated: alter Name von ``zurich_strb_by_department`` — bitte das
@@ -382,13 +383,13 @@ class GetSTRBDetailInput(BaseModel):
 
 @mcp.tool(
     name="zurich_strb_detail",
-    annotations={
-        "title": "Einzelnen Stadtratsbeschluss abrufen",
-        "readOnlyHint": True,
-        "destructiveHint": False,
-        "idempotentHint": True,
-        "openWorldHint": False,
-    },
+    annotations=ToolAnnotations(
+        title="Einzelnen Stadtratsbeschluss abrufen",
+        readOnlyHint=True,
+        destructiveHint=False,
+        idempotentHint=True,
+        openWorldHint=False,
+    ),
 )
 async def zurich_strb_detail(params: GetSTRBDetailInput) -> str:
     """Gibt die Metadaten eines einzelnen Stadtratsbeschlusses anhand der Beschlussnummer zurück.
@@ -442,13 +443,13 @@ async def zurich_strb_detail(params: GetSTRBDetailInput) -> str:
 
 @mcp.tool(
     name="get_stadtratsbeschluss_detail",
-    annotations={
-        "title": "Einzelnen Stadtratsbeschluss abrufen (deprecated)",
-        "readOnlyHint": True,
-        "destructiveHint": False,
-        "idempotentHint": True,
-        "openWorldHint": False,
-    },
+    annotations=ToolAnnotations(
+        title="Einzelnen Stadtratsbeschluss abrufen (deprecated)",
+        readOnlyHint=True,
+        destructiveHint=False,
+        idempotentHint=True,
+        openWorldHint=False,
+    ),
 )
 async def get_stadtratsbeschluss_detail(params: GetSTRBDetailInput) -> str:
     """Deprecated: alter Name von ``zurich_strb_detail`` — bitte das neue Tool

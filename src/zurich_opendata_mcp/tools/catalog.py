@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 from typing import Annotated
 
-from mcp.types import CallToolResult
+from mcp.types import CallToolResult, ToolAnnotations
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..app import mcp
@@ -55,13 +55,13 @@ class SearchDatasetsInput(BaseModel):
 
 @mcp.tool(
     name="zurich_search_datasets",
-    annotations={
-        "title": "Datensätze suchen",
-        "readOnlyHint": True,
-        "destructiveHint": False,
-        "idempotentHint": True,
-        "openWorldHint": True,
-    },
+    annotations=ToolAnnotations(
+        title="Datensätze suchen",
+        readOnlyHint=True,
+        destructiveHint=False,
+        idempotentHint=True,
+        openWorldHint=True,
+    ),
 )
 async def zurich_search_datasets(
     params: SearchDatasetsInput,
@@ -142,13 +142,13 @@ class GetDatasetInput(BaseModel):
 
 @mcp.tool(
     name="zurich_get_dataset",
-    annotations={
-        "title": "Datensatz-Details abrufen",
-        "readOnlyHint": True,
-        "destructiveHint": False,
-        "idempotentHint": True,
-        "openWorldHint": True,
-    },
+    annotations=ToolAnnotations(
+        title="Datensatz-Details abrufen",
+        readOnlyHint=True,
+        destructiveHint=False,
+        idempotentHint=True,
+        openWorldHint=True,
+    ),
 )
 async def zurich_get_dataset(
     params: GetDatasetInput,
@@ -204,13 +204,13 @@ class ListGroupInput(BaseModel):
 
 @mcp.tool(
     name="zurich_list_categories",
-    annotations={
-        "title": "Datenkategorien auflisten",
-        "readOnlyHint": True,
-        "destructiveHint": False,
-        "idempotentHint": True,
-        "openWorldHint": True,
-    },
+    annotations=ToolAnnotations(
+        title="Datenkategorien auflisten",
+        readOnlyHint=True,
+        destructiveHint=False,
+        idempotentHint=True,
+        openWorldHint=True,
+    ),
 )
 async def zurich_list_categories(params: ListGroupInput) -> str:
     """Listet alle Datenkategorien (Gruppen) im Katalog auf oder zeigt Details einer Kategorie.
@@ -264,13 +264,13 @@ class TagSearchInput(BaseModel):
 
 @mcp.tool(
     name="zurich_list_tags",
-    annotations={
-        "title": "Tags durchsuchen",
-        "readOnlyHint": True,
-        "destructiveHint": False,
-        "idempotentHint": True,
-        "openWorldHint": True,
-    },
+    annotations=ToolAnnotations(
+        title="Tags durchsuchen",
+        readOnlyHint=True,
+        destructiveHint=False,
+        idempotentHint=True,
+        openWorldHint=True,
+    ),
 )
 async def zurich_list_tags(params: TagSearchInput) -> str:
     """Durchsucht verfügbare Tags im Open-Data-Katalog.
@@ -320,13 +320,13 @@ class AnalyzeDatasetInput(BaseModel):
 
 @mcp.tool(
     name="zurich_analyze_datasets",
-    annotations={
-        "title": "Datensätze analysieren",
-        "readOnlyHint": True,
-        "destructiveHint": False,
-        "idempotentHint": True,
-        "openWorldHint": True,
-    },
+    annotations=ToolAnnotations(
+        title="Datensätze analysieren",
+        readOnlyHint=True,
+        destructiveHint=False,
+        idempotentHint=True,
+        openWorldHint=True,
+    ),
 )
 async def zurich_analyze_datasets(
     params: AnalyzeDatasetInput,
@@ -459,13 +459,13 @@ async def zurich_analyze_datasets(
 
 @mcp.tool(
     name="zurich_catalog_stats",
-    annotations={
-        "title": "Katalog-Statistiken",
-        "readOnlyHint": True,
-        "destructiveHint": False,
-        "idempotentHint": True,
-        "openWorldHint": True,
-    },
+    annotations=ToolAnnotations(
+        title="Katalog-Statistiken",
+        readOnlyHint=True,
+        destructiveHint=False,
+        idempotentHint=True,
+        openWorldHint=True,
+    ),
 )
 async def zurich_catalog_stats() -> str:
     """Gibt einen Überblick über den gesamten Open-Data-Katalog der Stadt Zürich.
@@ -542,13 +542,13 @@ class FindSchoolDataInput(BaseModel):
 
 @mcp.tool(
     name="zurich_find_school_data",
-    annotations={
-        "title": "Schulrelevante Daten finden",
-        "readOnlyHint": True,
-        "destructiveHint": False,
-        "idempotentHint": True,
-        "openWorldHint": True,
-    },
+    annotations=ToolAnnotations(
+        title="Schulrelevante Daten finden",
+        readOnlyHint=True,
+        destructiveHint=False,
+        idempotentHint=True,
+        openWorldHint=True,
+    ),
 )
 async def zurich_find_school_data(params: FindSchoolDataInput) -> str:
     """Findet Datensätze, die für das Schulamt und die Volksschule relevant sind.

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from mcp.types import ToolAnnotations
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..app import mcp
@@ -58,13 +59,13 @@ class TourismSearchInput(BaseModel):
 
 @mcp.tool(
     name="zurich_tourism",
-    annotations={
-        "title": "Zürich Tourismus Daten",
-        "readOnlyHint": True,
-        "destructiveHint": False,
-        "idempotentHint": True,
-        "openWorldHint": True,
-    },
+    annotations=ToolAnnotations(
+        title="Zürich Tourismus Daten",
+        readOnlyHint=True,
+        destructiveHint=False,
+        idempotentHint=True,
+        openWorldHint=True,
+    ),
 )
 async def zurich_tourism(params: TourismSearchInput) -> str:
     """Sucht Attraktionen, Restaurants, Hotels und Events über die Zürich Tourismus API.

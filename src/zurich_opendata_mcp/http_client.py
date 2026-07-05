@@ -80,8 +80,12 @@ async def http_get(url: str, params: dict[str, Any] | None = None) -> httpx.Resp
     return response
 
 
-async def ckan_request(action: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
-    """Make a CKAN API request and return the result."""
+async def ckan_request(action: str, params: dict[str, Any] | None = None) -> Any:
+    """Make a CKAN API request and return the ``result`` field.
+
+    Typed ``Any`` on purpose: CKAN returns a dict for most actions but a
+    plain list for e.g. ``group_list``/``tag_list``.
+    """
     response = await http_get(f"{CKAN_API_URL}/{action}", params=params or {})
     data = response.json()
 

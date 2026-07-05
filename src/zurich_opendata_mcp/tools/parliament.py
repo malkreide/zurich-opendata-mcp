@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from mcp.types import ToolAnnotations
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..app import mcp
@@ -154,13 +155,13 @@ class ParliamentSearchInput(BaseModel):
 
 @mcp.tool(
     name="zurich_parliament_search",
-    annotations={
-        "title": "Gemeinderatsgeschäfte suchen",
-        "readOnlyHint": True,
-        "destructiveHint": False,
-        "idempotentHint": True,
-        "openWorldHint": True,
-    },
+    annotations=ToolAnnotations(
+        title="Gemeinderatsgeschäfte suchen",
+        readOnlyHint=True,
+        destructiveHint=False,
+        idempotentHint=True,
+        openWorldHint=True,
+    ),
 )
 async def zurich_parliament_search(params: ParliamentSearchInput) -> str:
     """Durchsucht die Geschäfte des Gemeinderats der Stadt Zürich (Paris API).
@@ -261,13 +262,13 @@ class ParliamentMembersInput(BaseModel):
 
 @mcp.tool(
     name="zurich_parliament_members",
-    annotations={
-        "title": "Gemeinderatsmitglieder suchen",
-        "readOnlyHint": True,
-        "destructiveHint": False,
-        "idempotentHint": True,
-        "openWorldHint": True,
-    },
+    annotations=ToolAnnotations(
+        title="Gemeinderatsmitglieder suchen",
+        readOnlyHint=True,
+        destructiveHint=False,
+        idempotentHint=True,
+        openWorldHint=True,
+    ),
 )
 async def zurich_parliament_members(params: ParliamentMembersInput) -> str:
     """Sucht Mitglieder des Gemeinderats der Stadt Zürich.
