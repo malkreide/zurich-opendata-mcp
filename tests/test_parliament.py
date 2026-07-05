@@ -318,3 +318,30 @@ async def test_parliament_members_commission_json_format():
     assert rec["vorname"] == "Anna"
     assert rec["funktion"] == "Präsidentin"
     assert rec["dauer"] == "2022-05-01 -"
+
+
+# ─── defusedxml hardening (F-9) ──────────────────────────────────────────────
+
+_ENTITY_BOMB = """<?xml version="1.0"?>
+<!DOCTYPE bomb [
+  <!ENTITY a "AAAA">
+  <!ENTITY b "&a;&a;&a;&a;">
+]>
+<sr:searchDetailResponse xmlns:sr="http://www.cmiag.ch/cdws/searchDetailResponse" numHits="1">
+<sr:Hit>&b;</sr:Hit>
+</sr:searchDetailResponse>
+"""
+
+
+@respx.mock
+async def test_paris_xml_with_dtd_is_rejected():
+    """defusedxml refuses DTDs/entity expansion in upstream XML; the tool
+    surfaces it as a handled error instead of expanding the entities."""
+    respx.get(_url("geschaeft")).mock(
+        return_value=httpx.Response(200, content=_ENTITY_BOMB.encode())
+    )
+
+    result = await zurich_parliament_search(ParliamentSearchInput(query="x"))
+
+    assert "Fehler bei Geschäftssuche Gemeinderat" in result
+    assert "AAAA" not in result

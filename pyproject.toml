@@ -35,6 +35,7 @@ dependencies = [
     "pydantic>=2.13.4",
     "uvicorn>=0.46.0",
     "sqlparse>=0.5.5",
+    "defusedxml>=0.7.1",
 ]
 
 [project.optional-dependencies]

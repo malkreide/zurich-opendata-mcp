@@ -30,6 +30,7 @@ eine feste Menge von Open-Data-Endpunkten der Stadt Zürich und ihrer Partner
 | Injection | SQL-String-Literal- und ILIKE-Wildcard-Escaping in `tools/strb.py` (H-1, Rerun §2.3) und CQL-Escaping in `clients/paris.py` (H-2); Datums-/ID-Felder werden upstream per Regex validiert (SEC-018) |
 | Tools | Jedes Tool setzt `readOnlyHint: True`; es existieren keine Schreib-, Mutations- oder Löschpfade (ARCH) |
 | Secrets | Keine erforderlich — der Server nutzt keinen API-Key und keine Credentials; nichts Geheimes wird gespeichert oder geloggt (ARCH-005/SEC-013) |
+| XML | Paris-API-Antworten werden via `defusedxml` geparst — DTDs, Entity-Expansion und externe Entities werden abgelehnt (F-9) |
 | Fehler | Upstream-Fehlerbodies werden nur nach stderr geloggt; das Modell erhält eine generische, nicht-leckende Meldung (OBS-002) |
 | Stdout | Reserviert für den JSON-RPC-Stream; sämtliches Logging auf stderr gepinnt (OBS-004) |
 | Resilienz | Ein 30s-Timeout pro Anfrage (`REQUEST_TIMEOUT`) begrenzt jeden Upstream-Aufruf (SCALE-002/003) |

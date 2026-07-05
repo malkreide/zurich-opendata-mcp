@@ -2,7 +2,12 @@
 
 from __future__ import annotations
 
+# stdlib ElementTree only for the Element type; parsing goes through
+# defusedxml, which rejects DTDs/entity expansion (billion laughs) and
+# external entity references in upstream XML.
 import xml.etree.ElementTree as ET
+
+from defusedxml import ElementTree as DefusedET
 
 from ..config import PARIS_API_URL
 from ..http_client import http_get
@@ -31,7 +36,7 @@ async def paris_search(
         "m": str(max_results),
     }
     response = await http_get(url, params=params)
-    return ET.fromstring(response.content)
+    return DefusedET.fromstring(response.content)
 
 
 def paris_extract_text(element: ET.Element | None, default: str = "") -> str:

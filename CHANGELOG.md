@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Security
+- Paris-API XML responses are now parsed with `defusedxml` instead of
+  stdlib `xml.etree`: DTDs, entity expansion (billion laughs) and
+  external entity references in upstream XML are rejected and surface
+  as a handled tool error. Low practical risk (fixed, trusted host over
+  HTTPS), but the hardening is one dependency away. New runtime
+  dependency `defusedxml>=0.7.1`. (Solution-review finding F-9.)
+
+### Security
 - STRB search terms containing the LIKE wildcards `%`/`_` no longer act
   as wildcards (audit rerun §2.3): `_sql_escape` now also escapes `%`,
   `_` and the escape character itself, and the ILIKE conditions carry
