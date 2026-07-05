@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `format: 'markdown' | 'json'` parameter (default `markdown`, matching
+  the existing STRB tools) for all six realtime tools —
+  `zurich_parking_live`, `zurich_weather_live`, `zurich_air_quality`,
+  `zurich_water_weather`, `zurich_pedestrian_traffic` and
+  `zurich_vbz_passengers`. With `format='json'` the tools return a
+  machine-readable payload (records with the CKAN-internal `_id`
+  stripped, plus `total`/`count` metadata) instead of Markdown, so
+  agents no longer have to parse Markdown tables to post-process
+  measurements. `zurich_parking_live` gained an optional input model
+  for this; calling it without arguments behaves as before.
+  (Solution-review finding F-5, part 1 — realtime family.)
+
 ### Changed
 - The three Stadtratsbeschlüsse tools now follow the `zurich_` naming
   convention of the rest of the tool surface: `zurich_strb_search`,

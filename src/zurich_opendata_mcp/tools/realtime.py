@@ -21,11 +21,31 @@ from ..config import (
     VBZ_REISENDE_ID,
     WATER_MYTHENQUAI_ID,
     WATER_TIEFENBRUNNEN_ID,
+    OutputFormat,
     WaterStation,
 )
 from ..formatters import handle_api_error, md_cell
 from ..http_client import ckan_request, http_get_json
 from ..resolver import resolve_yearly_resource
+
+_FORMAT_FIELD_DESC = "Ausgabeformat: 'markdown' (Standard, lesbar) oder 'json' (maschinenlesbar)."
+
+
+def _json_out(payload: dict) -> str:
+    return json.dumps(payload, indent=2, ensure_ascii=False, default=str)
+
+
+def _strip_ids(records: list[dict]) -> list[dict]:
+    """Drop the CKAN-internal `_id` column from records for JSON output."""
+    return [{k: v for k, v in r.items() if k != "_id"} for r in records]
+
+
+class ParkingLiveInput(BaseModel):
+    """Input für Echtzeit-Parkplatzdaten."""
+
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+
+    format: OutputFormat = Field(default="markdown", description=_FORMAT_FIELD_DESC)
 
 
 @mcp.tool(
@@ -38,7 +58,7 @@ from ..resolver import resolve_yearly_resource
         "openWorldHint": True,
     },
 )
-async def zurich_parking_live() -> str:
+async def zurich_parking_live(params: ParkingLiveInput | None = None) -> str:
     """Ruft Echtzeit-Parkplatz-Belegungsdaten für die Stadt Zürich ab.
 
     Liefert aktuelle Daten von 36 Parkhäusern und Parkplätzen:
@@ -46,12 +66,19 @@ async def zurich_parking_live() -> str:
     Datenquelle: ParkenDD API.
 
     Returns:
-        Markdown-Tabelle mit aktuellen Parkhaus-Belegungen
+        Markdown-Tabelle mit aktuellen Parkhaus-Belegungen (oder JSON
+        bei format='json')
     """
+    params = params or ParkingLiveInput()
     try:
         data = await http_get_json(PARKENDD_URL)
         lots = data.get("lots", [])
         last_updated = data.get("last_updated", "unbekannt")
+
+        if params.format == "json":
+            return _json_out(
+                {"last_updated": last_updated, "count": len(lots), "lots": lots}
+            )
 
         lines = [
             "## Parkplatzbelegung Zürich",
@@ -97,6 +124,7 @@ class WeatherLiveInput(BaseModel):
         ),
     )
     limit: int = Field(default=20, description="Anzahl Messwerte (max. 100)", ge=1, le=100)
+    format: OutputFormat = Field(default="markdown", description=_FORMAT_FIELD_DESC)
 
 
 @mcp.tool(
@@ -141,6 +169,15 @@ async def zurich_weather_live(params: WeatherLiveInput) -> str:
 
         if not records:
             return "Keine Wetterdaten gefunden. Standort/Parameter prüfen."
+
+        if params.format == "json":
+            return _json_out(
+                {
+                    "total": result.get("total", 0),
+                    "count": len(records),
+                    "measurements": _strip_ids(records),
+                }
+            )
 
         lines = ["## 🌤️ Aktuelle Wetterdaten Zürich\n"]
         lines.append(f"*Quelle: UGZ Messnetz – {result.get('total', '?')} Messwerte total*\n")
@@ -202,6 +239,7 @@ class AirQualityInput(BaseModel):
         ),
     )
     limit: int = Field(default=30, description="Anzahl Messwerte (max. 100)", ge=1, le=100)
+    format: OutputFormat = Field(default="markdown", description=_FORMAT_FIELD_DESC)
 
 
 @mcp.tool(
@@ -245,6 +283,15 @@ async def zurich_air_quality(params: AirQualityInput) -> str:
 
         if not records:
             return "Keine Luftqualitätsdaten gefunden."
+
+        if params.format == "json":
+            return _json_out(
+                {
+                    "total": result.get("total", 0),
+                    "count": len(records),
+                    "measurements": _strip_ids(records),
+                }
+            )
 
         lines = ["## 🌬️ Luftqualität Zürich\n"]
         lines.append(f"*Quelle: UGZ Messnetz – {result.get('total', '?')} Messwerte total*\n")
@@ -296,6 +343,7 @@ class WaterWeatherInput(BaseModel):
         description="Messstation: 'tiefenbrunnen' oder 'mythenquai'",
     )
     limit: int = Field(default=6, description="Anzahl Messwerte (max. 50)", ge=1, le=50)
+    format: OutputFormat = Field(default="markdown", description=_FORMAT_FIELD_DESC)
 
 
 @mcp.tool(
@@ -334,6 +382,15 @@ async def zurich_water_weather(params: WaterWeatherInput) -> str:
 
         if not records:
             return f"Keine Daten für Station {station_name} gefunden."
+
+        if params.format == "json":
+            return _json_out(
+                {
+                    "station": station_name,
+                    "count": len(records),
+                    "measurements": _strip_ids(records),
+                }
+            )
 
         lines = [f"## 🌊 Zürichsee Wetterstation {station_name}\n"]
         lines.append("*Wasserschutzpolizei Zürich – alle 10 Min. aktualisiert*\n")
@@ -375,6 +432,7 @@ class PedestrianInput(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
 
     limit: int = Field(default=24, description="Anzahl Stundenwerte (max. 168)", ge=1, le=168)
+    format: OutputFormat = Field(default="markdown", description=_FORMAT_FIELD_DESC)
 
 
 @mcp.tool(
@@ -409,6 +467,15 @@ async def zurich_pedestrian_traffic(params: PedestrianInput) -> str:
 
         if not records:
             return "Keine Passantenfrequenz-Daten gefunden."
+
+        if params.format == "json":
+            return _json_out(
+                {
+                    "total": result.get("total", 0),
+                    "count": len(records),
+                    "records": _strip_ids(records),
+                }
+            )
 
         lines = ["## 🚶 Passantenfrequenzen Bahnhofstrasse Zürich\n"]
         lines.append("*hystreet.com Sensoren – stündlich aktualisiert*\n")
@@ -453,6 +520,7 @@ class VBZPassengersInput(BaseModel):
         description="Volltextsuche über alle Felder",
     )
     limit: int = Field(default=20, description="Anzahl Ergebnisse (max. 100)", ge=1, le=100)
+    format: OutputFormat = Field(default="markdown", description=_FORMAT_FIELD_DESC)
 
 
 @mcp.tool(
@@ -490,6 +558,16 @@ async def zurich_vbz_passengers(params: VBZPassengersInput) -> str:
             return "Keine VBZ-Fahrgastzahlen gefunden."
 
         field_names = [f["id"] for f in fields if f["id"] != "_id"]
+
+        if params.format == "json":
+            return _json_out(
+                {
+                    "total": result.get("total", 0),
+                    "count": len(records),
+                    "fields": field_names,
+                    "records": _strip_ids(records),
+                }
+            )
 
         lines = ["## 🚊 VBZ Fahrgastzahlen\n"]
         lines.append(f"*Verkehrsbetriebe Zürich – {result.get('total', '?')} Einträge*\n")

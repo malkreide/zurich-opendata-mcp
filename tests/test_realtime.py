@@ -25,6 +25,7 @@ from zurich_opendata_mcp.config import (
 )
 from zurich_opendata_mcp.tools.realtime import (
     AirQualityInput,
+    ParkingLiveInput,
     PedestrianInput,
     VBZPassengersInput,
     WaterWeatherInput,
@@ -400,3 +401,116 @@ async def test_vbz_error_path():
     respx.get(_DATASTORE).mock(return_value=httpx.Response(500))
     result = await zurich_vbz_passengers(VBZPassengersInput())
     assert "Fehler bei VBZ-Fahrgastzahlen" in result
+
+
+# ─── format="json" across the realtime family (F-5) ─────────────────────────
+
+
+@respx.mock
+async def test_parking_live_json_format():
+    respx.get(PARKENDD_URL).mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "last_updated": "2026-06-27T10:00:00",
+                "lots": [{"name": "Urania", "free": 50, "total": 100, "state": "open"}],
+            },
+        )
+    )
+
+    payload = json.loads(await zurich_parking_live(ParkingLiveInput(format="json")))
+
+    assert payload["last_updated"] == "2026-06-27T10:00:00"
+    assert payload["count"] == 1
+    assert payload["lots"][0]["name"] == "Urania"
+
+
+@respx.mock
+async def test_weather_live_json_format_strips_internal_id():
+    respx.get(_DATASTORE).mock(
+        return_value=_ckan(
+            {
+                "total": 7,
+                "records": [
+                    {"_id": 1, "Datum": "2026-06-27T09:00", "Parameter": "T", "Wert": 21.4}
+                ],
+            }
+        )
+    )
+
+    payload = json.loads(await zurich_weather_live(WeatherLiveInput(format="json")))
+
+    assert payload["total"] == 7
+    assert payload["count"] == 1
+    assert payload["measurements"][0]["Wert"] == 21.4
+    assert "_id" not in payload["measurements"][0]
+
+
+@respx.mock
+async def test_air_quality_json_format():
+    respx.get(_DATASTORE).mock(
+        return_value=_ckan(
+            {
+                "total": 1,
+                "records": [{"_id": 9, "Parameter": "NO2", "Wert": 18, "Einheit": "µg/m³"}],
+            }
+        )
+    )
+
+    payload = json.loads(await zurich_air_quality(AirQualityInput(format="json")))
+
+    assert payload["measurements"] == [{"Parameter": "NO2", "Wert": 18, "Einheit": "µg/m³"}]
+
+
+@respx.mock
+async def test_water_weather_json_format():
+    respx.get(_DATASTORE).mock(
+        return_value=_ckan(
+            {
+                "total": 1,
+                "records": [{"timestamp_cet": "2026-06-27 11:00", "water_temperature": 22.1}],
+            }
+        )
+    )
+
+    payload = json.loads(
+        await zurich_water_weather(WaterWeatherInput(station="mythenquai", format="json"))
+    )
+
+    assert payload["station"] == "Mythenquai"
+    assert payload["measurements"][0]["water_temperature"] == 22.1
+
+
+@respx.mock
+async def test_pedestrian_json_format():
+    respx.get(_DATASTORE).mock(
+        return_value=_ckan(
+            {
+                "total": 3,
+                "records": [{"_id": 4, "location_name": "Mitte", "pedestrians_count": 1234}],
+            }
+        )
+    )
+
+    payload = json.loads(await zurich_pedestrian_traffic(PedestrianInput(format="json")))
+
+    assert payload["total"] == 3
+    assert payload["records"] == [{"location_name": "Mitte", "pedestrians_count": 1234}]
+
+
+@respx.mock
+async def test_vbz_json_format_includes_fields():
+    respx.get(_DATASTORE).mock(
+        return_value=_ckan(
+            {
+                "total": 1,
+                "fields": [{"id": "_id", "type": "int"}, {"id": "Linienname", "type": "text"}],
+                "records": [{"_id": 1, "Linienname": "4"}],
+            }
+        )
+    )
+
+    payload = json.loads(await zurich_vbz_passengers(VBZPassengersInput(format="json")))
+
+    assert payload["fields"] == ["Linienname"]
+    assert payload["records"] == [{"Linienname": "4"}]

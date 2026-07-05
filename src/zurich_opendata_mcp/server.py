@@ -69,6 +69,7 @@ from .tools.parliament import (  # noqa: F401
 )
 from .tools.realtime import (  # noqa: F401
     AirQualityInput,
+    ParkingLiveInput,
     PedestrianInput,
     VBZPassengersInput,
     WaterWeatherInput,
