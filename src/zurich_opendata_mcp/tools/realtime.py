@@ -24,15 +24,11 @@ from ..config import (
     OutputFormat,
     WaterStation,
 )
+from ..formatters import FORMAT_FIELD_DESC as _FORMAT_FIELD_DESC
 from ..formatters import handle_api_error, md_cell
+from ..formatters import json_out as _json_out
 from ..http_client import ckan_request, http_get_json
 from ..resolver import resolve_yearly_resource
-
-_FORMAT_FIELD_DESC = "Ausgabeformat: 'markdown' (Standard, lesbar) oder 'json' (maschinenlesbar)."
-
-
-def _json_out(payload: dict) -> str:
-    return json.dumps(payload, indent=2, ensure_ascii=False, default=str)
 
 
 def _strip_ids(records: list[dict]) -> list[dict]:

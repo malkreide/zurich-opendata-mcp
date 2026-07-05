@@ -7,12 +7,15 @@ pure (no-HTTP) layer listing.
 
 from __future__ import annotations
 
+import json
+
 import httpx
 import respx
 
 from zurich_opendata_mcp.config import GEOPORTAL_LAYERS, WFS_BASE_URL
 from zurich_opendata_mcp.tools.geo import (
     GeoFeaturesInput,
+    GeoLayersInput,
     zurich_geo_features,
     zurich_geo_layers,
 )
@@ -133,3 +136,33 @@ async def test_geo_features_http_error():
     result = await zurich_geo_features(GeoFeaturesInput(layer_id="schulanlagen"))
 
     assert "Fehler bei Geodaten-Abfrage" in result
+
+
+# ─── format="json" (F-5) ─────────────────────────────────────────────────────
+
+
+async def test_geo_layers_json_format():
+    payload = json.loads(await zurich_geo_layers(GeoLayersInput(format="json")))
+
+    assert payload["count"] == len(GEOPORTAL_LAYERS)
+    by_id = {layer["layer_id"]: layer for layer in payload["layers"]}
+    assert by_id["schulanlagen"]["typename"] == _TYPENAME
+    assert by_id["schulanlagen"]["service"] == _SERVICE
+
+
+@respx.mock
+async def test_geo_features_json_format_returns_raw_geojson():
+    upstream = {
+        "type": "FeatureCollection",
+        "features": [_point("Schulhaus A", 8.54, 47.37, kategorie="Schulhaus")],
+    }
+    respx.get(_WFS_URL).mock(return_value=httpx.Response(200, json=upstream))
+
+    payload = json.loads(
+        await zurich_geo_features(
+            GeoFeaturesInput(layer_id="schulanlagen", format="json")
+        )
+    )
+
+    # The raw FeatureCollection passes through unchanged.
+    assert payload == upstream

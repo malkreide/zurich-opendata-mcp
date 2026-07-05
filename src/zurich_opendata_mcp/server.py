@@ -58,6 +58,7 @@ from .tools.datastore import (  # noqa: F401
 )
 from .tools.geo import (  # noqa: F401
     GeoFeaturesInput,
+    GeoLayersInput,
     zurich_geo_features,
     zurich_geo_layers,
 )

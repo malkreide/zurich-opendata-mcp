@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from typing import Any
 
@@ -11,6 +12,13 @@ from .config import CKAN_BASE_URL
 from .models import DatasetSummary, ResourceInfo
 
 logger = logging.getLogger(__name__)
+
+FORMAT_FIELD_DESC = "Ausgabeformat: 'markdown' (Standard, lesbar) oder 'json' (maschinenlesbar)."
+
+
+def json_out(payload: Any) -> str:
+    """Serialise a tool payload for ``format='json'`` output."""
+    return json.dumps(payload, indent=2, ensure_ascii=False, default=str)
 
 
 def to_resource_info(resource: dict[str, Any]) -> ResourceInfo:

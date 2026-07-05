@@ -147,3 +147,31 @@ async def test_tourism_custom_type_takes_precedence():
 
     # @customType wins over @type for the rendered Typ line.
     assert "- **Typ**: Sehenswürdigkeit" in result
+
+
+# ─── format="json" (F-5) ─────────────────────────────────────────────────────
+
+import json  # noqa: E402
+
+
+@respx.mock
+async def test_tourism_json_format():
+    respx.get(ZT_API_URL).mock(
+        return_value=httpx.Response(
+            200, json=[_item("Kornhaus", desc_de="Feines Essen")]
+        )
+    )
+
+    payload = json.loads(
+        await zurich_tourism(
+            TourismSearchInput(category="restaurants", language="de", format="json")
+        )
+    )
+
+    assert payload["category"] == "restaurants"
+    assert payload["total"] == 1
+    rec = payload["eintraege"][0]
+    assert rec["name"] == "Kornhaus"
+    assert rec["typ"] == "Restaurant"
+    assert rec["adresse"] == "Bahnhofstrasse 1, 8001 Zürich"
+    assert rec["lat"] == 47.37

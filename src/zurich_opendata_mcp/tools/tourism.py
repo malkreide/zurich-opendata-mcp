@@ -6,8 +6,29 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from ..app import mcp
 from ..clients.tourism import zt_get_data
-from ..config import ZT_CATEGORIES, TourismLanguage
-from ..formatters import handle_api_error
+from ..config import ZT_CATEGORIES, OutputFormat, TourismLanguage
+from ..formatters import FORMAT_FIELD_DESC, handle_api_error, json_out
+
+
+def _tourism_record(item: dict, lang: str) -> dict:
+    """Normalise one Schema.org tourism item into a flat record."""
+    address = item.get("address", {})
+    geo = item.get("geo", {})
+    url = item.get("url", {})
+    street = address.get("streetAddress", "") if isinstance(address, dict) else ""
+    postal = address.get("postalCode", "") if isinstance(address, dict) else ""
+    city = address.get("addressLocality", "") if isinstance(address, dict) else ""
+    return {
+        "name": item.get("name", {}).get(lang, "Unbenannt"),
+        "typ": item.get("@customType") or item.get("@type", ""),
+        "kategorien": list(item.get("category", {}).keys()),
+        "beschreibung": item.get("disambiguatingDescription", {}).get(lang, ""),
+        "adresse": f"{street}, {postal} {city}".strip(", ") if street else "",
+        "telefon": item.get("telephone", ""),
+        "web": url.get(lang, "") if isinstance(url, dict) else "",
+        "lat": geo.get("latitude") if isinstance(geo, dict) else None,
+        "lon": geo.get("longitude") if isinstance(geo, dict) else None,
+    }
 
 
 class TourismSearchInput(BaseModel):
@@ -32,6 +53,7 @@ class TourismSearchInput(BaseModel):
         default="de",
         description="Sprache der Ergebnisse: 'de', 'en', 'fr', 'it'",
     )
+    format: OutputFormat = Field(default="markdown", description=FORMAT_FIELD_DESC)
 
 
 @mcp.tool(
@@ -89,51 +111,39 @@ async def zurich_tourism(params: TourismSearchInput) -> str:
                 + "."
             )
 
+        records = [_tourism_record(item, lang) for item in data]
+
+        if params.format == "json":
+            return json_out(
+                {
+                    "category": params.category,
+                    "total": total,
+                    "count": len(records),
+                    "eintraege": records,
+                }
+            )
+
         lines = [
             f"## Zürich Tourismus: {params.category}",
-            f"**{total} Einträge** (zeige {len(data)})\n",
+            f"**{total} Einträge** (zeige {len(records)})\n",
         ]
 
-        for item in data:
-            name = item.get("name", {}).get(lang, "Unbenannt")
-            short_desc = item.get("disambiguatingDescription", {}).get(lang, "")
-            item_type = item.get("@type", "")
-            custom_type = item.get("@customType") or ""
-            categories = list(item.get("category", {}).keys())
-
-            # Address
-            address = item.get("address", {})
-            street = address.get("streetAddress", "") if isinstance(address, dict) else ""
-            postal = address.get("postalCode", "") if isinstance(address, dict) else ""
-            city = address.get("addressLocality", "") if isinstance(address, dict) else ""
-            addr_str = f"{street}, {postal} {city}".strip(", ") if street else ""
-
-            # Contact
-            url = item.get("url", {}).get(lang, "") if isinstance(item.get("url"), dict) else ""
-            phone = item.get("telephone", "")
-
-            # Geo
-            geo = item.get("geo", {})
-            lat = geo.get("latitude") if isinstance(geo, dict) else None
-            lon = geo.get("longitude") if isinstance(geo, dict) else None
-
-            lines.append(f"### {name}")
-            if custom_type:
-                lines.append(f"- **Typ**: {custom_type}")
-            elif item_type:
-                lines.append(f"- **Typ**: {item_type}")
-            if categories:
-                lines.append(f"- **Kategorien**: {', '.join(categories[:5])}")
-            if short_desc:
-                lines.append(f"- **Beschreibung**: {short_desc[:250]}")
-            if addr_str:
-                lines.append(f"- **Adresse**: {addr_str}")
-            if phone:
-                lines.append(f"- **Telefon**: {phone}")
-            if url:
-                lines.append(f"- **Web**: {url}")
-            if lat and lon:
-                lines.append(f"- **Koordinaten**: {lat}, {lon}")
+        for rec in records:
+            lines.append(f"### {rec['name']}")
+            if rec["typ"]:
+                lines.append(f"- **Typ**: {rec['typ']}")
+            if rec["kategorien"]:
+                lines.append(f"- **Kategorien**: {', '.join(rec['kategorien'][:5])}")
+            if rec["beschreibung"]:
+                lines.append(f"- **Beschreibung**: {rec['beschreibung'][:250]}")
+            if rec["adresse"]:
+                lines.append(f"- **Adresse**: {rec['adresse']}")
+            if rec["telefon"]:
+                lines.append(f"- **Telefon**: {rec['telefon']}")
+            if rec["web"]:
+                lines.append(f"- **Web**: {rec['web']}")
+            if rec["lat"] and rec["lon"]:
+                lines.append(f"- **Koordinaten**: {rec['lat']}, {rec['lon']}")
             lines.append("")
 
         return "\n".join(lines)

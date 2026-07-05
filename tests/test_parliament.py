@@ -261,3 +261,60 @@ async def test_parliament_members_error_path():
     result = await zurich_parliament_members(ParliamentMembersInput())
 
     assert "Fehler bei Mitgliedersuche Gemeinderat" in result
+
+
+# ─── format="json" (F-5) ─────────────────────────────────────────────────────
+
+import json  # noqa: E402
+
+
+@respx.mock
+async def test_parliament_search_json_format():
+    respx.get(_url("geschaeft")).mock(return_value=_response(3, _GESCHAEFT_HIT))
+
+    payload = json.loads(
+        await zurich_parliament_search(
+            ParliamentSearchInput(query="Schule", format="json")
+        )
+    )
+
+    assert payload["total"] == 3
+    assert payload["count"] == 1
+    rec = payload["geschaefte"][0]
+    assert rec["gr_nr"] == "2023/123"
+    assert rec["titel"] == "Schulraumplanung Test"
+    assert rec["erstunterzeichner"] == "Anna Muster (SP)"
+    assert rec["link"].endswith("/geschaefte/2023-123")
+
+
+@respx.mock
+async def test_parliament_members_kontakt_json_format():
+    respx.get(_url("kontakt")).mock(return_value=_response(1, _KONTAKT_HIT))
+
+    payload = json.loads(
+        await zurich_parliament_members(
+            ParliamentMembersInput(party="SP", format="json")
+        )
+    )
+
+    rec = payload["members"][0]
+    assert rec["name_vorname"] == "Muster Anna"
+    assert rec["wahlkreis"] == "1+2"
+    assert rec["mandate"] == [{"gremium": "GPK", "funktion": "Mitglied"}]
+
+
+@respx.mock
+async def test_parliament_members_commission_json_format():
+    respx.get(_url("behoerdenmandat")).mock(return_value=_response(1, _BEHOERDEN_HIT))
+
+    payload = json.loads(
+        await zurich_parliament_members(
+            ParliamentMembersInput(commission="GPK", format="json")
+        )
+    )
+
+    assert payload["commission"] == "GPK"
+    rec = payload["members"][0]
+    assert rec["vorname"] == "Anna"
+    assert rec["funktion"] == "Präsidentin"
+    assert rec["dauer"] == "2022-05-01 -"

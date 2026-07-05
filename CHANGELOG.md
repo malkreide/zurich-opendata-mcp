@@ -8,6 +8,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- `format: 'markdown' | 'json'` parameter (default `markdown`) for the
+  parliament, geo and tourism tools — `zurich_parliament_search`,
+  `zurich_parliament_members`, `zurich_geo_layers`, `zurich_geo_features`
+  and `zurich_tourism`. JSON output returns normalised records with
+  `total`/`count` metadata; `zurich_geo_features` returns the raw GeoJSON
+  FeatureCollection (bounded by `max_features`). Together with the STRB
+  and realtime tools, every data-bearing tool of the server now offers a
+  machine-readable output mode. `zurich_geo_layers` gained an optional
+  input model for this; calling it without arguments behaves as before.
+  Shared helpers (`json_out`, `FORMAT_FIELD_DESC`) moved to
+  `formatters.py`. (Solution-review finding F-5, part 2 — completes F-5.)
+
+### Added
 - `format: 'markdown' | 'json'` parameter (default `markdown`, matching
   the existing STRB tools) for all six realtime tools —
   `zurich_parking_live`, `zurich_weather_live`, `zurich_air_quality`,
