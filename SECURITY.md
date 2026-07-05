@@ -63,6 +63,28 @@ authored in-repo, and reviewed via PR; there is no dynamic or remote tool
 registration. Cross-server poisoning detection remains a gateway/host
 responsibility tracked at the portfolio level.
 
+### WFS `property_filter` (CQL) passthrough
+
+**Status:** accepted risk (bounded by design).
+`zurich_geo_features` forwards its `property_filter` string unescaped as the
+`CQL_FILTER` query parameter to the Stadt Zürich Geoserver. The blast radius
+is bounded: layer and typename are fixed server-side (`Literal`-validated
+against `GEOPORTAL_LAYERS`), the Geoserver is read-only and serves public
+data, and the parameter cannot change the request target. A malicious filter
+can at most produce a WFS error or an empty result for the caller's own
+query. Meaningful escaping would require a full CQL parser, which is not
+proportionate to this risk profile. Revisit if the WFS surface ever gains
+layers with non-public data.
+
+### `--http` transport has no authentication
+
+**Status:** documented deployment constraint.
+The optional Streamable-HTTP transport (`--http`) binds to the SDK default
+`127.0.0.1` and is intended for local clients only. The server implements no
+authentication of its own. If you expose it beyond localhost (reverse proxy,
+container network, tunnel), enforce authentication and TLS at that proxy
+layer — never forward the port unauthenticated.
+
 ## Re-evaluation triggers
 
 These acceptances should be revisited if the server ever:

@@ -66,6 +66,30 @@ versionskontrolliert, im Repo verfasst und via PR reviewt; es gibt keine
 dynamische oder entfernte Tool-Registrierung. Server-übergreifende
 Poisoning-Erkennung bleibt eine Gateway-/Host-Verantwortung auf Portfolio-Ebene.
 
+### WFS-`property_filter` (CQL) — Durchreichung ohne Escaping
+
+**Status:** akzeptiertes Risiko (durch Design begrenzt).
+`zurich_geo_features` reicht den `property_filter`-String unescaped als
+`CQL_FILTER`-Query-Parameter an den Geoserver der Stadt Zürich weiter. Der
+Wirkungsradius ist begrenzt: Layer und Typename sind serverseitig fixiert
+(`Literal`-validiert gegen `GEOPORTAL_LAYERS`), der Geoserver ist nur lesend
+und liefert öffentliche Daten, und der Parameter kann das Anfrageziel nicht
+ändern. Ein bösartiger Filter kann höchstens einen WFS-Fehler oder ein leeres
+Ergebnis für die eigene Abfrage erzeugen. Sinnvolles Escaping würde einen
+vollständigen CQL-Parser erfordern — unverhältnismässig für dieses
+Risikoprofil. Neu bewerten, falls die WFS-Fläche je Layer mit
+nicht-öffentlichen Daten erhält.
+
+### `--http`-Transport ohne Authentifizierung
+
+**Status:** dokumentierte Deployment-Einschränkung.
+Der optionale Streamable-HTTP-Transport (`--http`) bindet an den SDK-Default
+`127.0.0.1` und ist nur für lokale Clients gedacht. Der Server implementiert
+selbst keine Authentifizierung. Wer ihn über localhost hinaus exponiert
+(Reverse Proxy, Container-Netzwerk, Tunnel), muss Authentifizierung und TLS
+auf dieser Proxy-Ebene erzwingen — den Port niemals unauthentifiziert
+weiterleiten.
+
 ## Trigger für eine Neubewertung
 
 Diese Akzeptanzen sollten neu bewertet werden, falls der Server jemals:
