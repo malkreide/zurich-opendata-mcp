@@ -54,4 +54,4 @@ jobs:
         # whose ghcr.io image is tagged by ref name only — pinning the SHA
         # makes the runner pull ghcr.io/...:<sha>, which does not exist
         # ("manifest unknown", broke the v0.5.0 release run).
-        uses: pypa/gh-action-pypi-publish@v1.14.0
+        uses: pypa/gh-action-pypi-publish@v1.14.1
