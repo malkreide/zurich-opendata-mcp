@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+- Bumped the `mcp[cli]` lower bound from `>=1.27.1` to `>=1.28.1` (and
+  relocked `uv.lock` to `mcp 1.28.1`) to pull in the fix for
+  CVE-2026-59950, which affected `mcp` 1.28.0. `pip-audit` now reports no
+  known vulnerabilities.
+
 ## [0.5.0] - 2026-07-05
 
 This release closes all 13 findings of the July 2026 solution review
