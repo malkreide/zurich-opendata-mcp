@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-07-24
+
 ### Security
 - Bumped the `mcp[cli]` lower bound from `>=1.27.1` to `>=1.28.1` (and
   relocked `uv.lock` to `mcp 1.28.1`) to pull in the fix for
