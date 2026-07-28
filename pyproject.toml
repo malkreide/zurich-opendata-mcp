@@ -30,7 +30,12 @@ classifiers = [
 ]
 
 dependencies = [
-    "mcp[cli]>=1.28.1",
+    # Upper bound added deliberately: `mcp` 2.0.0 removed `mcp.server.fastmcp`
+    # outright (the API moved to `mcp.server.mcpserver`), so an unbounded
+    # `>=1.28.1` breaks every fresh install — CI and `pip install` alike.
+    # Migrating to the 2.x API is real work and a decision to take on purpose,
+    # not one a resolver should make silently.
+    "mcp[cli]>=1.28.1,<2",
     "httpx>=0.28.1",
     "pydantic>=2.13.4",
     "uvicorn>=0.46.0",
