@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Migrated to the `mcp` 2.x server API.** The pin moved from `>=1.28.1,<2`
+  to `>=2.0.0,<3`. The floor is hard: 2.0.0 removed `mcp.server.fastmcp` with
+  no compatibility shim, so this code cannot run on 1.x at all. `FastMCP` →
+  `MCPServer` (`mcp.server.mcpserver`).
+
+  Not a protocol change — the `initialize` handshake still negotiates
+  2025-11-25, so existing clients see no difference.
+
+  Two moved APIs, with different failure modes:
+
+  - `MCPServer.settings` no longer carries `host`/`port`; they are `run()`
+    kwargs. Reading raises `AttributeError`, assigning raises `ValueError`, so
+    a missed call site is loud rather than a server quietly bound to the wrong
+    address. `main()` passes the port to `run()`.
+  - `mcp_types` snake_cased its model fields (`structuredContent` →
+    `structured_content`, `isError` → `is_error`). The camelCase names survive
+    as pydantic aliases, so the old kwargs kept working and the test suite
+    stayed green — only `mypy` caught them. The wire format is unchanged
+    either way, since the aliases are what gets serialised.
+
+  `ToolManager.call_tool()` now requires a `Context`; the affected test calls
+  the public `MCPServer.call_tool()` instead of reaching into the manager.
+
+  Verified: 195 passed / 22 deselected, identical to the 1.x baseline;
+  `ruff check`, `mypy` and a fresh-venv install clean; `uv.lock` relocked
+  (`mcp` 1.28.1 → 2.0.0, adds `mcp-types`/`httpx2`, drops `pydantic-settings`
+  — not imported here).
+
 ### Fixed
 
 - **Capped `mcp` at `<2`.** `mcp` 2.0.0, published 2026-07-28, removed

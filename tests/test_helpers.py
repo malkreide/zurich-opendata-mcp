@@ -111,10 +111,10 @@ def test_main_runs_http_with_port(monkeypatch):
     calls: list[tuple] = []
     monkeypatch.setattr(srv.mcp, "run", lambda *a, **k: calls.append((a, k)))
     monkeypatch.setattr(sys, "argv", ["zurich-opendata-mcp", "--http", "--port", "9001"])
-    monkeypatch.setattr(srv.mcp.settings, "port", 8000)
 
     srv.main()
 
-    # FastMCP.run() takes no port kwarg — the port travels via settings.
-    assert calls == [((), {"transport": "streamable-http"})]
-    assert srv.mcp.settings.port == 9001
+    # mcp 2.x: MCPServer.settings carries no port, so the bind travels as a
+    # run() kwarg instead of being assigned beforehand. Asserting the whole
+    # call keeps transport and port in one place — dropping either fails here.
+    assert calls == [((), {"transport": "streamable-http", "port": 9001})]

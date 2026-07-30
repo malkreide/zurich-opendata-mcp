@@ -61,10 +61,10 @@ class TourismSearchInput(BaseModel):
     name="zurich_tourism",
     annotations=ToolAnnotations(
         title="Zürich Tourismus Daten",
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=True,
+        read_only_hint=True,
+        destructive_hint=False,
+        idempotent_hint=True,
+        open_world_hint=True,
     ),
 )
 async def zurich_tourism(params: TourismSearchInput) -> str:

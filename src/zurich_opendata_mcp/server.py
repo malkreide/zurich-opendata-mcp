@@ -13,7 +13,7 @@ AI-nativer Zugang zu Open Data der Stadt Zürich:
 Kein API-Schlüssel erforderlich. Alle Daten öffentlich zugänglich unter offenen Lizenzen.
 
 Entry point — tool/resource implementations live in ``zurich_opendata_mcp.tools.*``
-and register themselves on the shared FastMCP instance via decorator side-effects.
+and register themselves on the shared MCPServer instance via decorator side-effects.
 """
 
 from __future__ import annotations
@@ -142,8 +142,9 @@ def main() -> None:
 
     args = _parse_args()
     if args.http:
-        mcp.settings.port = args.port
-        mcp.run(transport="streamable-http")
+        # mcp 2.x: the bind address is a run() kwarg — MCPServer.settings no
+        # longer carries host/port.
+        mcp.run(transport="streamable-http", port=args.port)
     else:
         mcp.run()
 

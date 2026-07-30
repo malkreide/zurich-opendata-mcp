@@ -157,10 +157,10 @@ class ParliamentSearchInput(BaseModel):
     name="zurich_parliament_search",
     annotations=ToolAnnotations(
         title="Gemeinderatsgeschäfte suchen",
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=True,
+        read_only_hint=True,
+        destructive_hint=False,
+        idempotent_hint=True,
+        open_world_hint=True,
     ),
 )
 async def zurich_parliament_search(params: ParliamentSearchInput) -> str:
@@ -264,10 +264,10 @@ class ParliamentMembersInput(BaseModel):
     name="zurich_parliament_members",
     annotations=ToolAnnotations(
         title="Gemeinderatsmitglieder suchen",
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=True,
+        read_only_hint=True,
+        destructive_hint=False,
+        idempotent_hint=True,
+        open_world_hint=True,
     ),
 )
 async def zurich_parliament_members(params: ParliamentMembersInput) -> str:

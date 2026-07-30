@@ -205,7 +205,7 @@ async def test_get_dataset_error_path():
 
     result = await zurich_get_dataset(GetDatasetInput(dataset_id="x"))
 
-    assert result.isError is True
+    assert result.is_error is True
     assert "Fehler bei Datensatz-Details" in result.content[0].text
 
 
@@ -279,7 +279,7 @@ async def test_analyze_empty():
     result = await zurich_analyze_datasets(AnalyzeDatasetInput(query="zzz"))
 
     assert "Keine Datensätze gefunden" in result.content[0].text
-    assert result.structuredContent["total"] == 0
+    assert result.structured_content["total"] == 0
 
 
 @respx.mock
@@ -297,7 +297,7 @@ async def test_analyze_without_structure():
         AnalyzeDatasetInput(query="x", include_structure=False)
     )
 
-    assert result.structuredContent["datasets"][0]["fields"] is None
+    assert result.structured_content["datasets"][0]["fields"] is None
 
 
 @respx.mock
@@ -323,7 +323,7 @@ async def test_analyze_datastore_failure_is_tolerated():
     result = await zurich_analyze_datasets(AnalyzeDatasetInput(query="x"))
 
     # datastore_search failing → field info simply absent, tool still succeeds.
-    assert result.structuredContent["datasets"][0]["datastore_records"] is None
+    assert result.structured_content["datasets"][0]["datastore_records"] is None
 
 
 @respx.mock
@@ -361,5 +361,5 @@ async def test_analyze_error_path():
 
     result = await zurich_analyze_datasets(AnalyzeDatasetInput(query="x"))
 
-    assert result.isError is True
+    assert result.is_error is True
     assert "Fehler bei Datensatz-Analyse" in result.content[0].text

@@ -68,7 +68,7 @@ async def zurich_sparql(params: SparqlQueryInput) -> str:
 
 
 def register_sparql_tool() -> bool:
-    """Register ``zurich_sparql`` on the shared FastMCP instance if enabled.
+    """Register ``zurich_sparql`` on the shared MCPServer instance if enabled.
 
     Split out of import time so tests can exercise both paths regardless of
     the environment the suite runs in. Returns whether it registered.
@@ -79,10 +79,10 @@ def register_sparql_tool() -> bool:
         name="zurich_sparql",
         annotations=ToolAnnotations(
             title="SPARQL-Abfrage (Linked Data)",
-            readOnlyHint=True,
-            destructiveHint=False,
-            idempotentHint=True,
-            openWorldHint=False,
+            read_only_hint=True,
+            destructive_hint=False,
+            idempotent_hint=True,
+            open_world_hint=False,
         ),
     )(zurich_sparql)
     return True

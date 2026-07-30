@@ -104,14 +104,20 @@ class AnalysisResult(BaseModel):
 def tool_result(markdown: str, model: BaseModel, *, is_error: bool = False) -> CallToolResult:
     """Bundle a Markdown ``content`` block with a validated structured payload.
 
-    FastMCP validates ``structuredContent`` against the tool's output model on
-    every call (success and error alike), so callers must pass a fully-valid
+    MCPServer validates the structured payload against the tool's output model
+    on every call (success and error alike), so callers must pass a fully-valid
     model instance — the permissive defaults on the result models make the
     error path (empty data + ``error`` message) valid.
+
+    mcp 2.x snake_cased the model fields. The camelCase names are still
+    accepted as pydantic aliases, so the old kwargs kept working at runtime and
+    the test suite stayed green — only mypy caught them. The field names are
+    used here because they are the declared API; the JSON on the wire is
+    identical either way, since the aliases are what gets serialised.
     """
     structured: dict[str, Any] = model.model_dump(mode="json")
     return CallToolResult(
         content=[TextContent(type="text", text=markdown)],
-        structuredContent=structured,
-        isError=is_error,
+        structured_content=structured,
+        is_error=is_error,
     )

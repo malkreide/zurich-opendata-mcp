@@ -66,10 +66,10 @@ class DatastoreQueryInput(BaseModel):
     name="zurich_datastore_query",
     annotations=ToolAnnotations(
         title="Tabellarische Daten abfragen",
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=True,
+        read_only_hint=True,
+        destructive_hint=False,
+        idempotent_hint=True,
+        open_world_hint=True,
     ),
 )
 async def zurich_datastore_query(params: DatastoreQueryInput) -> str:
@@ -152,10 +152,10 @@ class DatastoreSqlInput(BaseModel):
     name="zurich_datastore_sql",
     annotations=ToolAnnotations(
         title="SQL-Abfrage auf DataStore",
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=False,
-        openWorldHint=True,
+        read_only_hint=True,
+        destructive_hint=False,
+        idempotent_hint=False,
+        open_world_hint=True,
     ),
 )
 async def zurich_datastore_sql(params: DatastoreSqlInput) -> str:

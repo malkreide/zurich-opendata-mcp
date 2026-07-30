@@ -57,10 +57,10 @@ class SearchDatasetsInput(BaseModel):
     name="zurich_search_datasets",
     annotations=ToolAnnotations(
         title="Datensätze suchen",
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=True,
+        read_only_hint=True,
+        destructive_hint=False,
+        idempotent_hint=True,
+        open_world_hint=True,
     ),
 )
 async def zurich_search_datasets(
@@ -144,10 +144,10 @@ class GetDatasetInput(BaseModel):
     name="zurich_get_dataset",
     annotations=ToolAnnotations(
         title="Datensatz-Details abrufen",
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=True,
+        read_only_hint=True,
+        destructive_hint=False,
+        idempotent_hint=True,
+        open_world_hint=True,
     ),
 )
 async def zurich_get_dataset(
@@ -206,10 +206,10 @@ class ListGroupInput(BaseModel):
     name="zurich_list_categories",
     annotations=ToolAnnotations(
         title="Datenkategorien auflisten",
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=True,
+        read_only_hint=True,
+        destructive_hint=False,
+        idempotent_hint=True,
+        open_world_hint=True,
     ),
 )
 async def zurich_list_categories(params: ListGroupInput) -> str:
@@ -266,10 +266,10 @@ class TagSearchInput(BaseModel):
     name="zurich_list_tags",
     annotations=ToolAnnotations(
         title="Tags durchsuchen",
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=True,
+        read_only_hint=True,
+        destructive_hint=False,
+        idempotent_hint=True,
+        open_world_hint=True,
     ),
 )
 async def zurich_list_tags(params: TagSearchInput) -> str:
@@ -322,10 +322,10 @@ class AnalyzeDatasetInput(BaseModel):
     name="zurich_analyze_datasets",
     annotations=ToolAnnotations(
         title="Datensätze analysieren",
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=True,
+        read_only_hint=True,
+        destructive_hint=False,
+        idempotent_hint=True,
+        open_world_hint=True,
     ),
 )
 async def zurich_analyze_datasets(
@@ -461,10 +461,10 @@ async def zurich_analyze_datasets(
     name="zurich_catalog_stats",
     annotations=ToolAnnotations(
         title="Katalog-Statistiken",
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=True,
+        read_only_hint=True,
+        destructive_hint=False,
+        idempotent_hint=True,
+        open_world_hint=True,
     ),
 )
 async def zurich_catalog_stats() -> str:
@@ -544,10 +544,10 @@ class FindSchoolDataInput(BaseModel):
     name="zurich_find_school_data",
     annotations=ToolAnnotations(
         title="Schulrelevante Daten finden",
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=True,
+        read_only_hint=True,
+        destructive_hint=False,
+        idempotent_hint=True,
+        open_world_hint=True,
     ),
 )
 async def zurich_find_school_data(params: FindSchoolDataInput) -> str:

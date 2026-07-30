@@ -2,7 +2,7 @@
 
 All upstream calls go through one process-wide ``httpx.AsyncClient`` so they
 reuse pooled TCP/TLS connections instead of re-handshaking on every request.
-The pool is closed on server shutdown via the FastMCP lifespan in ``app.py``.
+The pool is closed on server shutdown via the MCPServer lifespan in ``app.py``.
 
 Resilience: connect failures are retried at the transport layer
 (``AsyncHTTPTransport(retries=...)``), and ``http_get()`` retries once with a
@@ -37,7 +37,7 @@ def get_client() -> httpx.AsyncClient:
     """Return the shared async HTTP client, (re)creating it when needed.
 
     Callers must not close the returned client — shutdown is handled by
-    ``close_client()`` via the FastMCP lifespan.
+    ``close_client()`` via the MCPServer lifespan.
     """
     global _client, _client_loop
     loop = asyncio.get_running_loop()

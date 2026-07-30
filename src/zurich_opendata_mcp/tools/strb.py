@@ -153,10 +153,10 @@ class SearchSTRBInput(BaseModel):
     name="zurich_strb_search",
     annotations=ToolAnnotations(
         title="Stadtratsbeschlüsse durchsuchen",
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=False,
+        read_only_hint=True,
+        destructive_hint=False,
+        idempotent_hint=True,
+        open_world_hint=False,
     ),
 )
 async def zurich_strb_search(params: SearchSTRBInput) -> str:
@@ -225,10 +225,10 @@ async def zurich_strb_search(params: SearchSTRBInput) -> str:
     name="search_stadtratsbeschluesse",
     annotations=ToolAnnotations(
         title="Stadtratsbeschlüsse durchsuchen (deprecated)",
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=False,
+        read_only_hint=True,
+        destructive_hint=False,
+        idempotent_hint=True,
+        open_world_hint=False,
     ),
 )
 async def search_stadtratsbeschluesse(params: SearchSTRBInput) -> str:
@@ -289,10 +289,10 @@ class BeschluesseDepartementInput(BaseModel):
     name="zurich_strb_by_department",
     annotations=ToolAnnotations(
         title="STRB nach Departement abrufen",
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=False,
+        read_only_hint=True,
+        destructive_hint=False,
+        idempotent_hint=True,
+        open_world_hint=False,
     ),
 )
 async def zurich_strb_by_department(params: BeschluesseDepartementInput) -> str:
@@ -350,10 +350,10 @@ async def zurich_strb_by_department(params: BeschluesseDepartementInput) -> str:
     name="get_beschluesse_by_departement",
     annotations=ToolAnnotations(
         title="STRB nach Departement abrufen (deprecated)",
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=False,
+        read_only_hint=True,
+        destructive_hint=False,
+        idempotent_hint=True,
+        open_world_hint=False,
     ),
 )
 async def get_beschluesse_by_departement(params: BeschluesseDepartementInput) -> str:
@@ -385,10 +385,10 @@ class GetSTRBDetailInput(BaseModel):
     name="zurich_strb_detail",
     annotations=ToolAnnotations(
         title="Einzelnen Stadtratsbeschluss abrufen",
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=False,
+        read_only_hint=True,
+        destructive_hint=False,
+        idempotent_hint=True,
+        open_world_hint=False,
     ),
 )
 async def zurich_strb_detail(params: GetSTRBDetailInput) -> str:
@@ -445,10 +445,10 @@ async def zurich_strb_detail(params: GetSTRBDetailInput) -> str:
     name="get_stadtratsbeschluss_detail",
     annotations=ToolAnnotations(
         title="Einzelnen Stadtratsbeschluss abrufen (deprecated)",
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=False,
+        read_only_hint=True,
+        destructive_hint=False,
+        idempotent_hint=True,
+        open_world_hint=False,
     ),
 )
 async def get_stadtratsbeschluss_detail(params: GetSTRBDetailInput) -> str:
