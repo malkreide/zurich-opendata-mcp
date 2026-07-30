@@ -37,6 +37,9 @@ jobs:
       - name: Pytest
         run: uv run pytest
 
+      - name: Versions-Sync (pyproject ↔ server.json / README / src)
+        run: python scripts/check_version_sync.py
+
   audit:
     runs-on: ubuntu-latest
     # Alarm, don't block: a fresh advisory in a transitive dependency should
