@@ -36,8 +36,11 @@ dependencies = [
     # that fails at import. The `<3` cap stays for the reason the old `<2` one
     # existed: a major bump is a decision to take on purpose, not one a
     # resolver makes silently.
-    # Not a protocol change: the initialize handshake still negotiates
-    # 2025-11-25, so existing clients see no difference.
+    # Existing clients see no difference: the legacy `initialize` handshake
+    # still caps at 2025-11-25 (measured — a client asking for 2026-07-28 gets
+    # 2025-11-25 back). mcp 2.x additionally serves a "modern" per-request
+    # envelope era that reaches 2026-07-28, so a 2.x-aware client negotiates
+    # the newer revision. Not a break, but not a protocol no-op either.
     "mcp[cli]>=2.0.0,<3",
     "httpx>=0.28.1",
     "pydantic>=2.13.4",

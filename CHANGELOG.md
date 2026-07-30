@@ -14,8 +14,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   no compatibility shim, so this code cannot run on 1.x at all. `FastMCP` →
   `MCPServer` (`mcp.server.mcpserver`).
 
-  Not a protocol change — the `initialize` handshake still negotiates
-  2025-11-25, so existing clients see no difference.
+  Existing clients see no difference: the legacy `initialize` handshake still
+  caps at 2025-11-25 — measured, not inferred from a constant name; a client
+  asking for `2026-07-28` gets `2025-11-25` back. mcp 2.x does, however, serve
+  a second "modern" era over the same server (per-request envelope, the
+  client's first request picks the era) which reaches 2026-07-28. So a
+  2.x-aware client negotiates the newer revision. Not a break, but not a
+  protocol no-op either.
 
   Two moved APIs, with different failure modes:
 
