@@ -77,13 +77,29 @@ for the `main` branch:
   - **Dismiss stale approvals** when new commits are pushed.
   - Require **conversation resolution** before merging.
 - **Require status checks to pass before merging**, and require branches
-  to be **up to date** before merging. The required checks are the jobs
-  produced by `.github/workflows/ci.yml`:
+  to be **up to date** before merging. The required checks are:
   - `check (3.11)`
   - `check (3.12)`
   - `check (3.13)`
 
-  Each runs `uv run ruff check`, `uv run mypy`, and `uv run pytest`.
+  Each runs `uv run ruff check`, `uv run mypy`, `uv run pytest` and the
+  version-sync check. These run on pull requests only.
+
+  `.github/workflows/ci.yml` produces two further jobs that are **not**
+  currently required for merging:
+
+  - `Fresh-resolve install smoke (3.11 / 3.13)` — builds the wheel, installs
+    it from a *free* resolve with a cold cache, and starts it over stdio.
+    Unlike `check`, which resolves from the committed `uv.lock`, this one sees
+    what a user actually gets. Also runs weekly (Mondays 06:17 UTC), because
+    what breaks it is an upstream release rather than a commit here.
+  - `audit` — `pip-audit`; `continue-on-error: true` by design, so it alarms
+    without blocking. Also runs weekly, for the same reason.
+
+  Whether `Fresh-resolve install smoke` should become a required check is an
+  open call. Requiring it makes a broken dependency range un-mergeable, which
+  is the stronger guarantee; it also means an upstream release can turn every
+  open PR red until the range is fixed. It is left advisory for now.
 - **Require linear history** (no merge commits introduced by force).
 - **Do not allow bypassing the above settings** — apply the rules to
   administrators as well. No actor should be able to merge around the

@@ -6,11 +6,36 @@ name: CI
 on:
   pull_request:
 
+  # Weekly, on main, so `fresh-install` does not depend on someone opening a
+  # PR. A dependency range only breaks when *upstream* publishes, and upstream
+  # does not wait for this repo to be active: `mcp` 2.0.0 landed on 2026-07-28
+  # and broke every published release, and nothing here noticed. On a quiet
+  # week a PR-only trigger can leave that gap open indefinitely.
+  #
+  # Off-hour and off-minute deliberately: GitHub's scheduler is congested at
+  # :00 and at midnight UTC, and delays scheduled runs there.
+  #
+  # Note: GitHub disables scheduled workflows after 60 days without repository
+  # activity, and re-enabling is manual. If this repo goes quiet for that long,
+  # check that this trigger is still armed.
+  schedule:
+    - cron: "17 6 * * 1"   # Mondays, 06:17 UTC
+
+  # Manual re-run, for when an upstream release lands and waiting a week for
+  # the next scheduled run is not useful.
+  workflow_dispatch:
+
 permissions:
   contents: read
 
 jobs:
   check:
+    # Pull requests only. On a schedule this job would re-test nothing: it
+    # installs via `uv sync`, which resolves from the committed `uv.lock`, so
+    # a weekly run reinstalls the same pinned versions and re-runs the same
+    # deterministic suite. The whole point of the scheduled run is the resolve
+    # that is *not* frozen, which is `fresh-install`.
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -49,6 +74,15 @@ jobs:
     # CI green: the lock pinned 1.28.1, so CI never saw the version a user got.
     # This job resolves *freely* from the declared ranges, with no lockfile and
     # a cold cache, and then starts the artifact instead of merely importing it.
+    #
+    # Runs on pull requests *and* weekly (see the `schedule` trigger above),
+    # because the input that makes it fail is not a commit here — it is an
+    # upstream release. Note what the weekly run is and is not for now that
+    # `mcp` is capped at `<3`: a new *major* is excluded by the cap, so it
+    # cannot break this. What it catches is a break inside a range still
+    # declared open — an `mcp` 2.x minor, or a new `httpx`/`pydantic`/`uvicorn`/
+    # `sqlparse`/`defusedxml` release the floors still admit. That is the same
+    # failure mode as 0.5.1, just one version segment further in.
     strategy:
       fail-fast: false
       matrix:
@@ -90,6 +124,11 @@ jobs:
     # show up red here without blocking every unrelated PR (the `check`
     # matrix stays the required gate). Tighten to blocking once a clean
     # baseline has held for a while.
+    #
+    # Deliberately left to run on the weekly schedule too (no `if:` guard, in
+    # contrast to `check`). Like a broken dependency range, an advisory is
+    # published by someone else on their own timetable, so tying the only
+    # check for it to PR activity is the same mistake in a different place.
     continue-on-error: true
 
     steps:
