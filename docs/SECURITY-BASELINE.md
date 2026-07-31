@@ -77,29 +77,37 @@ for the `main` branch:
   - **Dismiss stale approvals** when new commits are pushed.
   - Require **conversation resolution** before merging.
 - **Require status checks to pass before merging**, and require branches
-  to be **up to date** before merging. The required checks are:
+  to be **up to date** before merging. The required checks are, verbatim as
+  GitHub reports them (matrix jobs report one check each):
   - `check (3.11)`
   - `check (3.12)`
   - `check (3.13)`
+  - `Fresh-resolve install smoke (3.11)`
+  - `Fresh-resolve install smoke (3.13)`
 
-  Each runs `uv run ruff check`, `uv run mypy`, `uv run pytest` and the
-  version-sync check. These run on pull requests only.
+  `check` runs `uv run ruff check`, `uv run mypy`, `uv run pytest` and the
+  version-sync check. It is guarded to `pull_request`, because it installs via
+  `uv sync` — a resolve frozen by the committed `uv.lock`.
 
-  `.github/workflows/ci.yml` produces two further jobs that are **not**
-  currently required for merging:
+  `Fresh-resolve install smoke` builds the wheel, installs it from a *free*
+  resolve with a cold cache, and starts it over stdio. That is the difference
+  that matters: `check` measures the lockfile, this measures what a user
+  actually gets. Release 0.5.1 shipped broken precisely because only the first
+  of those was ever gated. It also runs weekly (Mondays 06:17 UTC), since what
+  breaks it is an upstream release rather than a commit here.
 
-  - `Fresh-resolve install smoke (3.11 / 3.13)` — builds the wheel, installs
-    it from a *free* resolve with a cold cache, and starts it over stdio.
-    Unlike `check`, which resolves from the committed `uv.lock`, this one sees
-    what a user actually gets. Also runs weekly (Mondays 06:17 UTC), because
-    what breaks it is an upstream release rather than a commit here.
-  - `audit` — `pip-audit`; `continue-on-error: true` by design, so it alarms
-    without blocking. Also runs weekly, for the same reason.
+  Requiring the smoke job has an accepted cost: an upstream release that
+  breaks a declared dependency range turns every open PR red until the range
+  is fixed, and with "up to date before merging" also forces a re-run. That is
+  the intended behaviour — an unmergeable repo is the correct response to a
+  package that cannot be installed. Note the gate does not block its own
+  remedy: a PR that fixes the range makes the job pass on that PR.
 
-  Whether `Fresh-resolve install smoke` should become a required check is an
-  open call. Requiring it makes a broken dependency range un-mergeable, which
-  is the stronger guarantee; it also means an upstream release can turn every
-  open PR red until the range is fixed. It is left advisory for now.
+  One further job is produced but deliberately **not** required:
+
+  - `audit` — `pip-audit`; `continue-on-error: true` by design, so a fresh
+    advisory in a transitive dependency alarms without blocking unrelated
+    work. Also runs weekly, for the same reason as the smoke job.
 - **Require linear history** (no merge commits introduced by force).
 - **Do not allow bypassing the above settings** — apply the rules to
   administrators as well. No actor should be able to merge around the
