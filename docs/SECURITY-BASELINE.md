@@ -61,9 +61,19 @@ un-mergeable by the sole maintainer while still keeping the valuable gates
 
 ### Verify
 
-Open a throwaway PR (or inspect an open one): the three `check` jobs
-should be listed as **Required** and merging blocked until they pass; a
-direct push or force-push to `main` should be rejected.
+Open a throwaway PR (or inspect an open one): all **five** required checks
+(three `check` jobs plus both `Fresh-resolve install smoke` jobs, listed
+under "Required branch-protection rules" below) should be marked
+**Required**, and merging blocked until they pass. In API terms the PR's
+`mergeable_state` reads `blocked` while a required check is pending, and
+only reaches `clean` once every one of them has passed — `unstable` instead
+of `blocked` means a failing check is *not* gating and the ruleset is
+listing fewer checks than it should.
+
+A direct push or force-push to `main` should be rejected. Note this one can
+only be confirmed by attempting it, which writes to `main` if the rule is
+in fact absent — so verify it on a scratch commit you are willing to see
+land, or accept the ruleset's configuration as evidence.
 
 ## Required branch-protection rules on `main`
 
