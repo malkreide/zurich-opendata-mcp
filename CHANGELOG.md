@@ -7,6 +7,66 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Configurable HTTP bind address (`--host`, default `127.0.0.1`).** The
+  Streamable-HTTP transport could not be offered beyond loopback: `main()`
+  called `mcp.run(transport="streamable-http", port=…)` with no `host=`, so
+  uvicorn always bound `127.0.0.1` and there was no flag to change it.
+  Measured before the change — `Uvicorn running on http://127.0.0.1:41778` —
+  and after, where `--host 0.0.0.0` binds `0.0.0.0`.
+
+  The default stays loopback. A server that starts listening on every
+  interface after an update would be a security regression, not a feature, so
+  reaching the network is an explicit `--host` away and nothing else changes.
+
+- **Inbound Host/Origin allow-list (`MCP_ALLOWED_HOSTS`).** Comma-separated and
+  compared verbatim, so an entry carries its port (`zurich.example.ch:8000`).
+  Anything else is answered with 421; loopback stays allowed so container
+  health checks keep working.
+
+  This is not a bonus feature but the other half of the `--host` fix. The SDK
+  derives its DNS-rebinding allow-list from the bind address:
+
+  ```python
+  if transport_security is None and host in ("127.0.0.1", "localhost", "::1"):
+      transport_security = TransportSecuritySettings(...)   # loopback list
+  ```
+
+  So passing `host` through on its own would have had a silent side effect —
+  on a `0.0.0.0` bind `transport_security` stays `None` and Host validation is
+  not merely misconfigured but **entirely off**. That is a posture change
+  nobody would have decided; it is now decided explicitly, in three cases:
+
+  - `MCP_ALLOWED_HOSTS` set → that list plus loopback, protection on.
+  - loopback bind, no list → loopback only. Same protection the SDK would have
+    inferred, now stated rather than dependent on that inference.
+  - non-loopback bind, no list → off, and `main()` warns. That is the
+    gateway-fronted deployment, where whatever terminates TLS validates `Host`.
+
+  The last case is deliberately not a guess: on `0.0.0.0` the reachable name is
+  unknowable in-process, and a guessed list rejects the very deployment it is
+  meant to protect — 421 on every real request.
+
+  Follows `malkreide/bag-health-mcp#51` and `malkreide/swiss-transport-mcp#25`,
+  minus their CORS-origin folding: this server has no configurable origin list,
+  so the transport's origins are derived from the host list alone rather than
+  inventing an `MCP_CORS_ORIGINS` that nothing here reads.
+
+  22 new tests. The load-bearing one is **right hostname, wrong port** —
+  `evil.invalid` alone proves little, because a fallback loopback-only policy
+  rejects that too; only the wrong-port case tells a port-exact allow-list
+  apart from one that lets everything through. Verified end-to-end against a
+  running `0.0.0.0` instance as well: allowed name 200, foreign name 421,
+  right-name-wrong-port 421, loopback 200.
+
+- **`[tool.mcp_auditor.boot.commands]` in `pyproject.toml`.** An external
+  auditor could not start this server over HTTP automatically, because the
+  transport is chosen by CLI flag rather than by environment variable, so
+  setting an env var boots nothing. The stdio and streamable-http commands are
+  now declared; a test pins them against the console-script entry point so the
+  two cannot drift apart.
+
 ## [0.6.0] - 2026-07-31
 
 **Release this because 0.5.1 on PyPI is unusable.** The two entries below were

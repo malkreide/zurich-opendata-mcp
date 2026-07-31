@@ -62,6 +62,16 @@ dev = [
 [project.scripts]
 zurich-opendata-mcp = "zurich_opendata_mcp.server:main"
 
+[tool.mcp_auditor.boot.commands]
+# How an external auditor starts this server per transport. Declared because
+# the transport is chosen by CLI flag, not by environment variable, so a
+# harness cannot boot the HTTP path by setting an env var alone. `{port}` is
+# substituted by the auditor. The HTTP command deliberately omits `--host`:
+# the loopback default is what an auditor should exercise, and it is also the
+# only bind for which the Host allow-list is enabled without further config.
+"stdio" = ["zurich-opendata-mcp"]
+"streamable-http" = ["zurich-opendata-mcp", "--http", "--port", "{port}"]
+
 [project.urls]
 Homepage   = "https://github.com/malkreide/zurich-opendata-mcp"
 Repository = "https://github.com/malkreide/zurich-opendata-mcp"

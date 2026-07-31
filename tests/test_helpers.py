@@ -105,16 +105,31 @@ def test_main_runs_stdio_by_default(monkeypatch):
     assert calls == [((), {})]
 
 
-def test_main_runs_http_with_port(monkeypatch):
+def test_main_runs_http_with_host_port_and_security(monkeypatch):
     import zurich_opendata_mcp.server as srv
 
+    # An inherited allow-list would change which branch the security builder
+    # takes, and with it the assertion below.
+    monkeypatch.delenv("MCP_ALLOWED_HOSTS", raising=False)
     calls: list[tuple] = []
     monkeypatch.setattr(srv.mcp, "run", lambda *a, **k: calls.append((a, k)))
     monkeypatch.setattr(sys, "argv", ["zurich-opendata-mcp", "--http", "--port", "9001"])
 
     srv.main()
 
-    # mcp 2.x: MCPServer.settings carries no port, so the bind travels as a
-    # run() kwarg instead of being assigned beforehand. Asserting the whole
-    # call keeps transport and port in one place — dropping either fails here.
-    assert calls == [((), {"transport": "streamable-http", "port": 9001})]
+    # mcp 2.x: MCPServer.settings carries no host/port, so the bind travels as
+    # run() kwargs instead of being assigned beforehand. Asserting the whole
+    # call keeps them in one place — dropping any of them fails here.
+    #
+    # `host` in particular: without it the server binds loopback whatever
+    # --host said, and the SDK derives its Host allow-list from the default it
+    # then sees. `transport_security` is asserted separately because it is an
+    # object, not a literal; see tests/test_transport_security.py for what it
+    # contains.
+    (args, kwargs), = calls
+    assert args == ()
+    assert kwargs["transport"] == "streamable-http"
+    assert kwargs["host"] == "127.0.0.1"
+    assert kwargs["port"] == 9001
+    assert set(kwargs) == {"transport", "host", "port", "transport_security"}
+    assert "127.0.0.1:9001" in kwargs["transport_security"].allowed_hosts

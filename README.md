@@ -286,6 +286,39 @@ pytest tests/ -m live
 ruff check src/ tests/
 ```
 
+## 🌐 HTTP transport
+
+By default the server speaks MCP over stdio. `--http` serves Streamable HTTP
+instead:
+
+```bash
+zurich-opendata-mcp --http --port 8000              # binds 127.0.0.1 (default)
+zurich-opendata-mcp --http --host 0.0.0.0 --port 8000
+```
+
+| Option | Meaning | Default |
+|---|---|---|
+| `--http` | Serve Streamable HTTP instead of stdio | _(off → stdio)_ |
+| `--host` | Bind address | `127.0.0.1` |
+| `--port` | Bind port (1–65535) | `8000` |
+| `MCP_ALLOWED_HOSTS` | Comma-separated names this server is reachable under, **port included** (e.g. `zurich.example.ch:8000`). Requests under any other `Host` get **421**; loopback stays allowed so container health checks keep working. | _(unset)_ |
+
+**The loopback default is deliberate.** Binding `0.0.0.0` exposes the server on
+every interface, to everyone who can reach the machine — there is no
+authentication in front of it.
+
+**Set `MCP_ALLOWED_HOSTS` whenever you bind beyond loopback.** It guards against
+**DNS rebinding**: a page on your network resolves its own hostname to this
+server's address and then talks to it from the browser. From the browser's point
+of view that request is same-origin, so no origin rule stops it — only the
+`Host` check does.
+
+Left unset on a non-loopback bind, the check stays **off** and a warning is
+logged. That is the right default only when something in front of the server
+validates `Host`. It is deliberately not guessed: on `0.0.0.0` the reachable
+name is unknowable inside the process, and a wrong guess would answer the very
+deployment it is meant to protect with 421 on every request.
+
 ## Safety & Limits
 
 - **Read-only:** All tools perform HTTP GET requests only — no data is written, modified, or deleted.

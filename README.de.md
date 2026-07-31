@@ -286,6 +286,40 @@ pytest tests/ -m live
 ruff check src/ tests/
 ```
 
+## 🌐 HTTP-Transport
+
+Standardmässig spricht der Server MCP über stdio. Mit `--http` wird stattdessen
+Streamable HTTP bedient:
+
+```bash
+zurich-opendata-mcp --http --port 8000              # bindet 127.0.0.1 (Default)
+zurich-opendata-mcp --http --host 0.0.0.0 --port 8000
+```
+
+| Option | Bedeutung | Default |
+|---|---|---|
+| `--http` | Streamable HTTP statt stdio | _(aus → stdio)_ |
+| `--host` | Bind-Adresse | `127.0.0.1` |
+| `--port` | Bind-Port (1–65535) | `8000` |
+| `MCP_ALLOWED_HOSTS` | Kommagetrennte Namen, unter denen dieser Server erreichbar ist, **mit Port** (z. B. `zurich.example.ch:8000`). Anfragen unter einem anderen `Host` erhalten **421**; Loopback bleibt erlaubt, damit Container-Health-Checks weiter funktionieren. | _(nicht gesetzt)_ |
+
+**Der Loopback-Default ist Absicht.** Ein Bind auf `0.0.0.0` macht den Server auf
+allen Interfaces erreichbar, für jeden mit Zugriff auf die Maschine — eine
+Authentisierung ist nicht vorgeschaltet.
+
+**Setze `MCP_ALLOWED_HOSTS`, sobald du über Loopback hinaus bindest.** Es
+schützt vor **DNS-Rebinding**: Eine Seite in deinem Netz lässt ihren eigenen
+Hostnamen auf die Adresse dieses Servers auflösen und spricht ihn dann aus dem
+Browser an. Aus Sicht des Browsers ist diese Anfrage Same-Origin, keine
+Origin-Regel greift also — nur die `Host`-Prüfung tut es.
+
+Bleibt die Variable bei einem Nicht-Loopback-Bind ungesetzt, ist die Prüfung
+**aus** und es wird gewarnt. Das ist nur dann der richtige Default, wenn etwas
+Vorgelagertes den `Host` validiert. Geraten wird sie bewusst nicht: bei `0.0.0.0`
+ist der erreichbare Name im Prozess nicht bekannt, und ein falscher Rateversuch
+würde genau das Deployment, das er schützen soll, mit 421 auf jede Anfrage
+abweisen.
+
 ## Sicherheit & Grenzen
 
 - **Nur-Lesen:** Alle Tools verwenden ausschliesslich HTTP-GET-Anfragen — es werden keine Daten geschrieben, verändert oder gelöscht.
