@@ -51,10 +51,7 @@ async def handshake(executable: str) -> int:
                 return 1
 
     print("OK: installed artifact starts and completes an MCP handshake")
-    # TEMPORARY (reverted in the next commit): forced failure to determine
-    # whether `Fresh-resolve install smoke` is actually a *required* check.
-    print("TEMP: forcing a non-zero exit to test the merge gate")
-    return 1
+    return 0
 
 
 def main() -> int:
