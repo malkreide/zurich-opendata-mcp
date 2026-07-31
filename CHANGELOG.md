@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-07-31
+
+Minor: two new configuration surfaces, no existing behaviour changed. The
+loopback bind default is unchanged by design — `--host` has to be given for the
+server to reach the network, so upgrading cannot widen an existing deployment's
+exposure.
+
 ### Added
 
 - **Configurable HTTP bind address (`--host`, default `127.0.0.1`).** The
