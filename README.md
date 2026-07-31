@@ -77,6 +77,15 @@ An MCP (Model Context Protocol) server providing AI-powered access to **Open Dat
 ### Prerequisites
 - Python 3.11+
 - pip or uv
+- `mcp[cli]` 2.x — installed automatically; the server uses the 2.x API
+  (`mcp.server.mcpserver`) and cannot run on `mcp` 1.x
+
+> **Use 0.6.0 or newer.** Release `0.5.1` declared `mcp[cli]>=1.28.1` with no
+> upper bound. Once `mcp` 2.0.0 removed `mcp.server.fastmcp`, every fresh
+> install of `0.5.1` resolved to 2.0.0 and failed at import with
+> `ModuleNotFoundError`. `0.6.0` runs on the 2.x API and pins `>=2.0.0,<3`.
+> If you are pinned to `0.5.1`, upgrade — there is no working configuration of
+> that release left.
 
 ### Install
 ```bash

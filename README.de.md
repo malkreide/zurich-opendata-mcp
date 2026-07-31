@@ -77,6 +77,16 @@ MCP (Model Context Protocol) Server für den KI-gestützten Zugriff auf **Open D
 ### Voraussetzungen
 - Python 3.11+
 - pip oder uv
+- `mcp[cli]` 2.x — wird automatisch installiert; der Server nutzt die 2.x-API
+  (`mcp.server.mcpserver`) und läuft nicht mit `mcp` 1.x
+
+> **Version 0.6.0 oder neuer verwenden.** Release `0.5.1` deklarierte
+> `mcp[cli]>=1.28.1` ohne Obergrenze. Nachdem `mcp` 2.0.0 das Modul
+> `mcp.server.fastmcp` entfernt hatte, löste jede Neuinstallation von `0.5.1`
+> auf 2.0.0 auf und scheiterte beim Import mit `ModuleNotFoundError`. `0.6.0`
+> nutzt die 2.x-API und pinnt `>=2.0.0,<3`. Wer auf `0.5.1` festgepinnt ist,
+> sollte aktualisieren — für dieses Release existiert keine funktionierende
+> Konfiguration mehr.
 
 ### Installation
 ```bash

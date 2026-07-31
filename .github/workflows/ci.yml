@@ -40,6 +40,50 @@ jobs:
       - name: Versions-Sync (pyproject ↔ server.json / README / src)
         run: python scripts/check_version_sync.py
 
+  fresh-install:
+    name: Fresh-resolve install smoke
+    runs-on: ubuntu-latest
+    # The `check` job installs via `uv sync`, which resolves from `uv.lock` —
+    # a frozen resolve. That is why 0.5.1 could ship an uncapped
+    # `mcp[cli]>=1.28.1`, break on `mcp` 2.0.0 for every user, and still keep
+    # CI green: the lock pinned 1.28.1, so CI never saw the version a user got.
+    # This job resolves *freely* from the declared ranges, with no lockfile and
+    # a cold cache, and then starts the artifact instead of merely importing it.
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.13"]
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Build wheel
+        run: |
+          pip install --no-cache-dir build
+          python -m build --wheel
+
+      - name: Install the wheel into a clean venv (no lockfile, cold cache)
+        run: |
+          python -m venv /tmp/fresh
+          # --no-cache-dir is load-bearing: a warm wheel cache would reinstall
+          # a previously resolved dependency set and re-measure the old
+          # artifact, which is precisely how the 0.5.1 break went unnoticed.
+          /tmp/fresh/bin/pip install --no-cache-dir dist/*.whl
+
+      - name: Report the resolved dependency versions
+        # Printed unconditionally: when this job goes red because upstream
+        # released a new major, the resolved version is the first thing needed
+        # to tell an incompatibility apart from a flaky install.
+        run: /tmp/fresh/bin/pip list
+
+      - name: Start the installed server and complete an MCP handshake
+        run: /tmp/fresh/bin/python scripts/smoke_installed.py /tmp/fresh/bin/zurich-opendata-mcp
+
   audit:
     runs-on: ubuntu-latest
     # Alarm, don't block: a fresh advisory in a transitive dependency should

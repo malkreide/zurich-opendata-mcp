@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-07-31
+
+**Release this because 0.5.1 on PyPI is unusable.** The two entries below were
+already on `main` but had never been published: the version in the repo, the
+git tag and PyPI all read `0.5.1`, so every version comparison reported "in
+sync" while the artifact users actually download stayed broken. Reproduced on
+2026-07-31 against the published wheel:
+
+```
+$ uv run --with 'zurich-opendata-mcp==0.5.1' python -c "import zurich_opendata_mcp.app"
+installed zurich-opendata-mcp: 0.5.1
+installed mcp               : 2.0.0
+ModuleNotFoundError: No module named 'mcp.server.fastmcp'
+```
+
+Minor, not patch. Two consumer-visible changes make this more than a bugfix:
+the install requirement moved to a new major of a dependency
+(`mcp[cli]>=1.28.1` → `>=2.0.0,<3`), so an environment holding `mcp` 1.x can no
+longer install this package — a patch release should stay installable wherever
+its predecessor was — and 2.x-aware clients now negotiate a newer protocol era
+(see below). The tool surface is unchanged, so it is not a major.
+
 ### Changed
 
 - **Migrated to the `mcp` 2.x server API.** The pin moved from `>=1.28.1,<2`
@@ -51,6 +73,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Verified in both directions: 2.0.0 fails, `<2` resolves to 1.29.0 and imports
   cleanly. Migrating to the 2.x API (`mcp.server.mcpserver`) stays a separate,
   deliberate piece of work.
+
+### Added
+
+- **CI now installs the built wheel from a free resolve and starts it**
+  (`fresh-install` job in `ci.yml`, plus `scripts/smoke_installed.py`). This
+  closes the hole that let 0.5.1 ship broken and stay broken.
+
+  The existing `check` job runs `uv sync`, which resolves from `uv.lock`. A
+  lockfile is a *frozen* resolve: while `uv.lock` pinned `mcp` 1.28.1, CI kept
+  installing 1.28.1 and passing, no matter what the declared range allowed. A
+  user running `pip install zurich-opendata-mcp` gets a *free* resolve, took
+  `mcp` 2.0.0 the day it appeared, and hit `ModuleNotFoundError`. CI was green
+  and the artifact was dead, and neither fact contradicted the other.
+
+  The new job builds the wheel, installs it into a fresh venv with
+  `--no-cache-dir` and no lockfile, then runs a real stdio handshake against
+  the `zurich-opendata-mcp` console script and asserts the tool list is
+  non-empty. Importing alone would not have been enough here — it is the same
+  distinction that made the defect invisible, so the check exercises the thing
+  users actually run. It runs on every PR, so an upstream release that breaks
+  the declared range turns CI red on the next PR instead of on a user's
+  machine.
+
+- **`tests/test_packaging.py`** — guards the declared dependency range itself.
+  The `mcp` requirement must carry both a floor and an upper cap: the
+  unbounded `>=1.28.1` is exactly what let a resolver walk into a major
+  version that had removed the imported module. The tests also assert that
+  what the range promises and what the code imports stay the same claim —
+  `src/` must import `mcp.server.mcpserver` and must not reference
+  `mcp.server.fastmcp` — and that the installed `mcp` satisfies the declared
+  specifier, which catches the lockfile drifting out of the declared range.
 
 ## [0.5.1] - 2026-07-24
 
