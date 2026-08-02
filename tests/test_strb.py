@@ -73,17 +73,13 @@ async def test_strb_search_markdown():
 async def test_strb_search_json_format():
     respx.get(_SQL).mock(side_effect=_sql_side_effect([_REC], total=1))
 
-    result = await search_stadtratsbeschluesse(
-        SearchSTRBInput(query="Tagesschule", format="json")
-    )
+    result = await search_stadtratsbeschluesse(SearchSTRBInput(query="Tagesschule", format="json"))
 
     payload = json.loads(result)
     assert payload["query"] == "Tagesschule"
     assert payload["total"] == 1
     assert payload["beschluesse"][0]["beschlussnummer"] == "1203/2025"
-    assert payload["beschluesse"][0]["departement"] == (
-        "Schul- und Sportdepartement (SSD)"
-    )
+    assert payload["beschluesse"][0]["departement"] == ("Schul- und Sportdepartement (SSD)")
 
 
 @respx.mock
@@ -112,9 +108,7 @@ async def test_strb_search_http_error():
 async def test_strb_by_departement_markdown():
     respx.get(_SQL).mock(side_effect=_sql_side_effect([_REC], total=1))
 
-    result = await get_beschluesse_by_departement(
-        BeschluesseDepartementInput(departement="SSD")
-    )
+    result = await get_beschluesse_by_departement(BeschluesseDepartementInput(departement="SSD"))
 
     assert "## STRB – Departement: SSD" in result
     assert "[1203/2025]" in result
@@ -138,9 +132,7 @@ async def test_strb_by_departement_json_format():
 async def test_strb_by_departement_http_error():
     respx.get(_SQL).mock(return_value=httpx.Response(500))
 
-    result = await get_beschluesse_by_departement(
-        BeschluesseDepartementInput(departement="SSD")
-    )
+    result = await get_beschluesse_by_departement(BeschluesseDepartementInput(departement="SSD"))
 
     assert "Fehler bei STRB Departement-Abfrage" in result
 
@@ -149,9 +141,7 @@ async def test_strb_by_departement_http_error():
 async def test_strb_by_departement_empty_lists_departments():
     respx.get(_SQL).mock(side_effect=_sql_side_effect([], total=0))
 
-    result = await get_beschluesse_by_departement(
-        BeschluesseDepartementInput(departement="ZZ")
-    )
+    result = await get_beschluesse_by_departement(BeschluesseDepartementInput(departement="ZZ"))
 
     assert "Keine Stadtratsbeschlüsse für Departement 'ZZ'" in result
     # Falls back to listing the known departments.
@@ -165,9 +155,7 @@ async def test_strb_by_departement_empty_lists_departments():
 async def test_strb_detail_found():
     route = respx.get(_SEARCH).mock(return_value=_ckan({"records": [_REC]}))
 
-    result = await get_stadtratsbeschluss_detail(
-        GetSTRBDetailInput(beschlussnummer="1203/2025")
-    )
+    result = await get_stadtratsbeschluss_detail(GetSTRBDetailInput(beschlussnummer="1203/2025"))
 
     # The exact beschlussnummer is filtered server-side — and the filter must
     # be valid JSON on the wire (a dict's Python repr gets a CKAN 409).
@@ -183,9 +171,7 @@ async def test_strb_detail_found():
 async def test_strb_detail_not_found():
     respx.get(_SEARCH).mock(return_value=_ckan({"records": []}))
 
-    result = await get_stadtratsbeschluss_detail(
-        GetSTRBDetailInput(beschlussnummer="9999/2025")
-    )
+    result = await get_stadtratsbeschluss_detail(GetSTRBDetailInput(beschlussnummer="9999/2025"))
 
     assert "'9999/2025' nicht gefunden" in result
 
@@ -194,9 +180,7 @@ async def test_strb_detail_not_found():
 async def test_strb_detail_http_error():
     respx.get(_SEARCH).mock(return_value=httpx.Response(500))
 
-    result = await get_stadtratsbeschluss_detail(
-        GetSTRBDetailInput(beschlussnummer="1203/2025")
-    )
+    result = await get_stadtratsbeschluss_detail(GetSTRBDetailInput(beschlussnummer="1203/2025"))
 
     assert "Fehler bei STRB-Detail 1203/2025" in result
 
@@ -228,9 +212,7 @@ async def test_new_names_behave_like_old_ones():
     respx.get(_SQL).mock(side_effect=_sql_side_effect([_REC], total=1))
     respx.get(_SEARCH).mock(return_value=_ckan({"records": [_REC]}))
 
-    assert "«Tagesschule»" in await zurich_strb_search(
-        SearchSTRBInput(query="Tagesschule")
-    )
+    assert "«Tagesschule»" in await zurich_strb_search(SearchSTRBInput(query="Tagesschule"))
     assert "[1203/2025]" in await zurich_strb_by_department(
         BeschluesseDepartementInput(departement="SSD")
     )

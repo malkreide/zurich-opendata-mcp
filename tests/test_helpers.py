@@ -24,9 +24,7 @@ def test_format_dataset_summary_renders_all_optional_fields():
             "groups": [{"title": "Bildung"}],
             "tags": [{"display_name": "schule"}],
             "notes": "Eine Beschreibung",
-            "resources": [
-                {"id": "r1", "name": "CSV", "format": "CSV", "datastore_active": True}
-            ],
+            "resources": [{"id": "r1", "name": "CSV", "format": "CSV", "datastore_active": True}],
         }
     )
 
@@ -68,9 +66,7 @@ async def test_ckan_request_raises_on_unsuccessful_response():
     from zurich_opendata_mcp.http_client import ckan_request
 
     respx.get(f"{CKAN_API_URL}/package_show").mock(
-        return_value=httpx.Response(
-            200, json={"success": False, "error": {"message": "Not found"}}
-        )
+        return_value=httpx.Response(200, json={"success": False, "error": {"message": "Not found"}})
     )
 
     with pytest.raises(RuntimeError, match="Not found"):
@@ -126,7 +122,7 @@ def test_main_runs_http_with_host_port_and_security(monkeypatch):
     # then sees. `transport_security` is asserted separately because it is an
     # object, not a literal; see tests/test_transport_security.py for what it
     # contains.
-    (args, kwargs), = calls
+    ((args, kwargs),) = calls
     assert args == ()
     assert kwargs["transport"] == "streamable-http"
     assert kwargs["host"] == "127.0.0.1"

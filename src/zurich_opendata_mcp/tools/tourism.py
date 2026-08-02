@@ -98,7 +98,11 @@ async def zurich_tourism(params: TourismSearchInput) -> str:
                 name = item.get("name", {}).get(lang, "") or ""
                 desc = item.get("disambiguatingDescription", {}).get(lang, "") or ""
                 categories = " ".join(item.get("category", {}).keys())
-                if search_lower in name.lower() or search_lower in desc.lower() or search_lower in categories.lower():
+                if (
+                    search_lower in name.lower()
+                    or search_lower in desc.lower()
+                    or search_lower in categories.lower()
+                ):
                     filtered.append(item)
             data = filtered
 

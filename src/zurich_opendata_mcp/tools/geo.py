@@ -94,7 +94,8 @@ class GeoFeaturesInput(BaseModel):
     )
     format: OutputFormat = Field(
         default="markdown",
-        description=FORMAT_FIELD_DESC + " Bei 'json' wird die rohe GeoJSON-FeatureCollection zurückgegeben.",
+        description=FORMAT_FIELD_DESC
+        + " Bei 'json' wird die rohe GeoJSON-FeatureCollection zurückgegeben.",
     )
 
 
@@ -155,7 +156,12 @@ async def zurich_geo_features(params: GeoFeaturesInput) -> str:
             geom_type = geom.get("type", "?")
             coords = geom.get("coordinates", [])
 
-            name = props.get("name") or props.get("bezeichnung") or props.get("einheit") or f"Feature {i}"
+            name = (
+                props.get("name")
+                or props.get("bezeichnung")
+                or props.get("einheit")
+                or f"Feature {i}"
+            )
             kategorie = props.get("kategorie") or props.get("typ") or ""
             adresse = props.get("adresse") or props.get("strasse") or ""
 
@@ -175,7 +181,11 @@ async def zurich_geo_features(params: GeoFeaturesInput) -> str:
 
         # Show property names from first feature
         if features:
-            prop_keys = [k for k in features[0].get("properties", {}).keys() if k not in ("objectid", "geometrie_gdo")]
+            prop_keys = [
+                k
+                for k in features[0].get("properties", {}).keys()
+                if k not in ("objectid", "geometrie_gdo")
+            ]
             lines.append(f"\n**Verfügbare Felder**: {', '.join(prop_keys[:20])}")
 
         lines.append(f"\n*Volle GeoJSON-Daten via `zurich://geo/{params.layer_id}` Resource*")

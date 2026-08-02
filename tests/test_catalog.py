@@ -112,13 +112,9 @@ async def test_catalog_stats():
                 "count": 900,
                 "search_facets": {
                     "groups": {
-                        "items": [
-                            {"name": "bildung", "display_name": "Bildung", "count": 42}
-                        ]
+                        "items": [{"name": "bildung", "display_name": "Bildung", "count": 42}]
                     },
-                    "res_format": {
-                        "items": [{"name": "CSV", "display_name": "CSV", "count": 500}]
-                    },
+                    "res_format": {"items": [{"name": "CSV", "display_name": "CSV", "count": 500}]},
                 },
             }
         )
@@ -293,9 +289,7 @@ async def test_analyze_without_structure():
         )
     )
 
-    result = await zurich_analyze_datasets(
-        AnalyzeDatasetInput(query="x", include_structure=False)
-    )
+    result = await zurich_analyze_datasets(AnalyzeDatasetInput(query="x", include_structure=False))
 
     assert result.structured_content["datasets"][0]["fields"] is None
 
@@ -328,9 +322,7 @@ async def test_analyze_datastore_failure_is_tolerated():
 
 @respx.mock
 async def test_analyze_truncates_long_field_list():
-    fields = [{"id": "_id", "type": "int"}] + [
-        {"id": f"f{i}", "type": "text"} for i in range(17)
-    ]
+    fields = [{"id": "_id", "type": "int"}] + [{"id": f"f{i}", "type": "text"} for i in range(17)]
     respx.get(_SEARCH).mock(
         return_value=_ckan(
             {

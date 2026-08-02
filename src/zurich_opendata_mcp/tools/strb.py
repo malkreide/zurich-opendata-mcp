@@ -62,9 +62,7 @@ async def _strb_query(where: str, limit: int) -> tuple[list[dict], int]:
         f'ORDER BY "Beschlussdatum" DESC '
         f"LIMIT {limit}"
     )
-    sql_count = (
-        f'SELECT COUNT(*) AS cnt FROM "{STRB_RESOURCE_ID}" WHERE {where}'
-    )
+    sql_count = f'SELECT COUNT(*) AS cnt FROM "{STRB_RESOURCE_ID}" WHERE {where}'
     result_data, result_count = await asyncio.gather(
         ckan_request("datastore_search_sql", {"sql": sql_data}),
         ckan_request("datastore_search_sql", {"sql": sql_count}),
@@ -198,8 +196,11 @@ async def zurich_strb_search(params: SearchSTRBInput) -> str:
             return (
                 f"Keine Stadtratsbeschlüsse gefunden für: '{params.query}'"
                 + (f", Departement: '{params.departement}'" if params.departement else "")
-                + (f", Zeitraum: {params.datum_von or '?'} – {params.datum_bis or '?'}"
-                   if params.datum_von or params.datum_bis else "")
+                + (
+                    f", Zeitraum: {params.datum_von or '?'} – {params.datum_bis or '?'}"
+                    if params.datum_von or params.datum_bis
+                    else ""
+                )
                 + "\n\nHinweis: Das Archiv enthält öffentliche Beschlüsse ab Februar 2025."
             )
 
@@ -324,8 +325,7 @@ async def zurich_strb_by_department(params: BeschluesseDepartementInput) -> str:
         if not records:
             return (
                 f"Keine Stadtratsbeschlüsse für Departement '{params.departement}' gefunden.\n\n"
-                f"Verfügbare Departemente:\n"
-                + "\n".join(f"- {d}" for d in STRB_DEPARTEMENTE)
+                f"Verfügbare Departemente:\n" + "\n".join(f"- {d}" for d in STRB_DEPARTEMENTE)
             )
 
         if params.format == "json":
@@ -428,14 +428,16 @@ async def zurich_strb_detail(params: GetSTRBDetailInput) -> str:
             )
 
         r = _format_strb_record(records[0])
-        return "\n".join([
-            f"## Stadtratsbeschluss {r['beschlussnummer']}",
-            "",
-            f"**Titel:** {r['titel']}",
-            f"**Datum:** {r['datum']}",
-            f"**Departement:** {r['departement']}",
-            f"**Link:** {r['link']}",
-        ])
+        return "\n".join(
+            [
+                f"## Stadtratsbeschluss {r['beschlussnummer']}",
+                "",
+                f"**Titel:** {r['titel']}",
+                f"**Datum:** {r['datum']}",
+                f"**Departement:** {r['departement']}",
+                f"**Link:** {r['link']}",
+            ]
+        )
 
     except Exception as e:
         return handle_api_error(e, f"STRB-Detail {params.beschlussnummer}")

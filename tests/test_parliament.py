@@ -64,13 +64,9 @@ _GESCHAEFT_HIT = """
 
 @respx.mock
 async def test_parliament_search_renders_hit():
-    route = respx.get(_url("geschaeft")).mock(
-        return_value=_response(3, _GESCHAEFT_HIT)
-    )
+    route = respx.get(_url("geschaeft")).mock(return_value=_response(3, _GESCHAEFT_HIT))
 
-    result = await zurich_parliament_search(
-        ParliamentSearchInput(query="Schule", max_results=10)
-    )
+    result = await zurich_parliament_search(ParliamentSearchInput(query="Schule", max_results=10))
 
     assert route.called
     assert "## Gemeinderatsgeschäfte: 'Schule'" in result
@@ -126,9 +122,7 @@ async def test_parliament_members_kontakt_index():
     kontakt = respx.get(_url("kontakt")).mock(return_value=_response(1, _KONTAKT_HIT))
     behoerden = respx.get(_url("behoerdenmandat")).mock(return_value=_response(0, ""))
 
-    result = await zurich_parliament_members(
-        ParliamentMembersInput(party="SP", active_only=True)
-    )
+    result = await zurich_parliament_members(ParliamentMembersInput(party="SP", active_only=True))
 
     # No commission → goes through the Kontakt index, not Behoerdenmandat.
     assert kontakt.called
@@ -158,13 +152,9 @@ _BEHOERDEN_HIT = """
 @respx.mock
 async def test_parliament_members_commission_index():
     kontakt = respx.get(_url("kontakt")).mock(return_value=_response(0, ""))
-    behoerden = respx.get(_url("behoerdenmandat")).mock(
-        return_value=_response(1, _BEHOERDEN_HIT)
-    )
+    behoerden = respx.get(_url("behoerdenmandat")).mock(return_value=_response(1, _BEHOERDEN_HIT))
 
-    result = await zurich_parliament_members(
-        ParliamentMembersInput(commission="GPK")
-    )
+    result = await zurich_parliament_members(ParliamentMembersInput(commission="GPK"))
 
     # commission set → Behoerdenmandat index, not Kontakt.
     assert behoerden.called
@@ -223,9 +213,7 @@ async def test_parliament_search_skips_empty_hit_and_missing_signer():
 async def test_parliament_members_commission_empty():
     respx.get(_url("behoerdenmandat")).mock(return_value=_response(0, ""))
 
-    result = await zurich_parliament_members(
-        ParliamentMembersInput(commission="GPK")
-    )
+    result = await zurich_parliament_members(ParliamentMembersInput(commission="GPK"))
 
     assert "Keine Mitglieder gefunden für Kommission 'GPK'." == result
 
@@ -233,13 +221,9 @@ async def test_parliament_members_commission_empty():
 @respx.mock
 async def test_parliament_members_commission_skips_empty_hit():
     # Hit without b:Behordenmandat → continue; numHits keeps the section header.
-    respx.get(_url("behoerdenmandat")).mock(
-        return_value=_response(1, "<sr:Hit></sr:Hit>")
-    )
+    respx.get(_url("behoerdenmandat")).mock(return_value=_response(1, "<sr:Hit></sr:Hit>"))
 
-    result = await zurich_parliament_members(
-        ParliamentMembersInput(commission="GPK")
-    )
+    result = await zurich_parliament_members(ParliamentMembersInput(commission="GPK"))
 
     assert "## Kommission: GPK" in result
 
@@ -273,9 +257,7 @@ async def test_parliament_search_json_format():
     respx.get(_url("geschaeft")).mock(return_value=_response(3, _GESCHAEFT_HIT))
 
     payload = json.loads(
-        await zurich_parliament_search(
-            ParliamentSearchInput(query="Schule", format="json")
-        )
+        await zurich_parliament_search(ParliamentSearchInput(query="Schule", format="json"))
     )
 
     assert payload["total"] == 3
@@ -292,9 +274,7 @@ async def test_parliament_members_kontakt_json_format():
     respx.get(_url("kontakt")).mock(return_value=_response(1, _KONTAKT_HIT))
 
     payload = json.loads(
-        await zurich_parliament_members(
-            ParliamentMembersInput(party="SP", format="json")
-        )
+        await zurich_parliament_members(ParliamentMembersInput(party="SP", format="json"))
     )
 
     rec = payload["members"][0]
@@ -308,9 +288,7 @@ async def test_parliament_members_commission_json_format():
     respx.get(_url("behoerdenmandat")).mock(return_value=_response(1, _BEHOERDEN_HIT))
 
     payload = json.loads(
-        await zurich_parliament_members(
-            ParliamentMembersInput(commission="GPK", format="json")
-        )
+        await zurich_parliament_members(ParliamentMembersInput(commission="GPK", format="json"))
     )
 
     assert payload["commission"] == "GPK"

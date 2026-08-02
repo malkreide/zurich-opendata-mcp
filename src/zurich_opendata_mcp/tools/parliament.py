@@ -327,7 +327,9 @@ async def zurich_parliament_members(params: ParliamentMembersInput) -> str:
                 if partei:
                     display += f" ({partei})"
                 display += f" – {rec['funktion']}, {rec['gremium']}"
-                display += f" (seit {dauer_text.split(' -')[0].strip()})" if " -" in dauer_text else ""
+                display += (
+                    f" (seit {dauer_text.split(' -')[0].strip()})" if " -" in dauer_text else ""
+                )
 
                 lines.append(f"- {display}")
 
@@ -356,9 +358,7 @@ async def zurich_parliament_members(params: ParliamentMembersInput) -> str:
                 records.append(_kontakt_record(kontakt, ns))
 
             if params.format == "json":
-                return json_out(
-                    {"total": num_hits, "count": len(records), "members": records}
-                )
+                return json_out({"total": num_hits, "count": len(records), "members": records})
 
             lines = [
                 "## Gemeinderatsmitglieder",

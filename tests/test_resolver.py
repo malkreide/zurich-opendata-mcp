@@ -136,6 +136,5 @@ async def test_live_ugz_datasets_still_publish_recent_yearly_resources():
         dataset = await ckan_request("package_show", {"id": slug})
         names = [r.get("name") or "" for r in dataset.get("resources", [])]
         assert any(
-            n.startswith(f"{prefix}{year}") or n.startswith(f"{prefix}{year - 1}")
-            for n in names
+            n.startswith(f"{prefix}{year}") or n.startswith(f"{prefix}{year - 1}") for n in names
         ), f"{slug}: no {prefix}<recent-year> resource found — naming scheme changed?"

@@ -77,9 +77,7 @@ async def zurich_parking_live(params: ParkingLiveInput | None = None) -> str:
         last_updated = data.get("last_updated", "unbekannt")
 
         if params.format == "json":
-            return _json_out(
-                {"last_updated": last_updated, "count": len(lots), "lots": lots}
-            )
+            return _json_out({"last_updated": last_updated, "count": len(lots), "lots": lots})
 
         lines = [
             "## Parkplatzbelegung Zürich",
@@ -380,7 +378,9 @@ async def zurich_water_weather(params: WaterWeatherInput) -> str:
         Aktuelle See-Messwerte mit Wasser- und Lufttemperatur, Wind, Pegel
     """
     try:
-        resource_id = WATER_TIEFENBRUNNEN_ID if params.station == "tiefenbrunnen" else WATER_MYTHENQUAI_ID
+        resource_id = (
+            WATER_TIEFENBRUNNEN_ID if params.station == "tiefenbrunnen" else WATER_MYTHENQUAI_ID
+        )
         station_name = "Tiefenbrunnen" if params.station == "tiefenbrunnen" else "Mythenquai"
 
         result = await ckan_request(

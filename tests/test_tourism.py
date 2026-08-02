@@ -46,14 +46,10 @@ async def test_tourism_resolves_named_category_and_renders():
         return_value=httpx.Response(200, json=[_item("Kornhaus", desc_de="Feines Essen")])
     )
 
-    result = await zurich_tourism(
-        TourismSearchInput(category="restaurants", language="de")
-    )
+    result = await zurich_tourism(TourismSearchInput(category="restaurants", language="de"))
 
     # 'restaurants' resolves to its numeric id on the wire.
-    assert dict(route.calls[0].request.url.params)["id"] == str(
-        ZT_CATEGORIES["restaurants"]
-    )
+    assert dict(route.calls[0].request.url.params)["id"] == str(ZT_CATEGORIES["restaurants"])
     assert "## Zürich Tourismus: restaurants" in result
     assert "### Kornhaus" in result
     assert "Feines Essen" in result
@@ -64,9 +60,7 @@ async def test_tourism_resolves_named_category_and_renders():
 
 @respx.mock
 async def test_tourism_numeric_category_passes_through():
-    route = respx.get(ZT_API_URL).mock(
-        return_value=httpx.Response(200, json=[_item("Test")])
-    )
+    route = respx.get(ZT_API_URL).mock(return_value=httpx.Response(200, json=[_item("Test")]))
 
     await zurich_tourism(TourismSearchInput(category="166"))
 
@@ -85,9 +79,7 @@ async def test_tourism_search_text_filters():
         )
     )
 
-    result = await zurich_tourism(
-        TourismSearchInput(category="restaurants", search_text="vegan")
-    )
+    result = await zurich_tourism(TourismSearchInput(category="restaurants", search_text="vegan"))
 
     assert "Vegan Spot" in result
     assert "Steakhouse" not in result
@@ -96,14 +88,10 @@ async def test_tourism_search_text_filters():
 @respx.mock
 async def test_tourism_language_selection():
     respx.get(ZT_API_URL).mock(
-        return_value=httpx.Response(
-            200, json=[_item("Kornhaus", name_en="Granary")]
-        )
+        return_value=httpx.Response(200, json=[_item("Kornhaus", name_en="Granary")])
     )
 
-    result = await zurich_tourism(
-        TourismSearchInput(category="restaurants", language="en")
-    )
+    result = await zurich_tourism(TourismSearchInput(category="restaurants", language="en"))
 
     assert "Granary" in result
     assert "Kornhaus" not in result
@@ -157,9 +145,7 @@ import json  # noqa: E402
 @respx.mock
 async def test_tourism_json_format():
     respx.get(ZT_API_URL).mock(
-        return_value=httpx.Response(
-            200, json=[_item("Kornhaus", desc_de="Feines Essen")]
-        )
+        return_value=httpx.Response(200, json=[_item("Kornhaus", desc_de="Feines Essen")])
     )
 
     payload = json.loads(

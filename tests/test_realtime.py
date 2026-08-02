@@ -245,9 +245,7 @@ async def test_water_weather_none_becomes_dash():
         )
     )
 
-    result = await zurich_water_weather(
-        WaterWeatherInput(station="tiefenbrunnen", limit=2)
-    )
+    result = await zurich_water_weather(WaterWeatherInput(station="tiefenbrunnen", limit=2))
 
     assert WATER_TIEFENBRUNNEN_ID in str(route.calls[0].request.url)
     assert "Zürichsee Wetterstation Tiefenbrunnen" in result
@@ -621,7 +619,11 @@ async def test_vbz_stop_resolves_haltestellen_ids():
         # Second call: REISENDE filtered by the resolved ID list.
         assert json.loads(p["filters"]) == {"Haltestellen_Id": ["206"]}
         return _ckan(
-            {"total": 2, "fields": [{"id": "Linienname", "type": "text"}], "records": [{"Linienname": "7"}]}
+            {
+                "total": 2,
+                "fields": [{"id": "Linienname", "type": "text"}],
+                "records": [{"Linienname": "7"}],
+            }
         )
 
     respx.get(_DATASTORE).mock(side_effect=handler)
@@ -644,9 +646,7 @@ async def test_vbz_unknown_stop_short_circuits():
 
 @respx.mock
 async def test_vbz_many_stops_truncate_and_json_payload():
-    stops = [
-        {"Haltestellen_Id": str(i), "Haltestellenlangname": f"Halt {i}"} for i in range(7)
-    ]
+    stops = [{"Haltestellen_Id": str(i), "Haltestellenlangname": f"Halt {i}"} for i in range(7)]
 
     def handler(request: httpx.Request) -> httpx.Response:
         p = dict(request.url.params)
@@ -660,9 +660,7 @@ async def test_vbz_many_stops_truncate_and_json_payload():
     assert "(+2 weitere)" in md
 
     payload = json.loads(
-        await zurich_vbz_passengers(
-            VBZPassengersInput(stop="Halt", line="4", format="json")
-        )
+        await zurich_vbz_passengers(VBZPassengersInput(stop="Halt", line="4", format="json"))
     )
     assert payload["line"] == "4"
     assert payload["haltestellen"][0] == "Halt 0"

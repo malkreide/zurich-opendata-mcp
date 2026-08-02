@@ -67,9 +67,7 @@ async def test_geo_features_renders_points_and_fields():
         )
     )
 
-    result = await zurich_geo_features(
-        GeoFeaturesInput(layer_id="schulanlagen", max_features=50)
-    )
+    result = await zurich_geo_features(GeoFeaturesInput(layer_id="schulanlagen", max_features=50))
 
     # Correct WFS service + typename on the wire.
     params = dict(route.calls[0].request.url.params)
@@ -88,9 +86,7 @@ async def test_geo_features_renders_points_and_fields():
 
 @respx.mock
 async def test_geo_features_passes_cql_filter():
-    route = respx.get(_WFS_URL).mock(
-        return_value=httpx.Response(200, json={"features": []})
-    )
+    route = respx.get(_WFS_URL).mock(return_value=httpx.Response(200, json={"features": []}))
 
     result = await zurich_geo_features(
         GeoFeaturesInput(
@@ -99,9 +95,7 @@ async def test_geo_features_passes_cql_filter():
         )
     )
 
-    assert dict(route.calls[0].request.url.params)["CQL_FILTER"] == (
-        "kategorie = 'Kindergarten'"
-    )
+    assert dict(route.calls[0].request.url.params)["CQL_FILTER"] == ("kategorie = 'Kindergarten'")
     assert "**Filter**: `kategorie = 'Kindergarten'`" in result
 
 
@@ -110,9 +104,7 @@ async def test_geo_features_truncates_after_20():
     feats = [_point(f"P{i}", 8.5, 47.3) for i in range(21)]
     respx.get(_WFS_URL).mock(return_value=httpx.Response(200, json={"features": feats}))
 
-    result = await zurich_geo_features(
-        GeoFeaturesInput(layer_id="schulanlagen", max_features=500)
-    )
+    result = await zurich_geo_features(GeoFeaturesInput(layer_id="schulanlagen", max_features=500))
 
     assert "**Features**: 21" in result
     assert "… und 1 weitere Features" in result
@@ -159,9 +151,7 @@ async def test_geo_features_json_format_returns_raw_geojson():
     respx.get(_WFS_URL).mock(return_value=httpx.Response(200, json=upstream))
 
     payload = json.loads(
-        await zurich_geo_features(
-            GeoFeaturesInput(layer_id="schulanlagen", format="json")
-        )
+        await zurich_geo_features(GeoFeaturesInput(layer_id="schulanlagen", format="json"))
     )
 
     # The raw FeatureCollection passes through unchanged.

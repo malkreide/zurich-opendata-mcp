@@ -77,8 +77,7 @@ async def resolve_yearly_resource(dataset_slug: str, name_prefix: str, fallback_
         )
     except Exception as e:
         logger.warning(
-            "Yearly resource resolution for dataset %r failed (%s: %s); "
-            "using pinned fallback ID",
+            "Yearly resource resolution for dataset %r failed (%s: %s); using pinned fallback ID",
             dataset_slug,
             type(e).__name__,
             e,

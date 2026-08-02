@@ -94,9 +94,7 @@ async def zurich_search_datasets(
         summaries = [to_dataset_summary(ds) for ds in result["results"]]
 
         next_offset = (
-            params.offset + len(summaries)
-            if total > params.offset + len(summaries)
-            else None
+            params.offset + len(summaries) if total > params.offset + len(summaries) else None
         )
         model = SearchResult(
             query=params.query,
@@ -125,7 +123,9 @@ async def zurich_search_datasets(
 
     except Exception as e:
         msg = handle_api_error(e, "Datensatzsuche")
-        return tool_result(msg, SearchResult(query=params.query, offset=params.offset, error=msg), is_error=True)
+        return tool_result(
+            msg, SearchResult(query=params.query, offset=params.offset, error=msg), is_error=True
+        )
 
 
 class GetDatasetInput(BaseModel):
@@ -239,7 +239,9 @@ async def zurich_list_categories(params: ListGroupInput) -> str:
                 lines.append(f"- **{ds['title']}** (`{ds['name']}`)")
             return "\n".join(lines)
         else:
-            result = await ckan_request("group_list", {"all_fields": True, "include_dataset_count": True})
+            result = await ckan_request(
+                "group_list", {"all_fields": True, "include_dataset_count": True}
+            )
             lines = ["## Datenkategorien der Stadt Zürich\n"]
             for group in result:
                 count = group.get("package_count", 0)
@@ -296,7 +298,9 @@ async def zurich_list_tags(params: TagSearchInput) -> str:
         for tag in tags:
             lines.append(f"- `{tag}`")
 
-        lines.append("\n*Tipp: Nutze `zurich_search_datasets` mit `filter_group` oder Solr-Query `tags:tagname`*")
+        lines.append(
+            "\n*Tipp: Nutze `zurich_search_datasets` mit `filter_group` oder Solr-Query `tags:tagname`*"
+        )
         return "\n".join(lines)
 
     except Exception as e:
@@ -313,8 +317,12 @@ class AnalyzeDatasetInput(BaseModel):
         description="Suchbegriff für die Analyse, z.B. 'Schule', 'Verkehr', 'Wohnen'",
         min_length=1,
     )
-    max_datasets: int = Field(default=5, description="Maximale Anzahl zu analysierender Datensätze", ge=1, le=20)
-    include_structure: bool = Field(default=True, description="Datenstruktur (Felder) einschliessen")
+    max_datasets: int = Field(
+        default=5, description="Maximale Anzahl zu analysierender Datensätze", ge=1, le=20
+    )
+    include_structure: bool = Field(
+        default=True, description="Datenstruktur (Felder) einschliessen"
+    )
     include_freshness: bool = Field(default=True, description="Aktualitäts-Analyse einschliessen")
 
 
@@ -506,7 +514,9 @@ async def zurich_catalog_stats() -> str:
             else:
                 items = groups if isinstance(groups, list) else []
             for item in sorted(items, key=lambda x: x.get("count", 0), reverse=True):
-                lines.append(f"- **{item.get('display_name', item.get('name', '?'))}**: {item.get('count', 0)}")
+                lines.append(
+                    f"- **{item.get('display_name', item.get('name', '?'))}**: {item.get('count', 0)}"
+                )
 
         # Formats
         if "res_format" in facets:
@@ -517,7 +527,9 @@ async def zurich_catalog_stats() -> str:
             else:
                 items = fmts if isinstance(fmts, list) else []
             for item in sorted(items, key=lambda x: x.get("count", 0), reverse=True)[:10]:
-                lines.append(f"- **{item.get('display_name', item.get('name', '?'))}**: {item.get('count', 0)}")
+                lines.append(
+                    f"- **{item.get('display_name', item.get('name', '?'))}**: {item.get('count', 0)}"
+                )
 
         return "\n".join(lines)
 
@@ -582,7 +594,9 @@ async def zurich_find_school_data(params: FindSchoolDataInput) -> str:
         seen_ids: set[str] = set()
         datasets: list[dict] = []
         for term in search_terms:
-            result = await ckan_request("package_search", {"q": term, "rows": 15, "sort": "score desc"})
+            result = await ckan_request(
+                "package_search", {"q": term, "rows": 15, "sort": "score desc"}
+            )
             for ds in result["results"]:
                 if ds["name"] not in seen_ids:
                     seen_ids.add(ds["name"])

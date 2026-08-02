@@ -112,6 +112,7 @@ def _port(value: str) -> int:
     p = int(value)
     if not 1 <= p <= 65535:
         import argparse
+
         raise argparse.ArgumentTypeError(f"port must be in 1..65535, got {p}")
     return p
 

@@ -171,7 +171,9 @@ async def test_parliament_search():
 @pytest.mark.live
 async def test_parliament_members():
     result = await zurich_parliament_members(ParliamentMembersInput(active_only=True))
-    assert "Mitglied" in result or "Partei" in result or "Mandat" in result or "Gemeinderat" in result
+    assert (
+        "Mitglied" in result or "Partei" in result or "Mandat" in result or "Gemeinderat" in result
+    )
 
 
 # ─── Tourism & SPARQL ────────────────────────────────────────────────────────
@@ -305,8 +307,7 @@ def test_strb_where_clause_neutralises_departement_injection():
     assert " AND " not in where
     # Payload sits inside the literal with the quote doubled.
     assert where == (
-        "\"Federfuhrendes Departement\" ILIKE "
-        "'%SSD'' UNION SELECT 1,2,3 --%' ESCAPE '!'"
+        "\"Federfuhrendes Departement\" ILIKE '%SSD'' UNION SELECT 1,2,3 --%' ESCAPE '!'"
     )
 
 
@@ -327,10 +328,7 @@ def test_strb_where_clause_dates_pass_through_unescaped():
     from zurich_opendata_mcp.tools.strb import _strb_where_clause
 
     where = _strb_where_clause(datum_von="2025-01-01", datum_bis="2025-12-31")
-    assert where == (
-        "\"Beschlussdatum\" >= '2025-01-01' AND "
-        "\"Beschlussdatum\" <= '2025-12-31'"
-    )
+    assert where == ("\"Beschlussdatum\" >= '2025-01-01' AND \"Beschlussdatum\" <= '2025-12-31'")
 
 
 def test_strb_where_clause_combines_conditions_with_and():
@@ -404,9 +402,7 @@ def test_user_agent_version_matches_package():
 async def test_sparql_returns_disabled_notice_without_calling_endpoint():
     from zurich_opendata_mcp.tools.sparql import SparqlQueryInput, zurich_sparql
 
-    result = await zurich_sparql(
-        SparqlQueryInput(query="SELECT * WHERE { ?s ?p ?o } LIMIT 1")
-    )
+    result = await zurich_sparql(SparqlQueryInput(query="SELECT * WHERE { ?s ?p ?o } LIMIT 1"))
     assert "nicht produktiv" in result
     # The disabled notice should always cite the alternatives.
     assert "zurich_search_datasets" in result
@@ -426,10 +422,13 @@ def test_select_gate_accepts_plain_select():
 def test_select_gate_accepts_cte_with_clause():
     from zurich_opendata_mcp.tools.datastore import _validate_select_only
 
-    assert _validate_select_only(
-        'WITH counts AS (SELECT "Jahr" AS y, COUNT(*) AS c FROM "abc" GROUP BY 1) '
-        "SELECT * FROM counts ORDER BY c DESC"
-    ) is None
+    assert (
+        _validate_select_only(
+            'WITH counts AS (SELECT "Jahr" AS y, COUNT(*) AS c FROM "abc" GROUP BY 1) '
+            "SELECT * FROM counts ORDER BY c DESC"
+        )
+        is None
+    )
 
 
 def test_select_gate_rejects_stacked_statements():
@@ -555,9 +554,7 @@ def test_get_client_is_synchronous_and_public():
     from zurich_opendata_mcp import http_client
 
     assert hasattr(http_client, "get_client")
-    assert not hasattr(http_client, "_get_client"), (
-        "Old name _get_client should have been removed."
-    )
+    assert not hasattr(http_client, "_get_client"), "Old name _get_client should have been removed."
     assert not inspect.iscoroutinefunction(http_client.get_client), (
         "get_client() should be a plain factory, not async."
     )
@@ -575,8 +572,7 @@ def test_handle_api_error_logs_warning(caplog):
 
     assert "Fehler bei Wetter" in result
     assert any(
-        "RuntimeError" in r.getMessage() and "Wetter" in r.getMessage()
-        for r in caplog.records
+        "RuntimeError" in r.getMessage() and "Wetter" in r.getMessage() for r in caplog.records
     )
 
 
@@ -663,9 +659,7 @@ def test_live_data_tools_are_not_idempotent():
             value = annotations.idempotent_hint
         else:
             value = annotations.get("idempotentHint") if isinstance(annotations, dict) else None
-        assert value is False, (
-            f"{name}: idempotent_hint={value!r} but tool returns live timestamps"
-        )
+        assert value is False, f"{name}: idempotent_hint={value!r} but tool returns live timestamps"
 
 
 # ─── Paris CQL injection regression (audit rerun H-2) ────────────────────────
@@ -692,10 +686,7 @@ def test_geschaeft_cql_neutralises_quote_injection():
     # No structural AND was injected (only the sortBy suffix is appended).
     assert " AND " not in cql
     # Exact structural equality — payload sits inside the escaped literal.
-    assert cql == (
-        'Titel any "foo\\" OR Titel any \\"bar"'
-        " sortBy beginn_start/sort.descending"
-    )
+    assert cql == ('Titel any "foo\\" OR Titel any \\"bar" sortBy beginn_start/sort.descending')
 
 
 def test_geschaeft_cql_escapes_department():
@@ -728,8 +719,7 @@ def test_behoerdenmandat_cql_neutralises_commission_injection():
     # active-only sentinel). Payload sits inside the escaped literal.
     assert cql.count(" AND ") == 1
     assert cql == (
-        'gremium any "GPK\\" OR gremium any \\"RPK"'
-        ' AND Dauer_end > "9999-12-31 00:00:00"'
+        'gremium any "GPK\\" OR gremium any \\"RPK" AND Dauer_end > "9999-12-31 00:00:00"'
     )
 
 
@@ -827,6 +817,7 @@ async def test_analyze_datasets_does_not_call_package_show():
     http_client_module.ckan_request = fake_ckan
     # Patch the symbol that was imported at module load time too.
     import zurich_opendata_mcp.tools.catalog as catalog_module
+
     catalog_module.ckan_request = fake_ckan
     try:
         result = await zurich_analyze_datasets(

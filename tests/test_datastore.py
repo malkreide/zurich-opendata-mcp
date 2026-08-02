@@ -133,9 +133,7 @@ async def test_datastore_sql_rejects_non_select_without_http():
     # respx with no routes: any HTTP call would raise, so this also proves
     # the gate short-circuits before the request.
     with respx.mock:
-        result = await zurich_datastore_sql(
-            DatastoreSqlInput(sql='DROP TABLE "abc"')
-        )
+        result = await zurich_datastore_sql(DatastoreSqlInput(sql='DROP TABLE "abc"'))
 
     assert "Nur SELECT" in result
 
@@ -144,9 +142,7 @@ async def test_datastore_sql_rejects_non_select_without_http():
 async def test_datastore_sql_empty_result():
     respx.get(_SQL).mock(return_value=_ckan({"fields": [], "records": []}))
 
-    result = await zurich_datastore_sql(
-        DatastoreSqlInput(sql='SELECT * FROM "abc" WHERE 1=0')
-    )
+    result = await zurich_datastore_sql(DatastoreSqlInput(sql='SELECT * FROM "abc" WHERE 1=0'))
 
     assert "keine Ergebnisse" in result
 
@@ -155,8 +151,6 @@ async def test_datastore_sql_empty_result():
 async def test_datastore_sql_http_error():
     respx.get(_SQL).mock(return_value=httpx.Response(500))
 
-    result = await zurich_datastore_sql(
-        DatastoreSqlInput(sql='SELECT * FROM "abc"')
-    )
+    result = await zurich_datastore_sql(DatastoreSqlInput(sql='SELECT * FROM "abc"'))
 
     assert "Fehler bei SQL-Abfrage" in result

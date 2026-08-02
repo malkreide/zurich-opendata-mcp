@@ -21,8 +21,7 @@ except PackageNotFoundError:  # pragma: no cover - only when running from a non-
     _PACKAGE_VERSION = "0.0.0+local"
 
 USER_AGENT = (
-    f"ZurichOpenDataMCP/{_PACKAGE_VERSION} "
-    "(+https://github.com/malkreide/zurich-opendata-mcp)"
+    f"ZurichOpenDataMCP/{_PACKAGE_VERSION} (+https://github.com/malkreide/zurich-opendata-mcp)"
 )
 
 ZURICH_GROUPS = [
@@ -49,20 +48,44 @@ ZURICH_GROUPS = [
 
 # Geoportal WFS layers – dataset name → (WFS service name, primary typename, description)
 GEOPORTAL_LAYERS: dict[str, tuple[str, str, str]] = {
-    "schulanlagen": ("Schulanlagen", "poi_kindergarten_view", "Schulstandorte (Kindergärten, Schulhäuser, Horte)"),
+    "schulanlagen": (
+        "Schulanlagen",
+        "poi_kindergarten_view",
+        "Schulstandorte (Kindergärten, Schulhäuser, Horte)",
+    ),
     "schulkreise": ("Schulkreise", "adm_schulkreise_a", "Schulkreis-Grenzen (Polygone)"),
-    "schulwege": ("Schulweguebergaenge", "poi_schulweg_att", "Schulweg-Übergänge und Gefahrenstellen"),
+    "schulwege": (
+        "Schulweguebergaenge",
+        "poi_schulweg_att",
+        "Schulweg-Übergänge und Gefahrenstellen",
+    ),
     "stadtkreise": ("Stadtkreise", "adm_stadtkreise_a", "Stadtkreis-Grenzen (Polygone)"),
-    "spielplaetze": ("POI_oeffentliche_Spielplaetze", "poi_oeffentl_spielplatz_view", "Öffentliche Spielplätze"),
+    "spielplaetze": (
+        "POI_oeffentliche_Spielplaetze",
+        "poi_oeffentl_spielplatz_view",
+        "Öffentliche Spielplätze",
+    ),
     "kreisbuero": ("Kreisbuero", "poi_kreisbuero_view", "Kreisbüros der Stadt Zürich"),
     "sammelstelle": ("Sammelstelle", "poi_sammelstelle_view", "Abfall-Sammelstellen"),
     "sport": ("Sport", "poi_sport_view", "Sportanlagen und -einrichtungen"),
-    "klimadaten": ("Klimadaten", "klimadaten_raster", "Klimadaten (Raster, Temperaturen, Hitzeinseln)"),
+    "klimadaten": (
+        "Klimadaten",
+        "klimadaten_raster",
+        "Klimadaten (Raster, Temperaturen, Hitzeinseln)",
+    ),
     "lehrpfade": ("Lehrpfade", "poi_lehrpfad_view", "Lehrpfade und Bildungswege"),
     "stimmlokale": ("Stimmlokale", "poi_stimmlokale_view", "Abstimmungs- und Wahllokale"),
     "sozialzentrum": ("Sozialzentrum", "poi_sozialzentrum_view", "Sozialzentren"),
-    "velopruefstrecken": ("Velopruefstrecken", "poi_velopruefstrecke_view", "Veloprüfstrecken für Schulen"),
-    "familienberatung": ("Treffpunkt_Familienberatung", "poi_familienberatung_view", "Familienberatungs-Treffpunkte"),
+    "velopruefstrecken": (
+        "Velopruefstrecken",
+        "poi_velopruefstrecke_view",
+        "Veloprüfstrecken für Schulen",
+    ),
+    "familienberatung": (
+        "Treffpunkt_Familienberatung",
+        "poi_familienberatung_view",
+        "Familienberatungs-Treffpunkte",
+    ),
 }
 
 PARIS_NAMESPACES = {
