@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import httpx
 import respx
+from fixture_data import fixture_json
 
 from zurich_opendata_mcp.config import CKAN_API_URL
 from zurich_opendata_mcp.tools.catalog import (
@@ -355,3 +356,50 @@ async def test_analyze_error_path():
 
     assert result.is_error is True
     assert "Fehler bei Datensatz-Analyse" in result.content[0].text
+
+
+# ─── Aufgezeichnete Fixtures ─────────────────────────────────────────────────
+
+
+@respx.mock
+async def test_list_categories_against_the_recorded_catalogue():
+    """Die Kategorienliste gegen die echte Antwort, nicht gegen zwei Handeintraege.
+
+    Vorher standen hier zwei erfundene Gruppen mit runden Zahlen. Die echte
+    Antwort traegt alle Kategorien der Stadt Zuerich; Herkunft und Datum stehen
+    in tests/fixtures/PROVENANCE.md.
+    """
+    groups = fixture_json("ckan_group_list")
+    respx.get(f"{CKAN_API_URL}/group_list").mock(return_value=_ckan(groups))
+
+    result = await zurich_list_categories(ListGroupInput())
+
+    assert "## Datenkategorien der Stadt Zürich" in result
+    # Aus der Fixture abgeleitet statt hingeschrieben: eine feste Zeile waere
+    # beim naechsten Aufzeichnen falsch, ohne dass sich etwas Geprueftes
+    # geaendert haette.
+    first = groups[0]
+    assert f"**{first['title']}** (`{first['name']}`)" in result
+
+
+async def test_ckan_returns_ten_rows_when_the_parameter_is_omitted():
+    """Regel 1, am Gruendungsfall dieses Skills — und hier gemessen.
+
+    CKANs `package_search` liefert ohne `rows` genau 10 Treffer, unabhaengig
+    davon, wie viele es gibt. Aufgezeichnet am 2026-08-07: `q=verkehr` meldet
+    **count 102** und liefert **10** Ergebnisse.
+
+    Der Server sendet `rows` an jeder Aufrufstelle explizit — diese Zusicherung
+    haelt fest, *warum* das noetig ist. Faellt der Beleg eines Tages weg, weil
+    CKAN sein Verhalten aendert, ist das eine Information und kein Fehlalarm:
+    dann sagt der rote Test, dass die Begruendung nachgefuehrt gehoert.
+    """
+    measured = fixture_json("ckan_package_search_no_rows")
+    assert measured["returned"] < measured["count"], (
+        f"Ohne `rows` kamen {measured['returned']} von {measured['count']} "
+        "Treffern — der Default liefert also keine Teilmenge mehr. "
+        "Neu aufzeichnen und die Begruendung in den Tools pruefen."
+    )
+    assert measured["returned"] == 10, (
+        f"CKAN-Default ist nicht mehr 10, sondern {measured['returned']}"
+    )

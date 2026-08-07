@@ -7,6 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Hinzugefuegt — die CKAN-Fixtures sind aufgezeichnet, nicht mehr ausgedacht
+
+**`scripts/record_fixtures.py`** zeichnet `group_list`, `group_show` und
+`package_search` von `data.stadt-zuerich.ch` auf und schreibt
+`tests/fixtures/*` samt `PROVENANCE.md` mit Quelle, **Aufzeichnungsdatum**,
+Auswahlregel und SHA-256 je Datei.
+
+Ohne Datum ist «aufgezeichnet» nach zwei Jahren von «ausgedacht» nicht mehr zu
+unterscheiden — die Datei sieht gleich aus.
+
+Wo gekuerzt wurde, bleiben die **Zaehlfelder auf dem echten Wert** (`count`,
+`package_count`). Eine Fixture, die stillschweigend behauptet, der Bestand sei
+kleiner, waere genau der Fehler, gegen den diese Aufzeichnung angeht.
+
+**Regel 1 ist jetzt belegt statt begruendet.** Der Server sendet `rows` an jeder
+Aufrufstelle explizit — das war schon richtig, stand aber ohne Messung da.
+Aufgezeichnet am 2026-08-07: `package_search?q=verkehr` meldet **count 102** und
+liefert ohne `rows` genau **10** Ergebnisse. Genau dieser CKAN-Default ist der
+Gruendungsfall von Regel 1 des Skills
+[`mcp-data-fidelity`](https://github.com/malkreide/mcp-data-fidelity-skill).
+`test_ckan_returns_ten_rows_when_the_parameter_is_omitted` haelt beide Zahlen
+gegeneinander. Faellt der Beleg eines Tages, weil CKAN sein Verhalten aendert,
+ist der rote Test eine Information und kein Fehlalarm: Dann gehoert die
+Begruendung in den Tools nachgefuehrt.
+
+**Kein Befund am Produktivcode.** Anders als in `zh-education-mcp`,
+`bag-health-mcp` und `register-mcp` hat das Aufzeichnen hier nichts
+Kaputtes freigelegt — die 246 Tests laufen unveraendert durch, die 100-%-Marke
+haelt. Das gehoert genauso berichtet wie ein Fund.
+
+Gegenprobe gefuehrt: Mit einer Fixture, die `returned == count` behauptet,
+faellt der Regel-1-Test; mit einer leeren Kategorienliste faellt der
+Katalog-Test.
+
+
 ### Changed
 
 - **Retry policy against the source: bounded, spread, obedient (`ARCH-014`).**
