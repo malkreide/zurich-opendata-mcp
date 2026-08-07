@@ -77,10 +77,19 @@ async def test_lifespan_closes_shared_client():
 
 
 # ─── http_get retry behaviour ────────────────────────────────────────────────
+#
+# The policy itself is tested in `test_retry.py`. What stays here is the wiring:
+# that `http_get` actually goes through it, and that a non-retryable status
+# still surfaces as `HTTPStatusError` the way every caller expects.
+#
+# The tests that used to live here asserted "retries exactly once on
+# 502/503/504". That was the old policy and it is gone: a single fixed 1s wait,
+# no jitter, no `Retry-After`, no budget — and a second retrying level in the
+# transport underneath it.
 
 
 @respx.mock
-async def test_http_get_retries_once_on_503_then_succeeds():
+async def test_http_get_goes_through_the_retry_policy():
     route = respx.get("https://example.test/x").mock(
         side_effect=[httpx.Response(503), httpx.Response(200, json={"ok": True})]
     )
@@ -92,18 +101,7 @@ async def test_http_get_retries_once_on_503_then_succeeds():
 
 
 @respx.mock
-async def test_http_get_gives_up_after_one_retry():
-    route = respx.get("https://example.test/x").mock(return_value=httpx.Response(503))
-
-    with pytest.raises(httpx.HTTPStatusError):
-        await http_client.http_get("https://example.test/x")
-
-    assert route.call_count == 2
-
-
-@respx.mock
-async def test_http_get_does_not_retry_deterministic_errors():
-    # 4xx and plain 500 are answers, not transient gateway hiccups.
+async def test_http_get_raises_status_error_for_a_deterministic_answer():
     route = respx.get("https://example.test/x").mock(return_value=httpx.Response(404))
 
     with pytest.raises(httpx.HTTPStatusError):

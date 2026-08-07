@@ -4,12 +4,13 @@ All upstream calls go through one process-wide ``httpx.AsyncClient`` so they
 reuse pooled TCP/TLS connections instead of re-handshaking on every request.
 The pool is closed on server shutdown via the MCPServer lifespan in ``app.py``.
 
-Resilience: connect failures are retried at the transport layer
-(``AsyncHTTPTransport(retries=...)``), and ``http_get()`` retries once with a
-short backoff when an upstream answers 502/503/504 — all requests are
-idempotent GETs against public APIs, so a retry is always safe. Other status
-codes (4xx, 500) are not retried: they are deterministic answers, not
-transient gateway hiccups.
+Resilience: the retry policy lives in ``retry.py`` and is the **only** level
+that retries. The transport layer is explicitly set to zero retries — it used
+to sit at 2 underneath this module's own loop, and two retrying levels
+multiply rather than add.
+
+All requests are idempotent GETs against public APIs, so a retry is always
+safe. What is retried, how fast and how long is documented in ``retry.py``.
 """
 
 from __future__ import annotations
@@ -20,10 +21,12 @@ from typing import Any
 import httpx
 
 from .config import CKAN_API_URL, REQUEST_TIMEOUT, USER_AGENT
+from .retry import fetch_with_retry
 
-CONNECT_RETRIES = 2
-RETRY_STATUS_CODES = frozenset({502, 503, 504})
-RETRY_BACKOFF_SECONDS = 1.0
+# Exactly one level may retry, and it is `retry.fetch_with_retry`. httpx
+# retries connect failures itself when a transport is built with `retries>0`;
+# stacked under our own loop that is 3 x 4 attempts, not 3 + 4.
+CONNECT_RETRIES = 0
 
 # Pooled connections are bound to the event loop they were opened on, so the
 # client is recreated whenever the running loop changes. The server only ever
@@ -62,22 +65,18 @@ async def close_client() -> None:
 
 
 async def http_get(url: str, params: dict[str, Any] | None = None) -> httpx.Response:
-    """GET through the shared client, retrying once on 502/503/504.
+    """GET through the shared client, with the retry policy from ``retry.py``.
 
-    Raises ``httpx.HTTPStatusError`` for any non-2xx final response.
+    Raises ``httpx.HTTPStatusError`` for any non-2xx final response, and
+    ``httpx.RequestError`` when the upstream could not be reached at all —
+    both unwrapped, so callers can branch on the type.
 
     Note on ``params``: passed through as-is — httpx treats an *empty* dict
     as "replace the query string", which would strip a query already baked
     into the URL (e.g. zt_get_data's ``?id=<category>``). ``None`` leaves it
     intact.
     """
-    client = get_client()
-    response = await client.get(url, params=params)
-    if response.status_code in RETRY_STATUS_CODES:
-        await asyncio.sleep(RETRY_BACKOFF_SECONDS)
-        response = await client.get(url, params=params)
-    response.raise_for_status()
-    return response
+    return await fetch_with_retry(get_client(), url, params=params)
 
 
 async def ckan_request(action: str, params: dict[str, Any] | None = None) -> Any:

@@ -7,6 +7,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Retry policy against the source: bounded, spread, obedient (`ARCH-014`).**
+  A portfolio-wide run of the audit catalogue on 2026-08-07 read all 43 servers
+  against `ARCH-014` and this one failed on every count the check makes.
+
+  What was there: `http_get()` retried **once** on 502/503/504 after a fixed
+  `asyncio.sleep(1.0)`. Underneath it, the shared client was built with
+  `AsyncHTTPTransport(retries=2)`.
+
+  | Property | Before | Now |
+  |---|---|---|
+  | What is retried | 502/503/504 only; a 500 was called deterministic | 5xx, 429, timeouts and connection errors; 4xx except 429 fails fast |
+  | How fast | fixed 1.0s, no spread | exponential 2/4/8s, jittered into `[0.5x, 1.5x]` |
+  | `Retry-After` | not read | read (both RFC 9110 forms) and it beats our curve |
+  | The cap | none | `MAX_DELAY_SECONDS`, applied **after** the jitter |
+  | How long | one retry; no time bound at all | 25s wall-clock budget on `asyncio.timeout` |
+  | Levels retrying | **two** — this loop *and* the transport | exactly one |
+
+  Three of those are worth spelling out.
+
+  **The stacking was invisible.** `AsyncHTTPTransport(retries=2)` under a loop
+  of 2 is 3 x 2 attempts, not 3 + 2, and neither number appeared anywhere. The
+  transport is now at `retries=0` and a test asserts it, because the value is
+  one edit away from coming back and nothing else would notice.
+
+  **A fixed 1.0s wait is a retry storm.** Every client that hits the same
+  outage comes back at the same moment, and the load returns as a wave exactly
+  when the source recovers.
+
+  **`REQUEST_TIMEOUT` was never a budget.** httpx bounds each *operation*, and
+  its read timeout restarts with every chunk — a slowly trickling response
+  outlives any budget without a single read expiring. The 25s ceiling now hangs
+  off `asyncio.timeout`, and it is below the MCP SDK's 30s default so the
+  server stops working before the caller stops listening.
+
+  The policy is adopted from the `mcp-data-source-probe` reference template
+  (`reference/retry_backoff.py`) and lives in a new `retry.py`. It raises the
+  original upstream exception unwrapped; the one case with no exception to
+  re-raise — budget already spent before the first request — gets its own
+  `UpstreamUnavailableError` rather than a bare `RuntimeError`.
+
+  **Behaviour change to be aware of:** a plain 500 is now retried. The old
+  docstring called it a deterministic answer; `ARCH-014` treats all 5xx as
+  retryable, and a 500 from a gateway under load is exactly the transient case.
+
+  Counter-checks were run against all six properties — see the pull request.
+
 ## [0.7.0] - 2026-07-31
 
 Minor: two new configuration surfaces, no existing behaviour changed. The
