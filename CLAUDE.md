@@ -66,6 +66,9 @@ hält dieselbe Version. `ci.yml` rief ruff vorher per
 lintete mit 0.15.18 gegen ein Gate, das 0.16.1 fuhr. Beim Anheben:
 `pyproject.toml` ändern, `uv lock`, `ruff format`, alles zusammen committen.
 
+Vor dem Lauf `ruff --version` prüfen: ein älteres ruff früher im `PATH`
+schlägt den Pin, ohne dass der Install etwas meldet.
+
 **Gates, wörtlich aus `ci.yml`** (Matrix: Python 3.11 / 3.12 / 3.13):
 
 ```
