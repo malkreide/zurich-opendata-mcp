@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Geaendert — der ruff-Pin steht an einer Stelle statt an zweien
+
+`pyproject.toml` `[dev]` pinnt `ruff==0.16.1`, `uv.lock` haelt dieselbe
+Version, und `ci.yml` ruft `uv run ruff` ohne `--with` auf.
+
+Vorher stand im `dev`-Extra `ruff>=0.15.12`, im Lock aufgeloest auf `0.15.18`,
+waehrend die CI ihre beiden ruff-Schritte per `uv run --with ruff==0.16.1`
+fuhr. Das ueberschrieb nur diese zwei Aufrufe: Wer lokal `uv run ruff check`
+fuhr, lintete mit **0.15.18** gegen ein Gate, das **0.16.1** fuhr — und die
+Abweichungen, die dabei auftauchen, hat niemand verursacht.
+
+Gemessen, nicht geschlossen: `uv run ruff --version` meldet nach der Aenderung
+`0.16.1`, `uv lock` bewegte genau ein Paket (`ruff 0.15.18 -> 0.16.1`), und
+`ruff check` / `ruff format --check` / `mypy` / `pytest` (259 passed,
+100% Coverage) laufen gruen durch.
+
 ### Hinzugefuegt — die CKAN-Fixtures sind aufgezeichnet, nicht mehr ausgedacht
 
 **`scripts/record_fixtures.py`** zeichnet `group_list`, `group_show` und

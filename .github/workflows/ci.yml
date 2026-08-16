@@ -53,13 +53,16 @@ jobs:
       - name: Install dependencies
         run: uv sync --extra dev
 
-      # Pin ruff so an upstream release cannot change the default rule set or
-      # formatter and break CI on unrelated, untouched code.
+      # ruff kommt exakt gepinnt aus dem `dev`-Extra in pyproject.toml und
+      # damit aus uv.lock. Kein `--with ruff==...` mehr: Das ueberschrieb nur
+      # diesen einen Aufruf, waehrend die gesynchte Umgebung auf einer anderen
+      # Version stand — wer lokal `uv run ruff check` fuhr, lintete mit 0.15.18
+      # gegen ein Gate, das 0.16.1 fuhr.
       - name: Ruff
-        run: uv run --with ruff==0.16.1 ruff check src/ tests/ scripts/
+        run: uv run ruff check src/ tests/ scripts/
 
       - name: Ruff format
-        run: uv run --with ruff==0.16.1 ruff format --check src/ tests/ scripts/
+        run: uv run ruff format --check src/ tests/ scripts/
 
       - name: Mypy
         run: uv run mypy
