@@ -63,6 +63,23 @@ uv run pytest
 python scripts/check_version_sync.py
 ```
 
+`uv run pytest` ist mehr, als dasteht: `addopts` in `pyproject.toml` trägt
+`-m 'not live'` **und** `--cov-fail-under=100`. Der Marker-Ausschluss steht
+also nicht im Befehl, und ein Lauf über eine einzelne Testdatei fällt am
+Coverage-Gate statt am Test.
+
+**`ci.yml` hat keinen `push`-Trigger** — nur `pull_request`, `schedule`,
+`workflow_dispatch`. Ein Push direkt auf `main` löst hier nichts aus; was
+grün ist, wurde es auf einem PR. Der Job `check` trägt zusätzlich
+`if: github.event_name == 'pull_request'`, im Wochenlauf laufen also nur
+`fresh-install` und `audit`. Ein grüner Montagslauf sagt nichts über die
+Suite oben.
+
+Dritter Job: **`audit`** (pip-audit) — mit `continue-on-error: true` und
+damit kein Gate. Rot heisst dort «Advisory anschauen», nicht «Merge
+blockiert»; required ist die `check`-Matrix. Beide Matrizen setzen
+`fail-fast: false`, Actions sind SHA-gepinnt.
+
 Dazu ein zweiter Job «Fresh-resolve install smoke»: Wheel in ein leeres venv
 ohne Lockfile und mit kaltem Cache, dann ein echter MCP-Handshake über
 `scripts/smoke_installed.py`. Der Lockfile-Lauf oben kann nicht bemerken, wenn
