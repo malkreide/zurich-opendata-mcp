@@ -73,6 +73,7 @@ schlägt den Pin, ohne dass der Install etwas meldet.
 
 ```
 uv sync --extra dev
+uv run python scripts/check_ruff_pin.py
 uv run ruff check src/ tests/ scripts/
 uv run ruff format --check src/ tests/ scripts/
 uv run mypy

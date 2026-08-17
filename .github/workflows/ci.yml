@@ -53,6 +53,11 @@ jobs:
       - name: Install dependencies
         run: uv sync --extra dev
 
+      # Der Pin wirkt nur, wenn der Aufruf ihn auch trifft. Hier laeuft der
+      # Check unter `uv run`, damit er dasselbe ruff sieht wie die Gates.
+      - name: Ruff-Pin (PATH und Modul gegen pyproject.toml)
+        run: uv run python scripts/check_ruff_pin.py
+
       # ruff kommt exakt gepinnt aus dem `dev`-Extra in pyproject.toml und
       # damit aus uv.lock. Kein `--with ruff==...` mehr: Das ueberschrieb nur
       # diesen einen Aufruf, waehrend die gesynchte Umgebung auf einer anderen
