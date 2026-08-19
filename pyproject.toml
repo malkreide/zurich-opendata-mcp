@@ -45,7 +45,13 @@ dependencies = [
     "httpx>=0.28.1",
     "pydantic>=2.13.4",
     "uvicorn>=0.46.0",
-    "sqlparse>=0.5.5",
+    # Floor auf 0.6.0: 0.5.5 traegt CVE-2026-71491, -59894, -59893 und
+    # -54284, alle in 0.6.0 behoben. Der Floor, nicht bloss der Lock:
+    # `uv.lock` gilt nur hier, ein Fremdinstall loest aus der Spanne auf
+    # und darf die verwundbaren Versionen gar nicht erst ziehen duerfen.
+    # sqlparse ist keine Randabhaengigkeit — der SQL-Guard in
+    # tools/datastore.py parst damit.
+    "sqlparse>=0.6.0",
     "defusedxml>=0.7.1",
 ]
 

@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Sicherheit — sqlparse auf 0.6.0, Floor mitgezogen
+
+`sqlparse 0.5.5` traegt vier Advisories (CVE-2026-71491, CVE-2026-59894,
+CVE-2026-59893, CVE-2026-54284), alle behoben in `0.6.0`. Das ist keine
+Randabhaengigkeit: `tools/datastore.py` parst mit `sqlparse` das SQL, das den
+Guard aus H-1 traegt.
+
+Gehoben wurde der **Floor** in `pyproject.toml` (`>=0.5.5` -> `>=0.6.0`), nicht
+nur der Lock. `uv.lock` gilt fuer die Entwicklung hier; ein Fremdinstall loest
+aus der Spanne auf, und die soll die verwundbaren Versionen gar nicht erst
+zulassen. `uv lock` bewegte genau ein Paket.
+
+Gemessen, nicht geschlossen: Die Gates laufen gegen die installierte `0.6.0`
+gruen durch — `ruff check`, `ruff format --check`, `mypy`, `pytest`
+(263 passed, 100% Coverage) und `check_version_sync.py`. Der Fresh-Resolve-Job
+zog `sqlparse 0.6.0` schon vorher, weil die Spanne offen war; rot war allein
+`pip-audit`, das gegen den Lock misst.
+
 ### Geaendert — der ruff-Pin steht an einer Stelle statt an zweien
 
 `pyproject.toml` `[dev]` pinnt `ruff==0.16.1`, `uv.lock` haelt dieselbe
