@@ -69,6 +69,11 @@ lintete mit 0.15.18 gegen ein Gate, das 0.16.1 fuhr. Beim Anheben:
 Vor dem Lauf `ruff --version` prüfen: ein älteres ruff früher im `PATH`
 schlägt den Pin, ohne dass der Install etwas meldet.
 
+**Kein `.pre-commit-config.yaml`.** Es gibt also keinen zweiten Ort, an dem
+eine abweichende ruff-Version stehen könnte — aber auch nichts, das die Gates
+vor dem Commit erzwingt. `scripts/check_ruff_pin.py` schützt den Pin nur, wenn
+es aufgerufen wird: lokal von Hand, sonst erst in der CI auf dem PR.
+
 **Gates, wörtlich aus `ci.yml`** (Matrix: Python 3.11 / 3.12 / 3.13):
 
 ```
@@ -108,6 +113,9 @@ eine Abhängigkeitsspanne für Fremde kaputt auflöst; dieser Job kann es.
 eigenen Zeitplan (`17 6 * * 1`). DRIFT-005 ist hier erfüllt — die Live-Suite ist
 nicht bloss per Marker ausgeschlossen. `schedule` greift nur auf dem
 Default-Branch: Workflow-Änderungen wirken erst nach dem Merge.
+
+`live-tests.yml` pinnt seine Actions per Tag (`@v7`), nicht per SHA — die
+SHA-Pins gelten für `ci.yml` und `publish.yml`.
 
 ## Changelog discipline
 
