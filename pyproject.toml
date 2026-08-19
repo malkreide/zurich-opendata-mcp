@@ -68,7 +68,7 @@ dev = [
     # Version als das Gate. Beim Anheben: Version hier ändern, `uv lock`
     # laufen lassen, `ruff format` über src/ tests/ scripts/, alles zusammen
     # committen.
-    "ruff==0.16.1",
+    "ruff==0.16.3",
     "mypy>=1.18.2",
 ]
 
