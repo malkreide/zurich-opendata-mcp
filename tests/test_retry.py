@@ -22,6 +22,21 @@ from zurich_opendata_mcp import http_client, retry
 
 URL = "https://example.test/x"
 
+# Wall-clock numbers for the deadline test below, spread far enough apart that
+# scheduler jitter cannot move the outcome. Measured on 3.11 over 15 runs of
+# that test's own body, through pytest so every fixture is in place:
+# 0.088-0.101s against a 0.05s budget. Setup — the first call through a fresh
+# shared client — accounted for about 0.039s of that, nearly the whole budget,
+# so most of what the test used to measure was not the deadline. The old bound
+# of 0.25s left only 0.16s of absolute headroom, the thinnest in the portfolio,
+# and CI jitter is absolute, not proportional: in swiss-efv-mcp a loaded runner
+# turned 0.105s into 0.55s on 2026-08-21 and tore the same assertion there,
+# with more room to spare than this one had. Raising the budget does not shrink
+# that stall, it makes the stall small *relative to* what is measured.
+_BUDGET = 0.5
+_CUT_BY = 2.5
+_SLOW_RESPONSE = 8.0
+
 
 @pytest.fixture(autouse=True)
 async def _reset_shared_client():
@@ -188,17 +203,33 @@ async def test_a_slow_response_is_cut_by_the_wall_clock_deadline():
     about *real* time: the code that ignores the wall clock never sleeps, so
     no time passes and the broken version stays green. This test therefore
     sleeps for real — deliberately, and it is the only one here that does.
+
+    The margins are wide on purpose — see `_BUDGET` above for the measurement
+    that set them. The first call through a fresh shared client happens before
+    the clock starts, so the measured window holds the deadline and nothing
+    else.
     """
+    # Warm-up on the untouched default budget: pays whatever the first call
+    # through a fresh shared client costs, outside the window measured below.
+    route = respx.get(URL).mock(return_value=httpx.Response(200))
+    await retry.fetch_with_retry(http_client.get_client(), URL)
 
     async def _slow(request):
-        await asyncio.sleep(0.30)
+        await asyncio.sleep(_SLOW_RESPONSE)
         return httpx.Response(200)
 
-    respx.get(URL).mock(side_effect=_slow)
+    route.mock(side_effect=_slow)
     started = time.monotonic()
     with pytest.raises(TimeoutError):
-        await retry.fetch_with_retry(http_client.get_client(), URL, total_budget=0.05)
-    assert time.monotonic() - started < 0.25, "the per-operation timeout is not a budget"
+        await retry.fetch_with_retry(http_client.get_client(), URL, total_budget=_BUDGET)
+    elapsed = time.monotonic() - started
+
+    # Two-sided on purpose. The upper bound is the guarantee: a response that
+    # would have taken _SLOW_RESPONSE was cut. The lower bound says the cut came
+    # from the budget rather than from something failing straight away — a
+    # deadline computed wrong sails through an upper bound alone.
+    assert elapsed >= _BUDGET / 2, f"cut too early to be the budget: {elapsed:.3f}s"
+    assert elapsed < _CUT_BY, f"the per-operation timeout is not a budget: {elapsed:.2f}s"
 
 
 @respx.mock

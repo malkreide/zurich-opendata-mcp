@@ -57,9 +57,88 @@ Merge-Konflikt: GitHub berechnet dafür keinen Merge-Commit und startet nichts.
 
 Ein Codex-Review auf einem PR wird beantwortet oder behoben, nie ignoriert.
 
+### Wenn Codex gar nicht erst hinsieht
+
+Die Zeile oben unterstellt, dass es einen Befund geben *kann*. Das ist nicht
+immer so, und man sieht es dem PR nicht an.
+
+Am 21.8.2026 war das Code-Review-Kontingent zwischen 08:41 und 09:48
+aufgebraucht — davor echte Reviews, danach in 30 Repos nur noch:
+
+```
+You have reached your Codex usage limits for code reviews.
+```
+
+Bis mindestens zum 22.8. um 08:30, also 23 Stunden später, blieb es dabei. In
+der Zwischenzeit sind 32 PRs mit formal erfülltem Häkchen gemergt worden, ohne
+dass jemand hineingesehen hat.
+
+Drei Gründe, warum Codex schweigt, und nur einer davon ist harmlos:
+
+- **Kein Befund** — dann reagiert er mit 👍 und schreibt nichts.
+- **Der PR ist ein Draft** — darauf läuft Codex nicht an.
+- **Das Kontingent ist weg** — dann schreibt er die Meldung oben.
+
+«Kein Kommentar» heisst also nicht «geprüft und sauber». Unterscheiden lässt es
+sich an der Form: Ein echter Review ist ein Review-Objekt («💡 Codex Review»,
+mit Commit-Angabe), die Limit-Meldung ein gewöhnlicher Issue-Kommentar. Das
+sind zwei verschiedene Abfragen — `get_reviews` gegen `get_comments`; wer nur
+eine davon nimmt, übersieht die andere Hälfte. Genau so ist die Limit-Meldung
+zuerst durchgerutscht.
+
+Portfolio-weit nachsehen:
+
+```
+search_pull_requests: user:malkreide commenter:chatgpt-codex-connector[bot] updated:>=<Datum>
+```
+
+Findet nur, wo er *kommentiert* hat. Repos ohne PR-Aktivität tauchen nicht auf
+— das ist kein Beleg, dass dort geprüft wurde.
+
+Zweiter Weg, den Prüfer zu verlieren, ganz ohne Kontingentproblem: zu schnell
+mergen. Am 21./22.8. lagen zwischen «ready for review» und Merge mehrfach drei
+bis fünf Sekunden. Codex wird beim Umschalten von Draft auf ready ausgelöst und
+braucht danach Zeit; wer sofort mergt, hat das Häkchen gesetzt und den Review
+nicht abgewartet.
+
+Das Kontingent hängt am Konto, nicht am Repo, und Code-Reviews haben einen
+eigenen Topf — nur GitHub-getriggerte Reviews zählen hinein. ChatGPT-Pläne
+fahren ein rollendes Fünf-Stunden-Fenster plus Wochenlimits; welches greift,
+steht im Codex-Dashboard. Zeigt das freies Kontingent, während Reviews weiter
+scheitern, ist das ein bekannter Fehler bei mehreren verbundenen Konten — dann
+den GitHub-Connector in den Codex-Einstellungen trennen und neu verbinden.
+
+### Wenn zwei Agenten dasselbe tun
+
+Vor dem Anlegen eines Branches mit vorgegebenem Namen prüfen, ob es ihn schon
+gibt:
+
+```bash
+git ls-remote --heads origin claude/<name> | wc -l
+```
+
+Steht dort `1`, arbeitet jemand anderes daran — mit Schreibrecht auf denselben
+Ref.
+
+Ein PR mit leerem Diff wird geschlossen, nicht gemergt. Der Test ist
+`get_files` auf dem PR: kommt `[]` zurück, ändert er nichts. Ein grüner Check
+sagt dazu nichts — die CI prüft den Head, nicht die Differenz zur Basis.
+
+Am 21.8.2026 liefen zwei Sessions dieselbe Aufgabe über 45 Repos, auf den
+Branches `claude/codex-review-audit-templates-9sn6mx` und
+`claude/codex-review-audit-7ioh56`. Wo die eine zuerst nach `main` kam, wurde
+`main` in den Branch der anderen gemergt und der add/add-Konflikt zugunsten
+von `main` aufgelöst. Übrig blieben 14 PRs, die durch sämtliche Gates grün
+liefen und nichts enthielten; sie wurden gemergt und hinterliessen leere
+Merge-Commits. Mit den zwei Folge-PRs, die aus demselben Grund gegenstandslos
+waren, waren 16 der 59 PRs jenes Tages reine Reibung.
+
+Dieselbe Klasse wie der handgeschriebene Stub, der denselben Feldnamen annahm
+wie der Code: Nichts ist rot, weil nichts geprüft wird, worauf es ankommt.
+
 ## Teil 2 — Dieses Repo
 
-**ruff: eine Quelle.** `pyproject.toml` `[dev]` pinnt `ruff==0.16.1`, `uv.lock`
+**ruff: eine Quelle.** `pyproject.toml` `[dev]` pinnt `ruff==0.16.3`, `uv.lock`
 hält dieselbe Version. `ci.yml` rief ruff vorher per
 `uv run --with ruff==0.16.1` auf, während der Lock auf `0.15.18` stand — das
 überschrieb nur diesen einen Aufruf, und wer lokal `uv run ruff check` fuhr,
