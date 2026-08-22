@@ -63,12 +63,12 @@ dev = [
     "respx>=0.23.1",
     # Exakt gepinnt, nicht als Spanne: ruff ist ein Gate, kein Hilfsmittel.
     # Der Pin steht hier und nur hier — `ci.yml` rief ruff vorher per
-    # `uv run --with ruff==0.16.1` auf, während `uv.lock` auf 0.15.18 stand.
+    # `uv run --with ruff==0.16.3` auf, während `uv.lock` auf 0.15.18 stand.
     # Wer lokal `uv run ruff check` fuhr, lintete damit mit einer anderen
     # Version als das Gate. Beim Anheben: Version hier ändern, `uv lock`
     # laufen lassen, `ruff format` über src/ tests/ scripts/, alles zusammen
     # committen.
-    "ruff==0.16.1",
+    "ruff==0.16.3",
     "mypy>=1.18.2",
 ]
 
