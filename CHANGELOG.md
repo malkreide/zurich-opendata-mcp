@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Hinzugefuegt
+
+- **Frischehinweise auf den auflistenden Methoden** (SEP-2549, Spec
+  `2026-07-28`): `ttlMs` 300000, `cacheScope` `public`. Das SDK setzt beides auf
+  «sofort veraltet, nie geteilt» — wer nichts übergibt, lässt jeden Client bei
+  jeder Verbindung neu auflisten. `resources/read` und `prompts/get` bleiben
+  ohne Hinweis: das wäre eine Zusicherung über den Inhalt statt über das
+  Verzeichnis.
+
 ### Sicherheit — sqlparse auf 0.6.0, Floor mitgezogen
 
 `sqlparse 0.5.5` traegt vier Advisories (CVE-2026-71491, CVE-2026-59894,
