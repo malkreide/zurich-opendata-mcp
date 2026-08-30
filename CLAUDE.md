@@ -52,6 +52,157 @@ Datensatz weg war, sondern dass die Quelle die Schreibweise ihrer Kopfzeile
 gewechselt hatte — vier von sechs Datensätzen produktiv kaputt, alle
 Unit-Tests grün.
 
+**Ein 4xx ist kein Nein.** Am 29.8.2026 antwortete `past-publications` in
+`swiss-procurement-mcp` auf jede Publikation mit Losen mit HTTP 400. Daraus war
+geschlossen worden, die Quelle verweigere diese Auskunft; der Befund stand
+datiert im Fixture-Nachweis, ein Test bestätigte ihn, alles blieb grün. Die
+Spec desselben Endpunkts führt einen als *optional* deklarierten Parameter
+`lotId` — für Publikationen mit Losen ist er Pflicht. Mit ihm antwortet
+dieselbe Publikation mit 200. Ein Projekt trug sieben Vorgängerpublikationen,
+die der Server als «Quelle nicht erreichbar» wegwarf.
+
+Drei Handgriffe daraus:
+
+- **Die Parameterliste der Spec durchgehen, bevor ein Statuscode eingeordnet
+  wird.** «Optional» heisst dort oft «optional für die Mehrheit».
+- **Einer deterministischen Absage keinen Wiederholungsrat geben.** «Nicht
+  erreichbar, bitte später erneut» ist bei einem 400 falsch und liest sich für
+  das Modell wie eine Störung. Den Status mitführen und den fehlenden
+  Parameter benennen — den Status, nicht den Antwortkörper.
+- **Beide Antworten aufzeichnen, mit und ohne den Parameter.** Eine
+  Aufzeichnung nur des Fehlschlags kann nicht zeigen, dass er vermeidbar war;
+  dass nur der 400er aufgezeichnet war, ist der Grund, warum der falsche
+  Befund nicht auffiel.
+
+**Und ein 403 ist gar keine Auskunft.** Am 29.8.2026 sollten für 42 Repos die
+Dependabot-Labels nachgemessen werden. Alle 13 Abfragen des ersten Stapels
+kamen zurück als:
+
+```
+Failed to find label: API rate limit already exceeded for user ID 8864492.
+```
+
+Der gefährliche Teil steht vorn: Das Werkzeug verpackt eine Sperre als
+Fund-Fehlschlag. Wer die Zeile überfliegt oder nur auf ein leeres Ergebnis
+prüft, zählt 39 Repos als «Label fehlt» und hat seine eigene Erschöpfung
+gemessen. Das Limit hängt am Konto, nicht am Repo — derselbe Vormittag hatte
+es mit 42 eröffneten und 42 gemergten PRs verbraucht.
+
+Das ist der Absatz darüber, andersherum gelesen: dort war ein 400 eine echte,
+wiederholbare Antwort und galt als Störung; hier ist eine Störung als Antwort
+verpackt. Entscheidend ist nie der Statuscode, sondern ob die Quelle überhaupt
+geantwortet hat.
+
+- **Positivkontrolle im selben Repo.** Ein «nicht gefunden» wird erst dadurch
+  zur Messung, dass eine gleichzeitige Abfrage etwas findet.
+- **Die Messung entlang der Sperre teilen.** `raw.githubusercontent.com` ist
+  ein CDN und nicht die REST-API. Um 11:19:27 UTC lieferte es für
+  `register-mcp` HTTP 200, während die Label-Abfrage desselben Repos in
+  derselben Minute die Sperre meldete. Alle 42 `dependabot.yml` kamen so
+  durch, während die Label-Hälfte stand.
+- **Am Token vorbei geht es nicht.** Beide Umwege enden am Agent-Proxy, und
+  jeder mit einer eigenen irreführenden Begründung. `api.github.com` ohne
+  Zugangsdaten:
+
+  ```
+  GitHub access is not enabled for this session. An org admin must connect
+  the Claude GitHub App for this organization.
+  ```
+
+  Das ist keine Aussage über die Organisation, sondern das, was ohne Token
+  kommt. Wer ihr folgt, sucht einen Admin für ein Problem, das keiner hat.
+  Die HTML-Seite `github.com/<owner>/<repo>/labels` fällt ebenfalls, aber
+  anders:
+
+  ```
+  This GitHub API path is not available: sessions are bound to their
+  configured repositories. Use repository-scoped endpoints
+  (repos/{owner}/{repo}/...).
+  ```
+
+  Der Proxy behandelt also auch `github.com` als API-Pfad; die zweite Meldung
+  klingt nach einem Scope-Problem und ist doch nur dieselbe Sackgasse. Den
+  Token aus der Umgebung in einen curl-Header zu setzen, blockiert der
+  Klassifikator. Ob es überhaupt hülfe, ist offen: die Sperre nennt ein
+  Nutzerkonto, und ob der Token zu diesem gehört, wurde nie geprüft.
+- **Die Sperre gilt nicht dem Dienst, sondern dem Zugangspfad.** Unmittelbar
+  nachdem eine Abfrage der Checks eines PR sauber durchlief, meldete die
+  Label-Abfrage weiter die Sperre. Von einem blockierten Werkzeug also nicht
+  auf «GitHub ist zu» schliessen — und umgekehrt eine gelungene Abfrage nicht
+  als Entwarnung für die gesperrte nehmen. Das ist dieselbe Asymmetrie wie
+  bei der verschwundenen Codex-Meldung weiter unten.
+
+Wann die Sperre fällt, geben diese Beobachtungen nicht her. Die Meldung nennt
+keinen Zeitpunkt, und die `X-RateLimit`-Kopfzeilen sind hinter dem Proxy nicht
+zu sehen. Belegt sind drei gesperrte Zeitpunkte — 11:14, 11:16 und 11:19 UTC.
+Wer daraus eine Dauer macht, hat sie erfunden.
+
+**Dieselbe Falle bei einer Konfigurationsoption: die Vorgabe lesen, bevor man
+einen Schlüssel für wirkungslos hält.** Am 29.8.2026 fielen die
+`labels:`-Zeilen aus den `dependabot.yml` des Portfolios, begründet mit
+«Dependabot legt Labels nicht an». Eine Messung danach zeigte, dass
+`dependencies` in 36 von 42 Repos sehr wohl existiert, 35 davon mit GitHubs
+Standardbeschreibung. Das las sich zuerst wie ein Beleg, dass die Aktion
+falsch war.
+
+Die Optionsreferenz kehrt es um:
+
+```
+Dependabot creates these default labels automatically, as necessary in
+your repository.
+
+If you define more than one package manager, an additional label for the
+ecosystem or language is added to each pull request.
+
+The labels specified are used instead of the default labels.
+```
+
+Ohne `labels:` vergibt Dependabot also `dependencies` — und, sobald mehr als
+ein Paketmanager deklariert ist, zusätzlich ein Ökosystem-Label — und legt sie
+selbst an; eine eigene Liste **ersetzt** diesen Satz, und «if any of these
+labels is not defined in the repository, it is ignored». Die Zeile war nicht
+wirkungslos — sie tauschte einen sich selbst pflegenden Vorgabesatz gegen eine
+starre Liste.
+
+**Die Bedingung nicht weglassen.** Bei nur einem Paketmanager steht das
+Ökosystem-Label gar nicht zu; wer es dort trotzdem erwartet, schreibt genau
+den Fehlbefund auf, gegen den dieser Abschnitt geschrieben ist — der Abschnitt
+liefe an sich selbst vorbei. Im Portfolio deklariert jede `dependabot.yml`
+zwei (`pip` und `github-actions`), die Bedingung ist hier also überall
+erfüllt; anderswo nicht unbedingt. Aufgefallen ist die fehlende Bedingung
+nicht beim Schreiben, sondern durch einen Codex-Review auf
+`swiss-environment-mcp` PR #113 — vierzehn Sekunden vor dem Merge desselben
+PR.
+
+Was das kostet, ist an `openlex-mcp` gemessen: zwei Ökosysteme deklariert,
+also stünden `dependencies` **und** ein Ökosystem-Label zu; vorhanden ist nur
+das erste, `github-actions` und `github_actions` fehlen beide (Kontrolle `bug`
+vorhanden). `register-mcp` ist die Gegenprobe: dort existieren alle vier
+deklarierten Namen mit handgeschriebener Beschreibung, die Liste ist gewollt
+und vollständig.
+
+**Dreimal falsch eingeordnet, in drei Richtungen.** Erst die Zeile für bloss
+wirkungslos gehalten. Dann die gefundenen Labels für einen Widerspruch. Dann,
+auf denselben Fund gestützt, einen richtigen PR geschlossen mit dem Argument,
+das Label existiere ja — obwohl es existiert, *weil* die Vorgabe es anlegt.
+Der dritte Fehler ist der teuerste, weil er wie eine Messung aussah.
+
+Was die Messung **nicht** hergibt: wer die 36 Labels angelegt hat. Die
+Referenz sagt, Dependabot tue es; die Objekt-IDs liegen aber so dicht
+beieinander, dass sie eher aus einem Stapellauf stammen. Beides passt zum
+Befund, keines ist belegt — die Herkunft blieb ungemessen.
+
+Beim Aufräumen gilt deshalb dieselbe Frage wie bei `lotId`: Was ist die
+*Vorgabe*, wenn man das Ding weglässt — nicht bloss, ob der aktuelle Wert
+etwas bewirkt.
+
+**`results[0]` ist nur so verlässlich wie die Zusicherung danach.** Pinnt die
+Abfrage einen bekannten Datensatz, ist der erste Treffer eine Drift-Wache und
+in Ordnung. Hängt die Zusicherung dagegen davon ab, *welche* Variante die
+Quelle heute zuoberst hat, prüft der Test den Tag: am 25.8.2026 rot, weil die
+neueste Zürcher Publikation zufällig Lose hatte, am 26.8. grün, ohne dass sich
+etwas geändert hätte. Den Fall gezielt wählen und beide Zweige fahren.
+
 PR ohne jeden Check ist selten ein Repo ohne CI, meistens ein
 Merge-Konflikt: GitHub berechnet dafür keinen Merge-Commit und startet nichts.
 
