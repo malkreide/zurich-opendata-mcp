@@ -331,15 +331,38 @@ other era is refused.
 | Per-request envelope | **`2026-07-28`** | A request carrying the `2026-07-28` `_meta` envelope opens a modern connection. |
 
 Both revisions are pinned in
-[`tests/test_protocol_version.py`](tests/test_protocol_version.py) and asserted
-against the installed SDK, so a Dependabot bump of `mcp` cannot move either one
-silently. This server builds no ASGI app to send an `initialize` through, so
-the gate asserts the SDK constants rather than a measured response — the
-weaker form, named rather than left unsaid.
+[`tests/test_protocol_version.py`](tests/test_protocol_version.py), and the
+gate checks them twice over: it **measures** the revision an in-process
+`mcp.Client` actually negotiates against this server (both eras, over a memory
+transport — no ASGI, no network), and it **reads** the SDK constants so a
+Dependabot bump of `mcp` cannot move either one silently. The measured half is
+the load-bearing one: it fails even when an era stops being served while its
+constant stays put.
 
 Note that the SDK's `LATEST_PROTOCOL_VERSION` is an alias for the **modern**
 era, not for the handshake era — pinning against it alone would leave the era
 that current clients actually negotiate free to drift.
+
+### What this server does natively on `2026-07-28`
+
+The revision is not just a number the SDK reaches. Three of its changes ask
+something of the server itself, and this one answers all three:
+
+| Spec change | What this server does |
+|---|---|
+| **SEP-2549** — `ttlMs` / `cacheScope` on the listing methods | `tools/list`, `resources/list`, `resources/templates/list` and `server/discover` carry `ttlMs` 300000, `cacheScope` `public`. Without them the SDK answers "already stale, never share" for directories that are fixed at import. `resources/read` deliberately carries no hint: that would be a promise about content, not about a directory. |
+| **SEP-2575** — no `initialize`, so identity travels per result | Every result's `_meta` carries `io.modelcontextprotocol/serverInfo` with name, title, **version**, description and `websiteUrl`. An `MCPServer` built without `version=` stamps an empty string on every single answer, and the SDK never substitutes its own. |
+| **SEP-2575** — `server/discover` is the only place left for instructions | The server ships `instructions`; a stateless caller that never sends `initialize` still learns the catalog → resource-UUID → DataStore order and how long a real-time reading is good for. |
+
+Minor change #3 (`tools/list` **SHOULD** be deterministically ordered) is met
+by the tool manager's insertion order, which follows the import order fixed in
+`server.py`; a test compares the wire order against it.
+
+One property is the SDK's, not this server's: because `subscriptions/listen`
+is served, the capability block advertises `listChanged` and
+`resources.subscribe`. This server's directories are fixed at import and it
+never emits a change notification. That is measured and left as is — the
+capability says the method is served, which is true.
 
 **Update policy.** When the gate fails, do not edit the constant blindly: read
 the spec changelog between the two revisions, verify the server still behaves,

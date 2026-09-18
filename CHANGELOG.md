@@ -25,13 +25,63 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   aushandeln. Beide sind jetzt einzeln gepinnt, ein Dependabot-Bump von
   `mcp` kann keine davon still verschieben.
 
-  Ohne gemessenen Teil: dieser Server baut keine ASGI-App, durch die sich ein
-  `initialize` schicken liesse. Das Gate haengt deshalb an den SDK-Konstanten —
-  die schwaechere Form, im Docstring benannt statt verschwiegen.
+  Das Gate prueft beides: es **misst** ueber eine In-Prozess-`mcp.Client`-
+  Verbindung, welche Revision dieser Server je Aera tatsaechlich aushandelt,
+  und es **liest** daneben die SDK-Konstanten. Der gemessene Teil faellt auch
+  dann, wenn eine Aera gar nicht mehr bedient wird, waehrend ihre Konstante
+  unveraendert im SDK steht. (Hier stand vorher, das Repo baue keine ASGI-App
+  und koenne deshalb nur die Konstanten pruefen. Das war falsch: `mcp.Client`
+  spricht ueber einen Speicher-Transport direkt mit der `MCPServer`-Instanz
+  und handelt dabei wirklich aus — ohne ASGI, ohne Netz.)
 
   Beide READMEs beschreiben die Aeren; ein Test haelt jede Sprache einzeln
   dagegen — im Portfolio sind EN und DE desselben Repos schon dreimal
   auseinandergelaufen, weil nur eine Fassung nachgezogen wurde.
+
+- **Server-Identitaet auf jedem Resultat** (SEP-2575, Spec `2026-07-28`):
+  `MCPServer` bekommt `version`, `title`, `description` und `website_url`.
+
+  Das ist kein Kosmetik-Feld. `2026-07-28` streicht `initialize`; damit faellt
+  die eine Stelle weg, an der eine Verbindung bisher einmalig `serverInfo`
+  bekam, und die Identitaet wandert in das `_meta` JEDES Resultats
+  (`io.modelcontextprotocol/serverInfo`). Nachgemessen: ohne `version=`
+  stempelte dieser Server auf jede einzelne Antwort
+  `{"name": "zurich_opendata_mcp", "version": ""}` — das SDK setzt nichts ein
+  («the SDK never substitutes its own»). Ein zustandsloser Aufrufer erfuhr
+  also bei keiner Antwort, welche Fassung geantwortet hat.
+
+  Eine Quelle: `config.PACKAGE_VERSION` und das neue `config.REPO_URL` speisen
+  jetzt sowohl den `User-Agent` nach aussen als auch die Identitaet nach innen.
+
+  `scripts/smoke_installed.py` weist die Version jetzt zurueck, wenn sie leer
+  ist oder auf `+local` endet. Das ist die einzige Stelle, an der der Fallback
+  auffallen kann: `PACKAGE_VERSION` liest die Distributionsmetadaten, und in
+  der Suite laeuft das immer aus einem editierbaren Install heraus, wo der
+  Lesevorgang nie scheitert. Nur der Fresh-Install-Job fuehrt das Artefakt
+  aus, das ein Fremder herunterlaedt.
+
+- **`instructions` fuer `server/discover`** (SEP-2575). In der Handshake-Aera
+  reiste die Anleitung im `initialize`-Resultat; die moderne Aera hat kein
+  `initialize`, `server/discover` ist der einzig verbliebene Ort. Der Text war
+  leer, ein zustandsloser Client sah also nur die Tool-Liste. Er nennt jetzt
+  den dreistufigen Einstieg (Katalog → Resource-UUID → DataStore), die
+  Haltbarkeit der Echtzeitwerte und die drei veralteten Aliase. Eine
+  Drift-Wache prueft, dass jeder darin genannte Tool-Name auch registriert ist
+  — sonst schickt der Server eine Anleitung auf Werkzeuge, die es nicht gibt,
+  und die Tool-Zahl bliebe dabei unveraendert.
+
+- **Reihenfolge der Tool-Liste festgehalten** (Spec `2026-07-28`, Minor #3:
+  `tools/list` SOLL deterministisch sortiert sein). Erfuellt ueber die
+  Einfuegereihenfolge des `ToolManager`-Dicts, die der Importreihenfolge in
+  `server.py` folgt; ein Test haelt die Draht-Reihenfolge dagegen und stellt
+  zugleich sicher, dass sie nicht zufaellig alphabetisch ist — sonst koennte
+  er ein sortierendes SDK nicht von einem reihenfolgetreuen unterscheiden.
+
+  Nicht geaendert, aber nachgemessen und benannt: weil das SDK
+  `subscriptions/listen` bedient, meldet der Capability-Block `listChanged`
+  und `resources.subscribe`, obwohl dieser Server nie eine Aenderungsmeldung
+  sendet. Die Capability sagt, dass die Methode bedient wird — das stimmt, und
+  ohne Eingriff in `_request_handlers` ist sie auch nicht abschaltbar.
 
 ### Sicherheit — sqlparse auf 0.6.0, Floor mitgezogen
 
