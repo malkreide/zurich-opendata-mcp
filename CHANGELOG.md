@@ -83,6 +83,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   sendet. Die Capability sagt, dass die Methode bedient wird — das stimmt, und
   ohne Eingriff in `_request_handlers` ist sie auch nicht abschaltbar.
 
+### Sicherheit — anyio, httpx2 und httpcore2 aus dem Lock gehoben
+
+`pip-audit` meldete neun Advisories in drei Paketen:
+
+```
+anyio     4.14.0  CVE-2026-63374, CVE-2026-64847, CVE-2026-63349   -> 4.14.2
+httpcore2 2.9.1   PYSEC-2026-3844                                  -> 2.10.0
+httpx2    2.9.1   PYSEC-2026-3845..3849 (fuenf)                    -> 2.12.0
+```
+
+Gehoben auf `anyio 4.15.1`, `httpcore2 2.13.0`, `httpx2 2.13.0`. Danach
+antwortet `pip-audit` mit «No known vulnerabilities found»; `mcp` bleibt auf
+`2.0.0`, dessen Spannen tragen die neuen Fassungen.
+
+**Nur der Lock, kein Floor — und das ist hier der Unterschied zum
+`sqlparse`-Fall darunter.** Keines der drei Pakete steht in `pyproject.toml`:
+`httpx2` und `httpcore2` kommen ueber `mcp` herein, `anyio` ueber `httpx`,
+`mcp`, `starlette` und `sse-starlette`. Ein Fremdinstall loest deshalb frei
+auf und zieht ohnehin die neuesten — verwundbar blieben die Versionen einzig,
+weil `uv.lock` sie festhielt. Bei `sqlparse` lag es umgekehrt: direkte
+Abhaengigkeit, vom Code importiert, also musste die Spanne mit. Hier waeren
+drei neue Direkteintraege bloss dazu da, einen Floor zu tragen — und wuerden
+behaupten, der Code importiere sie.
+
+Der Lauf war nie ein Merge-Blocker (`audit` traegt `continue-on-error: true`)
+und das Rot stand schon auf `main`, auf genau dem Commit, der die Basis dieses
+Branches ist. Behoben wird es trotzdem hier: ein Alarm, den man mitschleppt,
+ist nach der dritten Woche keiner mehr.
+
+Nachgemessen statt vermutet: der Fehlschlag wurde lokal mit demselben Befehl
+reproduziert, den die CI faehrt (`uv run --with pip-audit pip-audit`), und
+nach dem Bump derselbe Befehl gruen gesehen.
+
+Ein neuer Eintrag im Lock ohne Wirkung hier: `httpx2-jsfetch 1.0`, von
+`httpx2` unter dem Marker `sys_platform == 'emscripten'` gezogen. `uv` sperrt
+das gesamte Marker-Universum, installiert wird es ausserhalb von Pyodide nie.
+
+Die Suite meldet seither eine `DeprecationWarning` — `starlette` benutzt
+`anyio.abc.BlockingPortal`, das `anyio 4.15` zugunsten von
+`anyio.from_thread.BlockingPortal` abgekuendigt hat. Fremder Code, hier nicht
+zu beheben; benannt, damit niemand sie spaeter fuer eine eigene haelt.
+
 ### Sicherheit — sqlparse auf 0.6.0, Floor mitgezogen
 
 `sqlparse 0.5.5` traegt vier Advisories (CVE-2026-71491, CVE-2026-59894,
