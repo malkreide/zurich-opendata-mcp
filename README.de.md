@@ -332,15 +332,40 @@ aus der jeweils anderen Aera wird abgewiesen.
 | Pro-Request-Envelope | **`2026-07-28`** | Eine Anfrage mit dem `2026-07-28`-`_meta`-Envelope oeffnet eine moderne Verbindung. |
 
 Beide Revisionen sind in
-[`tests/test_protocol_version.py`](tests/test_protocol_version.py) gepinnt und
-werden gegen das installierte SDK geprueft; ein Dependabot-Bump von `mcp` kann
-also keine der beiden still verschieben. Dieser Server baut keine ASGI-App, durch die sich ein `initialize`
-schicken liesse; das Gate sichert deshalb die SDK-Konstanten statt einer
-gemessenen Antwort — die schwaechere Form, benannt statt verschwiegen.
+[`tests/test_protocol_version.py`](tests/test_protocol_version.py) gepinnt, und
+das Gate prueft sie doppelt: es **misst** die Revision, die ein
+In-Prozess-`mcp.Client` gegen diesen Server tatsaechlich aushandelt (beide
+Aeren, ueber einen Speicher-Transport — ohne ASGI, ohne Netz), und es **liest**
+die SDK-Konstanten, damit ein Dependabot-Bump von `mcp` keine der beiden still
+verschieben kann. Der gemessene Teil ist der lasttragende: er faellt auch dann,
+wenn eine Aera nicht mehr bedient wird, waehrend ihre Konstante unveraendert
+bleibt.
 
 Zu beachten: `LATEST_PROTOCOL_VERSION` im SDK ist ein Alias auf die **moderne**
 Aera, nicht auf die Handshake-Aera — wer nur dagegen pinnt, laesst genau die
 Aera frei wandern, die heutige Clients tatsaechlich aushandeln.
+
+### Was dieser Server auf `2026-07-28` nativ tut
+
+Die Revision ist nicht bloss eine Zahl, die das SDK erreicht. Drei ihrer
+Aenderungen verlangen etwas vom Server selbst; dieser beantwortet alle drei:
+
+| Spec-Aenderung | Was dieser Server tut |
+|---|---|
+| **SEP-2549** — `ttlMs` / `cacheScope` auf den auflistenden Methoden | `tools/list`, `resources/list`, `resources/templates/list` und `server/discover` tragen `ttlMs` 300000, `cacheScope` `public`. Ohne sie antwortet das SDK «sofort veraltet, nie geteilt» — fuer Verzeichnisse, die beim Import feststehen. `resources/read` bleibt bewusst ohne Hinweis: das waere eine Zusicherung ueber den Inhalt statt ueber das Verzeichnis. |
+| **SEP-2575** — kein `initialize` mehr, Identitaet reist pro Resultat | Das `_meta` jedes Resultats traegt `io.modelcontextprotocol/serverInfo` mit Name, Titel, **Version**, Beschreibung und `websiteUrl`. Ein `MCPServer` ohne `version=` stempelt auf jede einzelne Antwort einen leeren String, und das SDK setzt nichts ein. |
+| **SEP-2575** — `server/discover` ist der einzig verbliebene Ort fuer die Anleitung | Der Server liefert `instructions` mit; auch ein zustandsloser Aufrufer, der nie ein `initialize` schickt, erfaehrt die Reihenfolge Katalog → Resource-UUID → DataStore und wie lange ein Echtzeitwert gilt. |
+
+Minor #3 (`tools/list` **SOLL** deterministisch sortiert sein) ist ueber die
+Einfuegereihenfolge des Tool-Managers erfuellt, die der in `server.py`
+festgelegten Importreihenfolge folgt; ein Test haelt die Draht-Reihenfolge
+dagegen.
+
+Eine Eigenschaft gehoert dem SDK, nicht diesem Server: weil
+`subscriptions/listen` bedient wird, meldet der Capability-Block `listChanged`
+und `resources.subscribe`. Die Verzeichnisse dieses Servers stehen beim Import
+fest, er sendet nie eine Aenderungsmeldung. Das ist nachgemessen und bewusst so
+belassen — die Capability sagt, dass die Methode bedient wird, und das stimmt.
 
 **Update-Politik.** Faellt das Gate, die Konstante nicht blind nachziehen: erst
 das Spec-Changelog zwischen den beiden Revisionen lesen, pruefen, ob sich der

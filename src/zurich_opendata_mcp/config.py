@@ -16,13 +16,17 @@ SPARQL_URL = "https://ld.stadt-zuerich.ch/query"
 REQUEST_TIMEOUT = 30.0
 
 try:
-    _PACKAGE_VERSION = version("zurich-opendata-mcp")
+    PACKAGE_VERSION = version("zurich-opendata-mcp")
 except PackageNotFoundError:  # pragma: no cover - only when running from a non-installed tree
-    _PACKAGE_VERSION = "0.0.0+local"
+    PACKAGE_VERSION = "0.0.0+local"
 
-USER_AGENT = (
-    f"ZurichOpenDataMCP/{_PACKAGE_VERSION} (+https://github.com/malkreide/zurich-opendata-mcp)"
-)
+# Public, because two outbound identities are built from it: the HTTP
+# ``User-Agent`` towards the upstream APIs, and — since Spec 2026-07-28 stamps
+# ``io.modelcontextprotocol/serverInfo`` into *every* result — the identity this
+# server hands its own clients. One source, so the two cannot disagree.
+REPO_URL = "https://github.com/malkreide/zurich-opendata-mcp"
+
+USER_AGENT = f"ZurichOpenDataMCP/{PACKAGE_VERSION} (+{REPO_URL})"
 
 ZURICH_GROUPS = [
     "arbeit-und-erwerb",
