@@ -19,7 +19,8 @@ this defect stayed invisible.
 Usage:
     python scripts/smoke_installed.py <path-to-zurich-opendata-mcp-executable>
 
-Exit code 0 on a completed handshake with a non-empty tool list, 1 otherwise.
+Exit code 0 on a completed handshake with a real version and a non-empty
+tool list, 1 otherwise.
 The `mcp` client used here ships with the package's own dependency, so no
 extra install is needed in the target venv.
 """
@@ -43,6 +44,24 @@ async def handshake(executable: str) -> int:
             # use the snake_case form.
             print(f"protocol : {init.protocol_version}")
             print(f"server   : {init.server_info.name}")
+            print(f"version  : {init.server_info.version!r}")
+
+            # Spec 2026-07-28 stamps `serverInfo` into every result, so an
+            # empty version is not a cosmetic blemish but a missing answer on
+            # every single response. It can only go wrong in an *installed*
+            # venv: `config.PACKAGE_VERSION` reads the distribution metadata
+            # and falls back to `0.0.0+local` when that read fails. The test
+            # suite runs from an editable install where the read always
+            # succeeds, so this is the one place the fallback can surface.
+            if not init.server_info.version or init.server_info.version.endswith("+local"):
+                print(
+                    f"FAIL: installed artifact reports version "
+                    f"{init.server_info.version!r} — the distribution metadata "
+                    "was not readable, so every result would carry a useless "
+                    "serverInfo stamp",
+                    file=sys.stderr,
+                )
+                return 1
 
             tools = await session.list_tools()
             print(f"tools    : {len(tools.tools)}")

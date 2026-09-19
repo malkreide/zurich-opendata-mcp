@@ -7,7 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Hinzugefuegt
+## [0.8.0] - 2026-09-19
+
+Minor: der Server beantwortet jetzt selbst, was Spec `2026-07-28` von ihm
+verlangt, statt die Revision nur ueber das SDK zu sprechen. Dazu eine
+Neufassung der Retry-Politik gegenueber den Quellen und zwei
+Sicherheits-Bewegungen. Keine Signatur eines Tools aendert sich, keine
+Konfiguration wird ungueltig.
+
+**Eine Verhaltensaenderung, die Aufmerksamkeit verdient:** ein glattes HTTP 500
+einer Quelle wird jetzt wiederholt (bisher galt es als deterministische
+Antwort), ebenso 429 und Timeouts. Dafuer gilt neu ein Gesamtbudget von 25
+Sekunden pro Aufruf. Wer sich darauf verlassen hat, dass ein 500 sofort
+durchschlaegt, sieht jetzt eine langsamere, aber haeufiger erfolgreiche
+Antwort.
+
+Gemessen auf dem Release-Stand: 303 Tests bei 100 % Coverage, `mypy` ohne
+Ausnahmen, `pip-audit` ohne Befund, und das installierte Artefakt vollzieht
+einen echten MCP-Handshake.
+
+### Added
+
 
 - **Frischehinweise auf den auflistenden Methoden** (SEP-2549, Spec
   `2026-07-28`): `ttlMs` 300000, `cacheScope` `public`. Das SDK setzt beides auf
@@ -25,49 +45,66 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   aushandeln. Beide sind jetzt einzeln gepinnt, ein Dependabot-Bump von
   `mcp` kann keine davon still verschieben.
 
-  Ohne gemessenen Teil: dieser Server baut keine ASGI-App, durch die sich ein
-  `initialize` schicken liesse. Das Gate haengt deshalb an den SDK-Konstanten —
-  die schwaechere Form, im Docstring benannt statt verschwiegen.
+  Das Gate prueft beides: es **misst** ueber eine In-Prozess-`mcp.Client`-
+  Verbindung, welche Revision dieser Server je Aera tatsaechlich aushandelt,
+  und es **liest** daneben die SDK-Konstanten. Der gemessene Teil faellt auch
+  dann, wenn eine Aera gar nicht mehr bedient wird, waehrend ihre Konstante
+  unveraendert im SDK steht. (Hier stand vorher, das Repo baue keine ASGI-App
+  und koenne deshalb nur die Konstanten pruefen. Das war falsch: `mcp.Client`
+  spricht ueber einen Speicher-Transport direkt mit der `MCPServer`-Instanz
+  und handelt dabei wirklich aus — ohne ASGI, ohne Netz.)
 
   Beide READMEs beschreiben die Aeren; ein Test haelt jede Sprache einzeln
   dagegen — im Portfolio sind EN und DE desselben Repos schon dreimal
   auseinandergelaufen, weil nur eine Fassung nachgezogen wurde.
 
-### Sicherheit — sqlparse auf 0.6.0, Floor mitgezogen
+- **Server-Identitaet auf jedem Resultat** (SEP-2575, Spec `2026-07-28`):
+  `MCPServer` bekommt `version`, `title`, `description` und `website_url`.
 
-`sqlparse 0.5.5` traegt vier Advisories (CVE-2026-71491, CVE-2026-59894,
-CVE-2026-59893, CVE-2026-54284), alle behoben in `0.6.0`. Das ist keine
-Randabhaengigkeit: `tools/datastore.py` parst mit `sqlparse` das SQL, das den
-Guard aus H-1 traegt.
+  Das ist kein Kosmetik-Feld. `2026-07-28` streicht `initialize`; damit faellt
+  die eine Stelle weg, an der eine Verbindung bisher einmalig `serverInfo`
+  bekam, und die Identitaet wandert in das `_meta` JEDES Resultats
+  (`io.modelcontextprotocol/serverInfo`). Nachgemessen: ohne `version=`
+  stempelte dieser Server auf jede einzelne Antwort
+  `{"name": "zurich_opendata_mcp", "version": ""}` — das SDK setzt nichts ein
+  («the SDK never substitutes its own»). Ein zustandsloser Aufrufer erfuhr
+  also bei keiner Antwort, welche Fassung geantwortet hat.
 
-Gehoben wurde der **Floor** in `pyproject.toml` (`>=0.5.5` -> `>=0.6.0`), nicht
-nur der Lock. `uv.lock` gilt fuer die Entwicklung hier; ein Fremdinstall loest
-aus der Spanne auf, und die soll die verwundbaren Versionen gar nicht erst
-zulassen. `uv lock` bewegte genau ein Paket.
+  Eine Quelle: `config.PACKAGE_VERSION` und das neue `config.REPO_URL` speisen
+  jetzt sowohl den `User-Agent` nach aussen als auch die Identitaet nach innen.
 
-Gemessen, nicht geschlossen: Die Gates laufen gegen die installierte `0.6.0`
-gruen durch — `ruff check`, `ruff format --check`, `mypy`, `pytest`
-(263 passed, 100% Coverage) und `check_version_sync.py`. Der Fresh-Resolve-Job
-zog `sqlparse 0.6.0` schon vorher, weil die Spanne offen war; rot war allein
-`pip-audit`, das gegen den Lock misst.
+  `scripts/smoke_installed.py` weist die Version jetzt zurueck, wenn sie leer
+  ist oder auf `+local` endet. Das ist die einzige Stelle, an der der Fallback
+  auffallen kann: `PACKAGE_VERSION` liest die Distributionsmetadaten, und in
+  der Suite laeuft das immer aus einem editierbaren Install heraus, wo der
+  Lesevorgang nie scheitert. Nur der Fresh-Install-Job fuehrt das Artefakt
+  aus, das ein Fremder herunterlaedt.
 
-### Geaendert — der ruff-Pin steht an einer Stelle statt an zweien
+- **`instructions` fuer `server/discover`** (SEP-2575). In der Handshake-Aera
+  reiste die Anleitung im `initialize`-Resultat; die moderne Aera hat kein
+  `initialize`, `server/discover` ist der einzig verbliebene Ort. Der Text war
+  leer, ein zustandsloser Client sah also nur die Tool-Liste. Er nennt jetzt
+  den dreistufigen Einstieg (Katalog → Resource-UUID → DataStore), die
+  Haltbarkeit der Echtzeitwerte und die drei veralteten Aliase. Eine
+  Drift-Wache prueft, dass jeder darin genannte Tool-Name auch registriert ist
+  — sonst schickt der Server eine Anleitung auf Werkzeuge, die es nicht gibt,
+  und die Tool-Zahl bliebe dabei unveraendert.
 
-`pyproject.toml` `[dev]` pinnt `ruff==0.16.1`, `uv.lock` haelt dieselbe
-Version, und `ci.yml` ruft `uv run ruff` ohne `--with` auf.
+- **Reihenfolge der Tool-Liste festgehalten** (Spec `2026-07-28`, Minor #3:
+  `tools/list` SOLL deterministisch sortiert sein). Erfuellt ueber die
+  Einfuegereihenfolge des `ToolManager`-Dicts, die der Importreihenfolge in
+  `server.py` folgt; ein Test haelt die Draht-Reihenfolge dagegen und stellt
+  zugleich sicher, dass sie nicht zufaellig alphabetisch ist — sonst koennte
+  er ein sortierendes SDK nicht von einem reihenfolgetreuen unterscheiden.
 
-Vorher stand im `dev`-Extra `ruff>=0.15.12`, im Lock aufgeloest auf `0.15.18`,
-waehrend die CI ihre beiden ruff-Schritte per `uv run --with ruff==0.16.1`
-fuhr. Das ueberschrieb nur diese zwei Aufrufe: Wer lokal `uv run ruff check`
-fuhr, lintete mit **0.15.18** gegen ein Gate, das **0.16.1** fuhr — und die
-Abweichungen, die dabei auftauchen, hat niemand verursacht.
+  Nicht geaendert, aber nachgemessen und benannt: weil das SDK
+  `subscriptions/listen` bedient, meldet der Capability-Block `listChanged`
+  und `resources.subscribe`, obwohl dieser Server nie eine Aenderungsmeldung
+  sendet. Die Capability sagt, dass die Methode bedient wird — das stimmt, und
+  ohne Eingriff in `_request_handlers` ist sie auch nicht abschaltbar.
 
-Gemessen, nicht geschlossen: `uv run ruff --version` meldet nach der Aenderung
-`0.16.1`, `uv lock` bewegte genau ein Paket (`ruff 0.15.18 -> 0.16.1`), und
-`ruff check` / `ruff format --check` / `mypy` / `pytest` (259 passed,
-100% Coverage) laufen gruen durch.
+#### Die CKAN-Fixtures sind aufgezeichnet, nicht mehr ausgedacht
 
-### Hinzugefuegt — die CKAN-Fixtures sind aufgezeichnet, nicht mehr ausgedacht
 
 **`scripts/record_fixtures.py`** zeichnet `group_list`, `group_show` und
 `package_search` von `data.stadt-zuerich.ch` auf und schreibt
@@ -101,8 +138,8 @@ Gegenprobe gefuehrt: Mit einer Fixture, die `returned == count` behauptet,
 faellt der Regel-1-Test; mit einer leeren Kategorienliste faellt der
 Katalog-Test.
 
-
 ### Changed
+
 
 - **Retry policy against the source: bounded, spread, obedient (`ARCH-014`).**
   A portfolio-wide run of the audit catalogue on 2026-08-07 read all 43 servers
@@ -149,6 +186,87 @@ Katalog-Test.
   retryable, and a 500 from a gateway under load is exactly the transient case.
 
   Counter-checks were run against all six properties — see the pull request.
+
+#### Der ruff-Pin steht an einer Stelle statt an zweien
+
+
+`pyproject.toml` `[dev]` pinnt `ruff==0.16.1`, `uv.lock` haelt dieselbe
+Version, und `ci.yml` ruft `uv run ruff` ohne `--with` auf.
+
+Vorher stand im `dev`-Extra `ruff>=0.15.12`, im Lock aufgeloest auf `0.15.18`,
+waehrend die CI ihre beiden ruff-Schritte per `uv run --with ruff==0.16.1`
+fuhr. Das ueberschrieb nur diese zwei Aufrufe: Wer lokal `uv run ruff check`
+fuhr, lintete mit **0.15.18** gegen ein Gate, das **0.16.1** fuhr — und die
+Abweichungen, die dabei auftauchen, hat niemand verursacht.
+
+Gemessen, nicht geschlossen: `uv run ruff --version` meldet nach der Aenderung
+`0.16.1`, `uv lock` bewegte genau ein Paket (`ruff 0.15.18 -> 0.16.1`), und
+`ruff check` / `ruff format --check` / `mypy` / `pytest` (259 passed,
+100% Coverage) laufen gruen durch.
+
+### Security
+
+#### anyio, httpx2 und httpcore2 aus dem Lock gehoben
+
+
+`pip-audit` meldete neun Advisories in drei Paketen:
+
+```
+anyio     4.14.0  CVE-2026-63374, CVE-2026-64847, CVE-2026-63349   -> 4.14.2
+httpcore2 2.9.1   PYSEC-2026-3844                                  -> 2.10.0
+httpx2    2.9.1   PYSEC-2026-3845..3849 (fuenf)                    -> 2.12.0
+```
+
+Gehoben auf `anyio 4.15.1`, `httpcore2 2.13.0`, `httpx2 2.13.0`. Danach
+antwortet `pip-audit` mit «No known vulnerabilities found»; `mcp` bleibt auf
+`2.0.0`, dessen Spannen tragen die neuen Fassungen.
+
+**Nur der Lock, kein Floor — und das ist hier der Unterschied zum
+`sqlparse`-Fall darunter.** Keines der drei Pakete steht in `pyproject.toml`:
+`httpx2` und `httpcore2` kommen ueber `mcp` herein, `anyio` ueber `httpx`,
+`mcp`, `starlette` und `sse-starlette`. Ein Fremdinstall loest deshalb frei
+auf und zieht ohnehin die neuesten — verwundbar blieben die Versionen einzig,
+weil `uv.lock` sie festhielt. Bei `sqlparse` lag es umgekehrt: direkte
+Abhaengigkeit, vom Code importiert, also musste die Spanne mit. Hier waeren
+drei neue Direkteintraege bloss dazu da, einen Floor zu tragen — und wuerden
+behaupten, der Code importiere sie.
+
+Der Lauf war nie ein Merge-Blocker (`audit` traegt `continue-on-error: true`)
+und das Rot stand schon auf `main`, auf genau dem Commit, der die Basis dieses
+Branches ist. Behoben wird es trotzdem hier: ein Alarm, den man mitschleppt,
+ist nach der dritten Woche keiner mehr.
+
+Nachgemessen statt vermutet: der Fehlschlag wurde lokal mit demselben Befehl
+reproduziert, den die CI faehrt (`uv run --with pip-audit pip-audit`), und
+nach dem Bump derselbe Befehl gruen gesehen.
+
+Ein neuer Eintrag im Lock ohne Wirkung hier: `httpx2-jsfetch 1.0`, von
+`httpx2` unter dem Marker `sys_platform == 'emscripten'` gezogen. `uv` sperrt
+das gesamte Marker-Universum, installiert wird es ausserhalb von Pyodide nie.
+
+Die Suite meldet seither eine `DeprecationWarning` — `starlette` benutzt
+`anyio.abc.BlockingPortal`, das `anyio 4.15` zugunsten von
+`anyio.from_thread.BlockingPortal` abgekuendigt hat. Fremder Code, hier nicht
+zu beheben; benannt, damit niemand sie spaeter fuer eine eigene haelt.
+
+#### sqlparse auf 0.6.0, Floor mitgezogen
+
+
+`sqlparse 0.5.5` traegt vier Advisories (CVE-2026-71491, CVE-2026-59894,
+CVE-2026-59893, CVE-2026-54284), alle behoben in `0.6.0`. Das ist keine
+Randabhaengigkeit: `tools/datastore.py` parst mit `sqlparse` das SQL, das den
+Guard aus H-1 traegt.
+
+Gehoben wurde der **Floor** in `pyproject.toml` (`>=0.5.5` -> `>=0.6.0`), nicht
+nur der Lock. `uv.lock` gilt fuer die Entwicklung hier; ein Fremdinstall loest
+aus der Spanne auf, und die soll die verwundbaren Versionen gar nicht erst
+zulassen. `uv lock` bewegte genau ein Paket.
+
+Gemessen, nicht geschlossen: Die Gates laufen gegen die installierte `0.6.0`
+gruen durch — `ruff check`, `ruff format --check`, `mypy`, `pytest`
+(263 passed, 100% Coverage) und `check_version_sync.py`. Der Fresh-Resolve-Job
+zog `sqlparse 0.6.0` schon vorher, weil die Spanne offen war; rot war allein
+`pip-audit`, das gegen den Lock misst.
 
 ## [0.7.0] - 2026-07-31
 
