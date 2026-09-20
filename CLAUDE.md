@@ -786,19 +786,42 @@ Das belegt zwei Annahmen, die bis dahin nur aus der Dokumentation stammten:
 Prämisse, auf der die `concurrency` auf Job-Ebene beruht —, und der `if`
 teilt exklusiv, es handelt genau einer der beiden.
 
-Ungeprüft bleibt damit weniger, aber Wesentliches:
+**Und innerhalb einer Stunde schlossen sich drei der vier offenen Zeilen von
+selbst** — es genügte, hinzusehen, statt es beim nächsten Mal zu planen:
 
-| Weg | Stand |
-|---|---|
-| `pull_request_target` **feuert und wird übersprungen** | gemessen auf #121 |
-| Fork-PR: der privilegierte Zweig **handelt** | offen, bis ein Fork-PR kommt |
-| Dependabot: derselbe Zweig | offen, bis zum nächsten Update-PR |
-| Grün nach befundloser Meldung (`issue_comment`) | offen, bis ein Codex-Kommentar auf `main`-Basis eintrifft |
+| Weg | Stand | Beleg |
+|---|---|---|
+| `pull_request_target` feuert, wird bei eigenem PR übersprungen | **gemessen** | #121/#122, Läufe `skipped` |
+| Dependabot: der privilegierte Zweig **handelt** | **gemessen** | Lauf 35524879005, `success` |
+| `issue_comment` erzeugt einen Lauf | **gemessen** | 4 Läufe nach dem Merge, 0 davor |
+| Fork-PR: derselbe Zweig | offen | bis ein Fork-PR kommt |
 
-Die drei offenen Zeilen decken bis dahin nur die Drift-Wachen und die
-Fixtures — also der Text der Datei und aufgezeichnete Antworten, nicht das
-Verhalten von GitHub. Beim ersten Dependabot-PR lohnt deshalb der Blick, ob
-der Job dort auch wirklich läuft statt übersprungen zu werden.
+Die Dependabot-Zeile ist die wichtigste, weil sie bis dahin allein auf
+GitHubs Dokumentation stand. Am 20.9.2026 um 17:07:54 lief der Gate auf
+`dependabot/pip/python-deps-e904d59df0` über `pull_request_target` — und der
+Job endete mit `success`, nicht mit `skipped` wie auf jedem eigenen PR. Der
+privilegierte Pfad handelt dort also wirklich, und sein Token reichte für den
+POST auf die Checks-API.
+
+**Was das nicht beweist:** dass der `pull_request`-Pfad dort mit 403
+gescheitert wäre. Belegt ist, dass der gewählte Weg funktioniert, nicht dass
+der andere versagt hätte — dafür bliebe nur, es absichtlich falsch zu
+verdrahten. Die Begründung für die Weiche stammt weiterhin aus der
+Dokumentation; gemessen ist ihre Wirkung.
+
+**Zwei Nebenbefunde aus denselben Minuten.** Der `issue_comment`-Lauf trägt
+als `head_sha` den Kopf von `main` (`49fa0d94`), nicht den PR-Head
+(`8b7f4d3`) — genau deshalb meldet der Gate über die Checks-API und nicht
+über den Job-Status. Die Begründung aus dem ersten Commit ist damit
+abgelesen statt zitiert. Und der Check gab erstmals seine
+kontingent-spezifische Begründung aus («Codex meldet ein erschöpftes
+Kontingent — der Review hat NICHT stattgefunden»), bis dahin nur durch
+Fixtures gedeckt.
+
+Bei drei überlappenden Ereignissen — «ready», `pull_request_target` und
+`issue_comment` — entstand dabei wie angekündigt ein abgebrochener Lauf
+(35525052359). Folgenlos: Sein Job-Status hing an `main`, nicht am PR, und
+er hinterliess keinen offenen `in_progress`-Check.
 
 Der Rest ist gemessen. Auf PR #120, Head `475fbce9`, 20.9.2026: Check-Run
 `Codex-Verdikt` auf `failure` («Kein Verdikt fuer diesen Head»), Job
