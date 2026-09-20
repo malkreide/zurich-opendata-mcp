@@ -290,6 +290,33 @@ def test_commits_werden_ueber_ein_gemeinsames_praefix_verglichen(
 # ── Der Weg durch das CLI, nicht nur durch die Funktion ──────────────────
 
 
+def test_die_concurrency_gruppe_steht_auf_job_ebene() -> None:
+    """Drift-Wache für eine Eigenschaft, die kein Unit-Test sonst erreicht.
+
+    `pull_request_target` feuert für JEDEN PR, nicht nur für Forks; für
+    dieselbe Aktion entstehen also immer zwei Läufe. Stünde die
+    `concurrency`-Gruppe auf Workflow-Ebene, träten beide ihr bei — sie wird
+    ausgewertet, bevor der Job-`if` je gelesen wird. Mit `cancel-in-progress`
+    könnte dann der Lauf gewinnen, dessen Job der Filter gleich darauf
+    überspringt: kein Job, kein POST, gar kein Check.
+
+    Geprüft wird die Einrückung und nicht der geparste Baum: pyyaml ist keine
+    Abhängigkeit dieses Projekts, und für genau diese Eigenschaft — steht der
+    Schlüssel auf Spalte 0 oder eingerückt — reicht der Text.
+    """
+    zeilen = (
+        (ROOT / ".github" / "workflows" / "codex-gate.yml").read_text(encoding="utf-8").splitlines()
+    )
+    auf_spalte_null = [z for z in zeilen if z.startswith("concurrency:")]
+    eingerueckt = [z for z in zeilen if z.strip() == "concurrency:" and z != z.lstrip()]
+
+    assert not auf_spalte_null, (
+        "concurrency steht wieder auf Workflow-Ebene — damit tritt auch der "
+        "Lauf der Gruppe bei, dessen Job uebersprungen wird."
+    )
+    assert len(eingerueckt) == 1, "genau eine concurrency-Gruppe, auf Job-Ebene"
+
+
 def test_das_cli_endet_mit_0_bei_verdikt_und_1_ohne(capsys, tmp_path) -> None:
     ok = tmp_path / "ok.json"
     ok.write_text((FIXTURES / "pr115_befundlos.json").read_text(encoding="utf-8"), "utf-8")
