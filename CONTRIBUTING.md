@@ -48,44 +48,6 @@ pip install -e ".[dev]"
 Keep one PR per feature/bugfix, and update documentation in **both** English
 and German (`README.md` / `README.de.md`).
 
-### The `Codex-Verdikt` check: why your PR may sit red for two minutes
-
-Marking a draft ready triggers a Codex review, and that review takes **two to
-three minutes**. Nothing about the merge button waits for it. Between the 18th
-and 20th of September 2026 the "Codex review answered" checkbox in this
-repository was ticked four times in a row on PRs where no review had happened;
-on three of them the review only *started* after the merge, measured from the
-timestamps Codex publishes in its summary table.
-
-So the review is a check now, not a checkbox. `.github/workflows/codex-gate.yml`
-reports a check run named `Codex-Verdikt`, and
-`scripts/check_codex_verdict.py` decides what counts:
-
-| Observed | Counts as a verdict? |
-|---|---|
-| A review object on the current head | yes — findings exist, answer them |
-| "Didn't find any major issues" naming the current commit | yes |
-| The summary table on `Completed`, nothing else | **no** |
-| The summary table on `Running` | no, still working |
-| Quota or missing-environment message | no, the review did not happen |
-
-The third row is the one worth knowing. When a review finishes on a PR that is
-already closed, the table says `Completed` and no verdict ever arrives —
-"completed" tells you the run finished, not how it went.
-
-The commit matters: a push does **not** re-trigger Codex. A verdict on an
-earlier commit is not a verdict on yours; re-trigger by commenting
-`@codex review`.
-
-The check re-reads the PR state from the API on every run. So if it sits red
-although Codex has since answered, *Actions → Codex-Verdikt → open the run →
-"Re-run all jobs"* is enough; no empty commit needed.
-
-**If you genuinely need to merge without a review** — the quota is exhausted,
-or the change cannot wait — add the label `codex-review-waived`. The check then
-passes and records in its summary that it was waived. An escape hatch you can
-see in the log beats one nobody notices.
-
 ---
 
 ## Adding a New Tool

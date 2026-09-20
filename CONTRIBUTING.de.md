@@ -48,47 +48,6 @@ pip install -e ".[dev]"
 Pro Feature/Bugfix ein PR, und aktualisieren Sie die Dokumentation **sowohl** auf
 Englisch als auch auf Deutsch (`README.md` / `README.de.md`).
 
-### Der Check `Codex-Verdikt`: warum Ihr PR zwei Minuten rot stehen kann
-
-Wer einen Draft auf «ready» schaltet, löst einen Codex-Review aus, und der
-braucht **zwei bis drei Minuten**. Der Merge-Button wartet darauf nicht.
-Zwischen dem 18. und 20.9.2026 wurde die Zeile «Codex-Review beantwortet» in
-diesem Repo viermal in Folge gesetzt, ohne dass ein Review stattgefunden
-hätte; bei dreien begann er überhaupt erst *nach* dem Merge — abgelesen an den
-Zeitstempeln, die Codex selbst in seiner Summary-Tabelle veröffentlicht.
-
-Der Review ist deshalb jetzt ein Check und keine Checkbox.
-`.github/workflows/codex-gate.yml` meldet einen Check-Run namens
-`Codex-Verdikt`, und `scripts/check_codex_verdict.py` entscheidet, was zählt:
-
-| Beobachtet | Zählt als Verdikt? |
-|---|---|
-| Review-Objekt auf dem aktuellen Head | ja — es gibt Befunde, beantworten Sie sie |
-| «Didn't find any major issues» mit dem aktuellen Commit | ja |
-| Summary-Tabelle auf `Completed`, sonst nichts | **nein** |
-| Summary-Tabelle auf `Running` | nein, läuft noch |
-| Kontingent- oder Environment-Meldung | nein, der Review fand nicht statt |
-
-Die dritte Zeile ist die, die man kennen sollte. Läuft ein Review auf einem
-bereits geschlossenen PR zu Ende, steht die Tabelle auf `Completed`, und ein
-Verdikt kommt nie — «completed» sagt, dass der Lauf fertig ist, nicht wie er
-ausging.
-
-Der Commit zählt mit: Ein Push löst **keinen** neuen Codex-Review aus. Ein
-Verdikt zu einem früheren Commit ist kein Verdikt zu Ihrem; nachtriggern mit
-einem Kommentar `@codex review`.
-
-Der Check liest den PR-Zustand bei jedem Lauf frisch über die API. Steht er
-rot, obwohl Codex inzwischen geantwortet hat, genügt deshalb *Actions →
-Codex-Verdikt → den Lauf öffnen → «Re-run all jobs»*; ein leerer Commit ist
-dafür nicht nötig.
-
-**Wenn Sie wirklich ohne Review mergen müssen** — das Kontingent ist weg, oder
-die Änderung kann nicht warten — setzen Sie das Label `codex-review-waived`.
-Der Check wird dann grün und hält in seiner Zusammenfassung fest, dass
-gewaivert wurde. Eine Hintertür, die im Log steht, ist besser als eine, die
-niemand bemerkt.
-
 ---
 
 ## Ein neues Tool hinzufügen

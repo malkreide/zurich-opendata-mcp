@@ -464,11 +464,18 @@ hinzufügte, vier Sekunden nach «ready» gemergt. Ein Text, den man zum
 Merge-Zeitpunkt lesen müsste, wird zum Merge-Zeitpunkt nicht gelesen — das ist
 keine Nachlässigkeit, sondern eine Eigenschaft des Ablaufs. Wer den Review
 wirklich als Gate will, braucht eine Mechanik: einen Check-Run, der rot bleibt,
-solange für den aktuellen Head kein Verdikt vorliegt. In diesem Repo liegt der
-in `.github/workflows/codex-gate.yml` und `scripts/check_codex_verdict.py`
-(Details in Teil 2); zum Portieren genügt, beide Dateien zu kopieren.
+solange für den aktuellen Head kein Verdikt vorliegt.
 
-**Der Workflow allein blockiert nichts.** Erst als Required Status Check in
+Die Entscheidung dafür — *liegt für genau diesen Head ein Verdikt vor?* — steht
+in diesem Repo als reine Funktion in `scripts/check_codex_verdict.py` (Details
+in Teil 2). Der Workflow, der daraus einen Check-Run macht, **fehlt noch
+absichtlich**: Er wurde zusammen mit dem Skript entworfen und in elf
+Review-Runden achtmal nachgebessert — Fork-Token, Dependabot, Checkout-Ref,
+Zustandsführung des Check-Runs. Jede dieser Weichen ist eine eigene Aussage
+über GitHub, und mehrere davon waren zuerst falsch. Sie gehören einzeln belegt
+statt gebündelt, deshalb folgt der Workflow getrennt.
+
+**Und selbst dann blockiert er nichts.** Erst als Required Status Check in
 einem Ruleset hält er einen Merge auf, und das ist eine Repo-Einstellung, die
 kein PR setzen kann. Wer die Dateien kopiert und den Haken vergisst, hat eine
 hübschere Anzeige und dieselbe Lücke.
@@ -573,76 +580,35 @@ ohne Lockfile und mit kaltem Cache, dann ein echter MCP-Handshake über
 `scripts/smoke_installed.py`. Der Lockfile-Lauf oben kann nicht bemerken, wenn
 eine Abhängigkeitsspanne für Fremde kaputt auflöst; dieser Job kann es.
 
-**Vierter Workflow: `codex-gate.yml`.** Meldet einen Check-Run
-`Codex-Verdikt`, der rot bleibt, solange für den aktuellen Head kein
-Codex-Verdikt vorliegt. Ausgelöst von `pull_request`, `pull_request_target`,
-`issue_comment` und `pull_request_review` — die befundlose Meldung ist ein
-gewöhnlicher Kommentar, ein Befund ein Review-Objekt, und beide Wege lösen
-sicher aus. `edited` ist bei `issue_comment` mitgenommen, weil Codex seine
-Summary-Tabelle in place editiert; ob ein Bot-Selbst-Edit das Ereignis
-auslöst, sagt die GitHub-Dokumentation nicht, und der Entwurf hängt deshalb
-nicht daran.
+**`scripts/check_codex_verdict.py` — die Entscheidung, noch ohne Workflow.**
+Eine reine Funktion: Sie bekommt `head_sha`, `labels`, `comments` und `reviews`
+in GitHub-REST-Form und beantwortet eine einzige Frage — liegt für GENAU diesen
+Head ein Codex-Verdikt vor? Nicht, ob es gut ist; einen Befund zu beantworten
+bleibt Menschenarbeit.
 
-**Warum vier Trigger und nicht drei.** Bei einem PR aus einem Fork gibt GitHub
-dem `pull_request`-Lauf einen Nur-Lese-Token, und der `permissions:`-Block hebt
-das nicht auf: der POST auf die Checks-API endet mit 403, der alte rote Check
-bleibt stehen — auch dann, wenn jemand den Notausgang setzt.
-`pull_request_target` bekommt den normalen Token und übernimmt deshalb diese
-Fälle.
+| Beobachtung | zählt als Verdikt? |
+|---|---|
+| Review-Objekt **mit Body** «Codex Review» auf dem aktuellen Head | ja |
+| «Didn't find any major issues» mit passendem Commit | ja |
+| Thread-Antwort von Codex (Review-Objekt ohne Body) | nein |
+| Summary-Tabelle `Completed`, sonst nichts | nein |
+| Summary-Tabelle `Running` | nein |
+| Kontingent- oder Environment-Meldung | nein |
 
-**Dasselbe gilt für Dependabot, und das sieht man ihm nicht an.** Sein Branch
-liegt in diesem Repo, eine reine Herkunftsprüfung schickt ihn also auf den
-`pull_request`-Pfad — aber GitHub behandelt von Dependabot ausgelöste
-Ereignisse wie Fork-Ereignisse und stuft den Token ebenso herunter. Unter einem
-Required Check wäre jeder wöchentliche Dependabot-PR dauerhaft blockiert,
-Notausgang eingeschlossen. Entschieden wird am PR-**Autor**, nicht an
-`github.actor`: Wer ein Label setzt, wechselt; die Herkunft des PR nicht.
+Die dritte Zeile ist der teuerste Einzelbefund: Ohne sie zählte eine blosse
+Thread-Antwort als Verdikt zum neuen Head (siehe Teil 1). Ausfallmeldungen
+entscheiden nichts mehr, sondern werden gesammelt und nur angehängt — sonst
+wäre nach einem erschöpften Kontingent nie wieder ein Verdikt erreichbar.
+Notausgang ist das Label aus `--waiver-label` (Vorgabe `codex-review-waived`);
+es lässt durch und schreibt das in die Begründung.
 
-**Der Checkout muss ausdrücklich gepinnt werden — hier lag der schwerste
-Fehler dieses Entwurfs.** Die naheliegende Annahme, ein Job ohne `ref` erhalte
-den Basis-Stand, gilt **nur für `pull_request_target`**. Am 20.9.2026 an Lauf
-35514764426 gemessen, ausgelöst durch `pull_request_review`:
+Geprüft in `tests/test_codex_gate.py` gegen aufgezeichnete Ereignisse in
+`tests/fixtures/codex/`; die dortige `PROVENANCE.md` trennt wörtliche
+Mitschriften, `CLAUDE.md`-Wortlaute und Konstruiertes.
 
-```
-git checkout --force refs/remotes/pull/119/merge
-HEAD is now at 18595a4 Merge 601d2214… into a8023ab2…
-```
-
-Also der PR-Merge-Ref — und `pull_request_review` trägt auch bei einem Fork-PR
-einen Token mit `checks: write`, denn nur `pull_request` wird heruntergestuft.
-Ein Fork hätte `check_codex_verdict.py` in eigener Fassung ausführen lassen und
-sich sein grünes Verdikt selbst geschrieben. Der `ref` wird deshalb explizit
-gesetzt, und zwar an der **Vertrauensfrage**: Head aus diesem Repo und nicht
-von Dependabot → PR-Stand, sonst Basis. Dazu `persist-credentials: false`.
-
-Die Vertrauensfrage ist nicht dasselbe wie die Trigger-Frage. Ein Versuch, das
-am Ereignisnamen abzukürzen, legte den Gate sofort lahm — ein
-`pull_request_review` auf einem PR aus diesem Repo landete auf der Basis, wo
-das Skript vor dem Merge gar nicht liegt. Dass Fremdtext als JSON ins Skript
-wandert und nie in eine Shell-Zeile, bleibt richtig; es ersetzt den gepinnten
-`ref` aber nicht.
-
-**Und `concurrency` steht auf JOB-Ebene, nicht auf Workflow-Ebene.**
-`pull_request_target` feuert für jeden PR, nicht nur für Forks; für dieselbe
-Aktion entstehen also immer zwei Läufe. Stünde die Gruppe oben, träten beide ihr
-bei — sie wird ausgewertet, bevor der Job-`if` je gelesen wird. Mit
-`cancel-in-progress` könnte dann der Lauf gewinnen, dessen Job der Filter gleich
-darauf überspringt: kein Job, kein POST, gar kein Check. Auf Job-Ebene tritt ein
-übersprungener Lauf der Gruppe nie bei. `tests/test_codex_gate.py` hält das mit
-einer Drift-Wache fest.
-
-Gemeldet wird über die Checks-API und nicht über den Job-Status: `issue_comment`
-und `pull_request_review` laufen nicht am Head-SHA, ihr Job-Status landet also
-nirgends, wo ein Ruleset ihn sieht.
-
-Die Entscheidung trifft `scripts/check_codex_verdict.py` — eine reine Funktion,
-geprüft in `tests/test_codex_gate.py` gegen aufgezeichnete Ereignisse in
-`tests/fixtures/codex/` (Herkunft in der dortigen `PROVENANCE.md`, drei davon
-wörtliche Mitschriften aus #115, #116 und #118). Notausgang ist das Label
-`codex-review-waived`; es lässt durch und schreibt das in die Begründung.
-
-**Noch nicht scharf:** Der Check hält erst auf, wenn er in einem Ruleset als
-Required Status Check eingetragen ist. Bis dahin ist er Anzeige, nicht Gate.
+**Noch kein Gate.** Das Skript entscheidet, meldet aber nichts: Der Workflow,
+der daraus einen Check-Run macht, folgt in einem eigenen PR (Begründung in
+Teil 1). Bis dahin ist die Logik vorhanden und geprüft, wirkt aber nirgends.
 
 **Live-Tests: geplanter Workflow vorhanden.** `.github/workflows/live-tests.yml`,
 `cron: "43 4 * * 1"` (wöchentlich Mo, 04:43 UTC). `ci.yml` hat zusätzlich einen
