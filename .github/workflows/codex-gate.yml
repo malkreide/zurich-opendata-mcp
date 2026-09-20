@@ -23,7 +23,25 @@ name: Codex-Verdikt
 on:
   # Erster Anlauf: sobald der PR reviewfähig ist. Ergebnis hier ist fast immer
   # rot — das ist der Zweck, nicht ein Fehler.
+  #
+  # Nur für PRs aus diesem Repo. Bei einem PR AUS EINEM FORK gibt GitHub dem
+  # `pull_request`-Lauf einen Nur-Lese-Token, und der `permissions:`-Block
+  # unten kann das nicht aufheben: der POST auf die Checks-API endet mit 403,
+  # der alte rote Check bleibt stehen — ausgerechnet auch dann, wenn jemand
+  # den Notausgang «codex-review-waived» setzt. Deshalb der zweite Trigger.
   pull_request:
+    types: [opened, ready_for_review, reopened, synchronize, labeled, unlabeled]
+  # Nur für PRs aus einem Fork. `pull_request_target` läuft im Kontext des
+  # Basis-Branch und bekommt den normalen Token.
+  #
+  # Das ist hier die sichere Variante dieses sonst heiklen Triggers: Der Job
+  # checkt einen ausdrücklich gesetzten Ref aus (siehe beim Checkout-Schritt)
+  # und führt damit keinen Code aus dem Fork aus. Was aus dem PR kommt —
+  # Kommentar- und Review-Texte — wandert als JSON ins Skript, nie in eine
+  # Shell-Zeile; es gibt keine `${{ }}`-Einsetzung von Fremdtext. Ein Fork
+  # kann die Entscheidungslogik damit auch nicht zu seinen Gunsten ändern: es
+  # gilt das `check_codex_verdict.py` des Basis-Branch.
+  pull_request_target:
     types: [opened, ready_for_review, reopened, synchronize, labeled, unlabeled]
   # Die befundlose Meldung und die beiden Ausfallmeldungen sind gewöhnliche
   # Issue-Kommentare. `edited` ist mitgenommen, weil Codex seine
@@ -48,19 +66,23 @@ jobs:
     name: Codex-Verdikt ermitteln
     runs-on: ubuntu-latest
 
-    # Auf Issues, die keine PRs sind, gibt es nichts zu prüfen.
+    # Auf Issues, die keine PRs sind, gibt es nichts zu prüfen. Und die
+    # beiden PR-Trigger teilen sich die Arbeit strikt nach Herkunft, damit
+    # kein PR doppelt bewertet wird: `pull_request` für dieses Repo,
+    # `pull_request_target` für Forks.
     #
-    # `pull_request` läuft vorerst nur für PRs AUS DIESEM REPO. Bei einem PR
-    # aus einem Fork gibt GitHub diesem Lauf einen Nur-Lese-Token, und der
-    # `permissions:`-Block oben kann das nicht aufheben; der POST auf die
-    # Checks-API endete dort mit 403. Der Fork-Fall bekommt deshalb einen
-    # eigenen Pfad — der folgt im nächsten Commit.
+    # `issue_comment` und `pull_request_review` tragen bei jeder Herkunft
+    # einen vollen Token und brauchen die Unterscheidung hier nicht — wohl
+    # aber beim Checkout: `pull_request_review` läuft NICHT im Basis-Kontext,
+    # sondern am PR-Merge-Ref. Das steht dort.
     if: >-
       (github.event_name == 'issue_comment' &&
        github.event.issue.pull_request != null) ||
       github.event_name == 'pull_request_review' ||
       (github.event_name == 'pull_request' &&
-       github.event.pull_request.head.repo.full_name == github.repository)
+       github.event.pull_request.head.repo.full_name == github.repository) ||
+      (github.event_name == 'pull_request_target' &&
+       github.event.pull_request.head.repo.full_name != github.repository)
 
     env:
       CHECK_NAME: Codex-Verdikt
