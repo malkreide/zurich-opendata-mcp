@@ -153,6 +153,27 @@ def test_kontingent_ist_kein_verdikt_und_nennt_den_weg() -> None:
     assert "@codex review" in verdict.reason
 
 
+def test_kontingent_auch_ohne_den_zusatz_fuer_code_reviews() -> None:
+    """Zweite Wortlaut-Variante, am 20.9.2026 auf PR #120 mitgeschrieben.
+
+    Bis dahin war nur «…usage limits **for code reviews**» belegt, und nur
+    dieser Wortlaut stand in `CLAUDE.md`. Um 16:54:52 UTC kam auf demselben
+    PR die kuerzere Fassung ohne den Zusatz — 230 Sekunden vor der langen.
+    Zwei Texte, dieselbe Bedeutung.
+
+    Das Muster des Skripts greift fuer beide, weil es auf dem gemeinsamen
+    Teil sitzt. Das war Glueck und keine Absicht: Waere es auf den vollen
+    Satz gepinnt, haette die kurze Fassung als UNBEKANNTER Text gegolten und
+    der Gate haette sie nur als «sonst noch gesehen» gefuehrt, statt sie als
+    Ausfall zu benennen. Diese Fixture haelt die Variante fest, damit ein
+    spaeteres Nachschaerfen des Musters sie nicht verliert.
+    """
+    verdict = gate.evaluate(event("kontingent_allgemein.json"))
+    assert not verdict.ok
+    assert "Kontingent" in verdict.reason
+    assert "@codex review" in verdict.reason
+
+
 def test_fehlende_environment_ist_kein_verdikt_und_nennt_den_weg() -> None:
     verdict = gate.evaluate(event("environment.json"))
     assert not verdict.ok

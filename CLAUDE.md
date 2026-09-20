@@ -311,8 +311,26 @@ ohne dass jemand hineingesehen hat, und am 22.8. noch einmal 43.
   Infokasten, den Codex unter jeden Review setzt, behauptet weiterhin eine
   Reaktion («otherwise it will react with 👍») — am 23.8. kam in sechs Repos
   die Meldung und in keinem die Reaktion. Der Kasten ist keine Quelle.
-- **Der PR ist ein Draft** — darauf läuft Codex nicht an.
-- **Das Kontingent ist weg** — dann schreibt er die Meldung oben.
+- **Der PR ist ein Draft** — darauf läuft Codex nicht an. Das heisst aber
+  nicht, dass ein Draft gar keinen Codex-Kommentar trägt: Am 20.9.2026 um
+  16:54:52 UTC stand auf dem noch als Draft geführten PR #120 eine
+  Kontingent-Meldung, knapp vier Minuten vor «ready». Was sie ausgelöst hat,
+  ist ungeklärt — dreizehn Sekunden davor lag ein eigener Kommentar, davor
+  ein Push; belegt ist keines von beidem. Für den Review bleibt die Aussage
+  richtig, für den Kommentarzähler nicht.
+- **Das Kontingent ist weg** — dann schreibt er die Meldung oben. Und zwar in
+  **zwei** Wortlauten, beide am 20.9.2026 auf PR #120 mitgeschrieben, 230
+  Sekunden auseinander:
+
+  ```
+  16:54:52  You have reached your Codex usage limits.
+  16:58:42  You have reached your Codex usage limits for code reviews.
+  ```
+
+  Wer auf den vollen Satz prüft, erkennt die kürzere Fassung nicht. Das Muster
+  in `check_codex_verdict.py` sitzt auf dem gemeinsamen Teil und greift für
+  beide — das war Glück, nicht Absicht, und ist seit dem 20.9. durch
+  `tests/fixtures/codex/kontingent_allgemein.json` abgesichert.
 - **Für das Repo fehlt eine Environment** — dann schreibt er:
 
   ```
@@ -447,11 +465,24 @@ nennt Startzeit, Abschlusszeit und den geprüften Commit. Drei Fälle vom
 | #115 | 18:26:16 | 18:33:27 | 18:30:55 | 18:33:26 | **ja**, Commit genannt |
 | #116 | 17:11:25 | 17:11:29 | 17:11:31 | 17:13:42 | nein |
 | #117 | 19:21:27 | 19:21:31 | 19:21:33 | 19:24:10 | nein |
+| #120 | ~16:58:38 | 16:58:43 | — | — | nein, Kontingent weg |
 
 Bei #116 und #117 begann der Review **nach** dem Merge, um zwei Sekunden, und
 lief danach noch gut zwei Minuten auf einem geschlossenen PR. Bei #115 lag
 zwischen Befundlos-Meldung und Merge **eine** Sekunde — es ging gut aus, aber
 aus Zufall, nicht aus Disziplin.
+
+**#120 ist der teuerste Eintrag dieser Tabelle, weil dort alles vorhanden
+war.** Es ist der PR, der den Gate einführte; der Check-Run lief, meldete
+korrekt «Kein Verdikt fuer diesen Head» — und der Merge fünf Sekunden nach
+«ready» ging trotzdem durch, weil `Codex-Verdikt` zu diesem Zeitpunkt noch
+nicht als Required Status Check im Ruleset stand. Genau die Lücke, die zwei
+Absätze weiter oben benannt ist, gemessen an dem Vorgang, der sie schliessen
+sollte.
+
+Das ist die Pointe des ganzen Abschnitts: Ein Mechanismus, der nur anzeigt,
+ändert nichts am Ablauf. Der Haken im Ruleset ist nicht die Kür nach der
+Arbeit, er **ist** die Arbeit.
 
 Daraus der Richtwert: der Review braucht **zwei bis drei Minuten** ab «ready».
 Und die Erklärung dafür, warum #116 und #117 in genau dem nicht auflösbaren
@@ -490,19 +521,38 @@ einem Ruleset hält er einen Merge auf, und das ist eine Repo-Einstellung, die
 kein PR setzen kann. Wer die Dateien kopiert und den Haken vergisst, hat eine
 hübschere Anzeige und dieselbe Lücke.
 
-**Ein `pull_request_target`-Zweig lässt sich auf dem PR, der ihn einführt,
-nicht prüfen.** Dieser Trigger benutzt die Workflow-Datei des BASIS-Branch;
-solange die Datei dort nicht liegt, entsteht gar kein Lauf — kein
-übersprungener, keiner. Am 20.9.2026 auf PR #120 gemessen: für den Head
-`475fbce9` genau ein Lauf, Ereignis `pull_request`, und über zehn Läufe
-desselben Branch hinweg nie ein `pull_request_target`. Dasselbe gilt fürs
-Ändern eines bestehenden solchen Zweigs: Geprüft wird die alte Fassung.
+**Ein neuer Workflow ist nicht auf jedem seiner Trigger prüfbar — und welche
+stillbleiben, ist nicht zu raten.** `pull_request_target` und `issue_comment`
+benutzen nicht die Datei des PR, sondern die des Basis- bzw. Default-Branch.
+Liegt sie dort noch nicht, entsteht **gar kein Lauf** — kein übersprungener,
+keiner. Am 20.9.2026 über die gesamte Laufhistorie von `codex-gate.yml`
+gezählt, als die Datei nur auf dem Branch von PR #120 lag:
 
-Das ist dieselbe Klasse wie «Ein Release-Lauf benutzt die Workflow-Datei AM
-TAG» weiter unten, nur unauffälliger, weil hier nichts scheitert. Ein grüner
-PR sagt über diesen Zweig nichts; die erste echte Prüfung ist der erste
-Fork- oder Dependabot-PR nach dem Merge. Wer das nicht weiss, hält die
-Abwesenheit eines Laufs für «der Filter hat gegriffen».
+| Trigger | Läufe |
+|---|---|
+| `pull_request` | 17 |
+| `pull_request_review` | 17 |
+| `pull_request_target` | **0** |
+| `issue_comment` | **0** |
+
+Die beiden oberen sind die Positivkontrolle: Dieselbe Datei erzeugte 34 Läufe,
+sie ist also gültig und registriert; ein Fehlen ist damit eine Messung und
+nicht bloss eine Abwesenheit. `pull_request_review` liest die Fassung des PR —
+das ist der Punkt, an dem eine pauschale Regel «alles ausser `pull_request`
+nimmt den Default-Branch» falsch wäre. Auf PR #120 fielen Basis- und
+Default-Branch zusammen; welcher der beiden für `issue_comment` gilt, trennt
+diese Messung nicht.
+
+Der Anlass war ein Ausbleiben: Um 16:54:52 UTC kam die Kontingent-Meldung von
+Codex als Issue-Kommentar, und drei Minuten später gab es dazu keinen Lauf.
+
+Dasselbe gilt fürs Ändern eines bestehenden solchen Zweigs: Geprüft wird die
+alte Fassung. Das ist die Klasse «Ein Release-Lauf benutzt die Workflow-Datei
+AM TAG» weiter unten, nur unauffälliger, weil hier nichts scheitert. Wer das
+nicht weiss, hält die Abwesenheit eines Laufs für «der Filter hat gegriffen» —
+und genau diesen Fehlschluss habe ich hier zuerst gemacht, in der anderen
+Richtung: Ich hielt die Sache für auf `pull_request_target` beschränkt und
+zählte `issue_comment` nicht dazu.
 
 Das Kontingent hängt am Konto, nicht am Repo, und Code-Reviews haben einen
 eigenen Topf — nur GitHub-getriggerte Reviews zählen hinein. ChatGPT-Pläne
@@ -677,12 +727,30 @@ Fünf Drift-Wachen in `tests/test_codex_gate.py` halten diese Eigenschaften
 fest; sie lesen die Datei als Text, weil pyyaml keine Abhängigkeit dieses
 Projekts ist.
 
-**Zwei der fünf Weichen sind live noch ungeprüft**, und das liegt an der
-Mechanik von `pull_request_target` (Teil 1): Solange `codex-gate.yml` nicht
-auf dem Basis-Branch liegt, entsteht für diesen Trigger kein Lauf. Der Fork-
-und der Dependabot-Pfad zeigen sich deshalb erstmals beim ersten solchen PR
-nach dem Merge. Gedeckt sind sie bis dahin nur durch die Drift-Wachen, und
-die prüfen den Text der Datei, nicht das Verhalten von GitHub.
+**Was gemessen ist und was nicht.** Seit dem Merge von PR #120 liegt die
+Datei auf `main`, alle vier Trigger sind also scharf. Auf dem PR selbst
+konnten sie es nicht sein — `pull_request_target` und `issue_comment` lesen
+die Fassung des Basis- bzw. Default-Branch (Teil 1), dort lag nichts.
+
+Gemessen ist damit bisher nur der `pull_request`-Pfad: Head `475fbce9`,
+20.9.2026, Check-Run `Codex-Verdikt` auf `failure` («Kein Verdikt fuer diesen
+Head») bei gleichzeitig grünem Job `Codex-Verdikt ermitteln` — die
+Entkopplung, die auf PR #119 gefehlt hatte. Ein Check-Run, nicht zwei:
+`CHECK_ID 106112983618` angelegt und derselbe abgeschlossen, 16:51:57 bis
+16:51:59.
+
+Ungeprüft bleiben drei Wege, jeder bis zu seinem ersten echten Anlass:
+
+| Weg | Hängt an | Zeigt sich bei |
+|---|---|---|
+| Fork-PR | `pull_request_target` | erstem PR aus einem Fork |
+| Dependabot | `pull_request_target` | nächstem wöchentlichen Update-PR |
+| Grün nach befundloser Meldung | `issue_comment` | erstem Codex-Kommentar auf `main`-Basis |
+
+Gedeckt sind sie bis dahin nur durch die Drift-Wachen und die Fixtures — also
+durch den Text der Datei und aufgezeichnete Antworten, nicht durch das
+Verhalten von GitHub. Beim ersten Dependabot-PR lohnt deshalb ein Blick, ob
+überhaupt ein `pull_request_target`-Lauf entsteht.
 
 Der Rest ist gemessen. Auf PR #120, Head `475fbce9`, 20.9.2026: Check-Run
 `Codex-Verdikt` auf `failure` («Kein Verdikt fuer diesen Head»), Job
@@ -690,9 +758,14 @@ Der Rest ist gemessen. Auf PR #120, Head `475fbce9`, 20.9.2026: Check-Run
 gefehlt hatte. Ein Check-Run, nicht zwei: `CHECK_ID 106112983618` wurde
 angelegt und derselbe abgeschlossen, 16:51:57 bis 16:51:59.
 
-**Noch nicht scharf.** Der Check hält erst auf, wenn er in einem Ruleset als
-Required Status Check eingetragen ist. Bis dahin ist er Anzeige, nicht Gate —
-und das ist eine Repo-Einstellung, die kein PR setzen kann.
+**Noch nicht scharf, Stand 20.9.2026.** Der Check hält erst auf, wenn er in
+einem Ruleset als Required Status Check eingetragen ist. Das ist eine
+Repo-Einstellung, die kein PR setzen kann, und solange sie fehlt, ist der
+Check eine zutreffende Anzeige und sonst nichts.
+
+Wie wenig das leistet, steht in der Merge-Tabelle in Teil 1: PR #120 wurde
+fünf Sekunden nach «ready» gemergt, während der Check korrekt rot meldete.
+Der Gate war vollständig, geprüft und wirkungslos.
 
 **Live-Tests: geplanter Workflow vorhanden.** `.github/workflows/live-tests.yml`,
 `cron: "43 4 * * 1"` (wöchentlich Mo, 04:43 UTC). `ci.yml` hat zusätzlich einen
