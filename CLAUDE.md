@@ -484,6 +484,34 @@ Das ist die Pointe des ganzen Abschnitts: Ein Mechanismus, der nur anzeigt,
 ändert nichts am Ablauf. Der Haken im Ruleset ist nicht die Kür nach der
 Arbeit, er **ist** die Arbeit.
 
+**Und der Merge in Sekunden frisst auch Commits.** Zweimal hintereinander, am
+20.9.2026, ging ein Push verloren, weil er wenige Sekunden nach dem Merge
+ankam:
+
+| PR | gemergt | gemergter Head | Push danach | Inhalt |
+|---|---|---|---|---|
+| #120 | 16:58:43 | `60c7e25` | `8229ded` | verloren |
+| #121 | ~17:07:29 | `2e61bb2` | `5fb26e5` | verloren |
+
+GitHub mergt den Head, den es hat. Ein Push, der danach eintrifft, landet auf
+dem Branch und nirgends sonst — es gibt keine Warnung, der PR zeigt ihn nicht
+mehr an, und der Branch-Ref sieht gesund aus.
+
+**Der naheliegende Test taugt nichts.** Nach einem Squash-Merge ist *kein*
+Branch-Commit ein Vorfahr von `main`; `git merge-base --is-ancestor` meldet
+für den gemergten Head dasselbe wie für den verlorenen. Beide Male «nein»,
+und daraus lässt sich nichts ablesen. Verglichen werden muss der **Inhalt**:
+
+```bash
+git diff --stat <letzter-eigener-commit> origin/main -- <datei>
+```
+
+Zwei Handgriffe daraus. Erstens: Nach dem Merge eines eigenen PR den Inhalt
+gegenprüfen, nicht die Ahnenschaft. Zweitens, wirksamer: In einen PR, der
+jederzeit gemergt werden kann, keine Nachträge mehr pushen — sie gehören vor
+das Öffnen. Wer nachschiebt, wettet darauf, dass niemand in derselben Minute
+auf «Merge» drückt, und diese Wette ging hier zweimal verloren.
+
 Daraus der Richtwert: der Review braucht **zwei bis drei Minuten** ab «ready».
 Und die Erklärung dafür, warum #116 und #117 in genau dem nicht auflösbaren
 Zustand landeten, der weiter oben beschrieben ist: ein Review, der auf einem schon
