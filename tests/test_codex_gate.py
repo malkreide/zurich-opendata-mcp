@@ -404,6 +404,30 @@ def test_der_check_wird_vor_dem_fehlbaren_teil_auf_laufend_gesetzt() -> None:
     )
 
 
+def test_der_job_status_haengt_nicht_am_verdikt() -> None:
+    """Fuenfte Drift-Wache: gegen Rauschen, das wie ein Defekt aussieht.
+
+    Das Gate ist der Check-Run, nie der Job-Status. Liess man den Job rot
+    werden, sobald kein Verdikt vorliegt, stand auf PR #119 ein gruener
+    Required Check neben einem roten Job — der PR sah rot aus, obwohl das
+    Gate tat, was es soll. Rauschen ist hier nicht harmlos: Es gewoehnt Leute
+    daran, einen roten Eintrag auf diesem PR zu uebergehen.
+
+    Ebenso darf die Gruppe nicht abbrechen: Ein `cancelled`-Eintrag sieht
+    genauso rot aus, und seit der Check vorab auf `in_progress` steht, kann
+    ein Abbruch ihn unabgeschlossen zuruecklassen.
+    """
+    text = (ROOT / ".github" / "workflows" / "codex-gate.yml").read_text(encoding="utf-8")
+
+    # Als ALLEINSTEHENDE Anweisung, nicht als Teilstring: derselbe Ausdruck
+    # steht legitim in der `TITLE=`-Zeile und in einem Kommentar.
+    alleinstehend = [z for z in text.splitlines() if z.strip() == '[ "$CONCLUSION" = success ]']
+    assert not alleinstehend, "der Job faellt wieder mit dem Verdikt — das Gate ist der Check-Run"
+    assert "cancel-in-progress: false" in text, (
+        "abgebrochene Laeufe hinterlassen rote Eintraege und offene Check-Runs"
+    )
+
+
 def test_das_cli_endet_mit_0_bei_verdikt_und_1_ohne(capsys, tmp_path) -> None:
     ok = tmp_path / "ok.json"
     ok.write_text((FIXTURES / "pr115_befundlos.json").read_text(encoding="utf-8"), "utf-8")

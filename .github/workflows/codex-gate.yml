@@ -82,7 +82,22 @@ jobs:
     # handelt. Befund eines Codex-Reviews auf PR #119.
     concurrency:
       group: codex-verdikt-${{ github.event.pull_request.number || github.event.issue.number }}
-      cancel-in-progress: true
+      # NICHT abbrechen, sondern anstellen. Zwei Gruende, beide gemessen:
+      #
+      # Ein abgebrochener Lauf hinterlaesst einen `cancelled`-Eintrag in der
+      # Check-Liste des PR — auf PR #119 am 20.9.2026 genau das, was den PR
+      # rot aussehen liess, obwohl der Required Check gruen war.
+      #
+      # Und seit der Check vor dem fehlbaren Teil auf `in_progress` gesetzt
+      # wird, kann ein Abbruch mitten im Schritt einen Run in `in_progress`
+      # zuruecklassen, der nie abgeschlossen wird. (Beim beobachteten Fall
+      # kam der Abbruch erst nach dem PATCH — Glueck, keine Eigenschaft.)
+      #
+      # Ohne Abbruch serialisiert die Gruppe die Laeufe statt sie zu toeten:
+      # Der aeltere laeuft fertig, der juengere danach, und weil der
+      # juengere seinen Check-Run spaeter anlegt, ist sein Urteil das
+      # massgebende. Das ist strenger geordnet als vorher, nicht lockerer.
+      cancel-in-progress: false
     # Auf Issues, die keine PRs sind, gibt es nichts zu prüfen. Und die
     # beiden PR-Trigger teilen sich die Arbeit strikt nach Herkunft, damit
     # kein PR doppelt bewertet wird: `pull_request` für dieses Repo,
@@ -308,4 +323,22 @@ jobs:
             exit 1
           fi
 
-          [ "$CONCLUSION" = success ]
+          # Hier endete der Step frueher mit `[ "$CONCLUSION" = success ]`,
+          # der Job wurde also rot, sobald kein Verdikt vorlag. Das war
+          # falsch — und zwar sichtbar: Am 20.9.2026 stand auf PR #119 der
+          # Required Check `Codex-Verdikt` auf gruen, waehrend daneben
+          # `Codex-Verdikt ermitteln` rot bzw. abgebrochen hing. Der PR sah
+          # rot aus, obwohl das Gate genau das tat, was es soll.
+          #
+          # Das Gate ist der CHECK-RUN, nie der Job-Status; das steht schon
+          # im Kopf dieser Datei. Ein roter Job neben einem gruenen Check
+          # traegt keine Information, nur Rauschen — und Rauschen ist bei
+          # einem Gate nicht harmlos: Es gewoehnt Leute daran, einen roten
+          # Eintrag auf diesem PR zu uebergehen. Genau die Erosion, gegen
+          # die der Gate gebaut ist.
+          #
+          # Der Job meldet deshalb ab jetzt nur noch, ob die MECHANIK lief:
+          # rot, wenn das Skript ausfiel oder der Check nicht veroeffentlicht
+          # werden konnte (beides oben), sonst gruen. Das Urteil selbst
+          # steht im Check-Run.
+          echo "Urteil veroeffentlicht ($CONCLUSION): $OUT"
