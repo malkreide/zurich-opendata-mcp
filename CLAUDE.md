@@ -490,6 +490,20 @@ einem Ruleset hält er einen Merge auf, und das ist eine Repo-Einstellung, die
 kein PR setzen kann. Wer die Dateien kopiert und den Haken vergisst, hat eine
 hübschere Anzeige und dieselbe Lücke.
 
+**Ein `pull_request_target`-Zweig lässt sich auf dem PR, der ihn einführt,
+nicht prüfen.** Dieser Trigger benutzt die Workflow-Datei des BASIS-Branch;
+solange die Datei dort nicht liegt, entsteht gar kein Lauf — kein
+übersprungener, keiner. Am 20.9.2026 auf PR #120 gemessen: für den Head
+`475fbce9` genau ein Lauf, Ereignis `pull_request`, und über zehn Läufe
+desselben Branch hinweg nie ein `pull_request_target`. Dasselbe gilt fürs
+Ändern eines bestehenden solchen Zweigs: Geprüft wird die alte Fassung.
+
+Das ist dieselbe Klasse wie «Ein Release-Lauf benutzt die Workflow-Datei AM
+TAG» weiter unten, nur unauffälliger, weil hier nichts scheitert. Ein grüner
+PR sagt über diesen Zweig nichts; die erste echte Prüfung ist der erste
+Fork- oder Dependabot-PR nach dem Merge. Wer das nicht weiss, hält die
+Abwesenheit eines Laufs für «der Filter hat gegriffen».
+
 Das Kontingent hängt am Konto, nicht am Repo, und Code-Reviews haben einen
 eigenen Topf — nur GitHub-getriggerte Reviews zählen hinein. ChatGPT-Pläne
 fahren ein rollendes Fünf-Stunden-Fenster plus Wochenlimits; welches greift,
@@ -662,6 +676,19 @@ unbehandelte Ausnahme enden beide mit 1.
 Fünf Drift-Wachen in `tests/test_codex_gate.py` halten diese Eigenschaften
 fest; sie lesen die Datei als Text, weil pyyaml keine Abhängigkeit dieses
 Projekts ist.
+
+**Zwei der fünf Weichen sind live noch ungeprüft**, und das liegt an der
+Mechanik von `pull_request_target` (Teil 1): Solange `codex-gate.yml` nicht
+auf dem Basis-Branch liegt, entsteht für diesen Trigger kein Lauf. Der Fork-
+und der Dependabot-Pfad zeigen sich deshalb erstmals beim ersten solchen PR
+nach dem Merge. Gedeckt sind sie bis dahin nur durch die Drift-Wachen, und
+die prüfen den Text der Datei, nicht das Verhalten von GitHub.
+
+Der Rest ist gemessen. Auf PR #120, Head `475fbce9`, 20.9.2026: Check-Run
+`Codex-Verdikt` auf `failure` («Kein Verdikt fuer diesen Head»), Job
+`Codex-Verdikt ermitteln` auf `success` — die Entkopplung, die auf PR #119
+gefehlt hatte. Ein Check-Run, nicht zwei: `CHECK_ID 106112983618` wurde
+angelegt und derselbe abgeschlossen, 16:51:57 bis 16:51:59.
 
 **Noch nicht scharf.** Der Check hält erst auf, wenn er in einem Ruleset als
 Required Status Check eingetragen ist. Bis dahin ist er Anzeige, nicht Gate —
