@@ -1,0 +1,229 @@
+# Macht den Codex-Review zu einem Check statt zu einer Checkbox.
+#
+# Warum: Zwischen dem 18. und 20.9.2026 wurde die Zeile «Codex-Review
+# beantwortet» in diesem Repo viermal in Folge formal gesetzt und faktisch
+# leer gelassen; dreimal begann der Review erst NACH dem Merge. Der Ablauf
+# lässt vier Sekunden zwischen «ready for review» und Merge zu, der Review
+# braucht zwei bis drei Minuten. Ein Text, den man zum Merge-Zeitpunkt lesen
+# müsste, wird zum Merge-Zeitpunkt nicht gelesen.
+#
+# Dieser Workflow meldet einen Check-Run mit festem Namen (siehe CHECK_NAME).
+# Erst wenn der als Required Status Check in einem Ruleset eingetragen ist,
+# blockiert er tatsächlich — das ist eine Repo-Einstellung und kann aus einem
+# PR heraus nicht gesetzt werden. Ohne diesen Schritt ist der Workflow nur
+# eine sichtbare Anzeige.
+#
+# Der Check wird über die Checks-API gemeldet und nicht über den Job-Status:
+# `issue_comment` und `pull_request_review` laufen nicht am Head-SHA des PR,
+# ihr Job-Status landet also nirgends, wo ein Ruleset ihn sieht. Über die API
+# hängt jede Auslösung denselben Namen an denselben SHA.
+
+name: Codex-Verdikt
+
+on:
+  # Erster Anlauf: sobald der PR reviewfähig ist. Ergebnis hier ist fast immer
+  # rot — das ist der Zweck, nicht ein Fehler.
+  pull_request:
+    types: [opened, ready_for_review, reopened, synchronize, labeled, unlabeled]
+  # Die befundlose Meldung und die beiden Ausfallmeldungen sind gewöhnliche
+  # Issue-Kommentare. `edited` ist mitgenommen, weil Codex seine
+  # Summary-Tabelle in place editiert; ob ein Bot-Selbst-Edit dieses Ereignis
+  # auslöst, sagt die GitHub-Dokumentation nicht, und der Entwurf hängt
+  # deshalb nicht daran: Verdikte kommen als NEUER Kommentar oder als
+  # Review-Objekt, beide lösen sicher aus.
+  issue_comment:
+    types: [created, edited]
+  # Ein Befund ist ein Review-Objekt, kein Kommentar.
+  pull_request_review:
+    types: [submitted, edited]
+
+permissions:
+  contents: read
+  pull-requests: read
+  issues: read
+  checks: write
+
+jobs:
+  verdikt:
+    name: Codex-Verdikt ermitteln
+    runs-on: ubuntu-latest
+
+    # Auf Issues, die keine PRs sind, gibt es nichts zu prüfen.
+    #
+    # `pull_request` läuft vorerst nur für PRs AUS DIESEM REPO. Bei einem PR
+    # aus einem Fork gibt GitHub diesem Lauf einen Nur-Lese-Token, und der
+    # `permissions:`-Block oben kann das nicht aufheben; der POST auf die
+    # Checks-API endete dort mit 403. Der Fork-Fall bekommt deshalb einen
+    # eigenen Pfad — der folgt im nächsten Commit.
+    if: >-
+      (github.event_name == 'issue_comment' &&
+       github.event.issue.pull_request != null) ||
+      github.event_name == 'pull_request_review' ||
+      (github.event_name == 'pull_request' &&
+       github.event.pull_request.head.repo.full_name == github.repository)
+
+    env:
+      CHECK_NAME: Codex-Verdikt
+      GH_TOKEN: ${{ github.token }}
+      PR: ${{ github.event.pull_request.number || github.event.issue.number }}
+      REPO: ${{ github.repository }}
+
+    steps:
+      # Den auszucheckenden Stand AUSDRÜCKLICH festlegen. Ohne `ref` richtet
+      # sich der Checkout nach dem Ereignis — am 20.9.2026 an Lauf
+      # 35514764426 im Log abgelesen:
+      #
+      #     git checkout --force refs/remotes/pull/119/merge
+      #     HEAD is now at 18595a4 Merge 601d2214… into a8023ab2…
+      #
+      # Bei `pull_request_review` ist die Vorgabe also der PR-MERGE-REF und
+      # enthält bei einem Fork-PR Fork-Code — während der Token dieses
+      # Ereignisses `checks: write` trägt, denn nur `pull_request` wird bei
+      # Forks auf Nur-Lesen heruntergestuft. Wer dort ungefiltert auscheckt,
+      # führt `check_codex_verdict.py` in der Fassung des Forks aus und lässt
+      # ihn sein eigenes grünes `Codex-Verdikt` schreiben. Der Gate wäre
+      # damit von genau dem umgehbar, den er prüfen soll.
+      #
+      # Entschieden wird daran, ob der HEAD vertrauenswürdig ist — nicht
+      # daran, welcher Trigger gerade zuständig ist. Vertrauenswürdig heisst
+      # hier: aus diesem Repo; wer so einen Branch pusht, hat Schreibrecht,
+      # und der Gate prüft sich damit auf seinem eigenen PR. Sonst die Basis.
+      # Bei `issue_comment` gibt es kein `pull_request`-Objekt; dort greift
+      # `github.ref`, das bereits auf den Default-Branch zeigt.
+      #
+      # Hier stand im Entwurf kurzzeitig `github.event_name == 'pull_request'`
+      # — eine scheinbare Vereinfachung, weil der `if` oben ja schon filtert.
+      # Sie war falsch und hat den Gate sofort lahmgelegt: Ein
+      # `pull_request_review` auf einem PR AUS DIESEM REPO landete damit auf
+      # der Basis, und dort liegt `check_codex_verdict.py` erst nach dem
+      # Merge. Gemessen an Lauf 35515251744:
+      #
+      #     python: can't open file '…/scripts/check_codex_verdict.py'
+      #
+      # Welcher Trigger zuständig ist und ob der Head vertrauenswürdig ist,
+      # sind zwei verschiedene Fragen. Nur die zweite gehört hierher.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: >-
+            ${{ (github.event.pull_request.head.repo.full_name == github.repository
+                 && github.event.pull_request.head.sha)
+                || github.event.pull_request.base.sha
+                || github.ref }}
+          # Nichts wird gepusht, und ein privilegierter Lauf soll den Token
+          # nicht in der git-Konfiguration liegen lassen.
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+
+      - name: PR-Zustand einsammeln
+        run: |
+          set -euo pipefail
+          # Head-SHA und Labels aus dem PR selbst. Nicht aus dem Ereignis:
+          # bei `issue_comment` steht der Head dort gar nicht drin, und bei
+          # den übrigen wäre er womöglich schon überholt.
+          gh api "repos/$REPO/pulls/$PR" > pr.json
+          gh api --paginate "repos/$REPO/issues/$PR/comments" > comments.json
+          gh api --paginate "repos/$REPO/pulls/$PR/reviews"   > reviews.json
+
+          python - <<'PY' > event.json
+          import json, pathlib
+
+          def read_all(name):
+              """Alle JSON-Werte der Datei, flach.
+
+              `gh api --paginate` haengt bei mehreren Seiten MEHRERE Arrays
+              aneinander — das ist kein gueltiges JSON-Dokument, und ein
+              blosses `json.loads` wirft darauf. Ab der 31. Anmerkung (die
+              Seitengroesse ist 30) waere der Gate damit still kaputt. Ein
+              `raw_decode`-Lauf frisst beide Formen, die eine Seite wie die
+              vielen, und bleibt unabhaengig von der gh-Version.
+              """
+              text = pathlib.Path(name).read_text(encoding="utf-8").strip()
+              decoder, out, i = json.JSONDecoder(), [], 0
+              while i < len(text):
+                  value, end = decoder.raw_decode(text, i)
+                  out.extend(value if isinstance(value, list) else [value])
+                  i = end
+                  while i < len(text) and text[i].isspace():
+                      i += 1
+              return out
+
+          pr = json.loads(pathlib.Path("pr.json").read_text(encoding="utf-8"))
+          print(json.dumps({
+              "head_sha": pr["head"]["sha"],
+              "labels": [label["name"] for label in pr.get("labels") or []],
+              "comments": read_all("comments.json"),
+              "reviews": read_all("reviews.json"),
+          }))
+          PY
+
+          HEAD_SHA="$(python -c "import json;print(json.load(open('event.json'))['head_sha'])")"
+          echo "HEAD_SHA=$HEAD_SHA" >> "$GITHUB_ENV"
+          echo "head: $HEAD_SHA"
+
+      - name: Urteilen und als Check melden
+        run: |
+          set -uo pipefail
+          # stderr NICHT nach stdout mischen: Sonst ist ein Absturz von einem
+          # Urteil nicht mehr zu unterscheiden.
+          if OUT="$(python scripts/check_codex_verdict.py --event event.json 2>err.txt)"; then
+            STATUS=0
+          else
+            STATUS=$?
+          fi
+          ERR="$(cat err.txt || true)"
+
+          # Der Exit-Code allein reicht zum Unterscheiden NICHT: «kein
+          # Verdikt» endet mit 1, eine unbehandelte Ausnahme in Python
+          # ebenfalls. Entschieden wird deshalb am Praefix, das das Skript
+          # selbst schreibt — alles andere ist ein Ausfall der Mechanik.
+          BROKEN=0
+          case "$OUT" in
+            "OK: "*)        CONCLUSION=success ;;
+            "BLOCKIERT: "*) CONCLUSION=failure ;;
+            *)              CONCLUSION=failure; BROKEN=1 ;;
+          esac
+
+          if [ "$BROKEN" = 1 ]; then
+            # Der Gate faellt geschlossen aus — aber die Ursache liegt im
+            # Workflow und nicht im Verdikt, und das muss im Check stehen.
+            # Faengt man hier nur eine LEERE Ausgabe auf, geht ein Absturz
+            # mit stderr-Ausgabe als gewoehnliches «kein Verdikt» durch.
+            OUT="BLOCKIERT: check_codex_verdict.py lieferte kein verwertbares Urteil (Exit $STATUS). Das ist ein Ausfall der Mechanik, keine Aussage ueber den Review. stderr: ${ERR:-(leer)}"
+          fi
+          echo "$OUT"
+
+          TITLE="$( [ "$CONCLUSION" = success ] && echo 'Verdikt liegt vor' || echo 'Kein Verdikt fuer diesen Head' )"
+
+          # Der POST wird AUSDRUECKLICH geprueft. Gemessen traegt dieser Step
+          # `bash -e` (im Log: `shell: /usr/bin/bash -e {0}`), ein
+          # fehlschlagendes `gh` braeche ihn also ohnehin ab — aber diese
+          # Eigenschaft haengt dann an einem impliziten Flag, das ein
+          # `set +e` oder ein `shell:`-Override still entfernt. Bei einem
+          # Gate ist «faellt geschlossen aus» zu wichtig, um implizit zu
+          # bleiben.
+          if ! jq -n --arg n "$CHECK_NAME" --arg s "$HEAD_SHA" \
+               --arg c "$CONCLUSION" --arg t "$TITLE" --arg o "$OUT" \
+               '{name:$n, head_sha:$s, status:"completed", conclusion:$c,
+                 output:{title:$t, summary:$o}}' \
+               | gh api --method POST "repos/$REPO/check-runs" --input -
+          then
+            echo "::error::Check-Run konnte nicht veroeffentlicht werden — das Urteil lautete: $OUT"
+            exit 1
+          fi
+
+          # Der Job faellt NICHT mit dem Verdikt. Das Gate ist der Check-Run;
+          # ein roter Job neben einem gruenen Check traegt keine Information,
+          # nur Rauschen — und Rauschen ist bei einem Gate nicht harmlos: Es
+          # gewoehnt Leute daran, einen roten Eintrag auf diesem PR zu
+          # uebergehen. Genau die Erosion, gegen die der Gate gebaut ist.
+          #
+          # Rot wird der Job nur, wenn die MECHANIK ausfaellt.
+          if [ "$BROKEN" = 1 ]; then
+            echo "::error::check_codex_verdict.py lieferte kein verwertbares Urteil (Exit $STATUS)."
+            exit 1
+          fi
+          echo "Urteil veroeffentlicht ($CONCLUSION)."
