@@ -69,7 +69,20 @@ jobs:
     # Auf Issues, die keine PRs sind, gibt es nichts zu prüfen. Und die
     # beiden PR-Trigger teilen sich die Arbeit strikt nach Herkunft, damit
     # kein PR doppelt bewertet wird: `pull_request` für dieses Repo,
-    # `pull_request_target` für Forks.
+    # `pull_request_target` für Forks UND für Dependabot.
+    #
+    # Dependabot ist der unscheinbare Fall: Sein Branch liegt in diesem Repo,
+    # die Herkunftsprüfung allein schickt ihn also auf den `pull_request`-Pfad
+    # — aber GitHub behandelt von Dependabot ausgelöste Ereignisse wie
+    # Fork-Ereignisse und gibt einen Nur-Lese-Token. Der POST endet mit 403,
+    # und unter einem Required Check wäre jeder wöchentliche Dependabot-PR
+    # dauerhaft blockiert, Notausgang eingeschlossen. `.github/dependabot.yml`
+    # deklariert zwei gruppierte Ökosysteme (github-actions und pip), also bis
+    # zu zwei solche PRs pro Woche.
+    #
+    # Geprüft wird der PR-AUTOR und nicht `github.actor`: Wer das Label setzt,
+    # wechselt, die Herkunft des PR nicht. So bleibt die Zuordnung stabil, und
+    # es läuft in jedem Fall genau einer der beiden Pfade.
     #
     # `issue_comment` und `pull_request_review` tragen bei jeder Herkunft
     # einen vollen Token und brauchen die Unterscheidung hier nicht — wohl
@@ -80,9 +93,11 @@ jobs:
        github.event.issue.pull_request != null) ||
       github.event_name == 'pull_request_review' ||
       (github.event_name == 'pull_request' &&
-       github.event.pull_request.head.repo.full_name == github.repository) ||
+       github.event.pull_request.head.repo.full_name == github.repository &&
+       github.event.pull_request.user.login != 'dependabot[bot]') ||
       (github.event_name == 'pull_request_target' &&
-       github.event.pull_request.head.repo.full_name != github.repository)
+       (github.event.pull_request.head.repo.full_name != github.repository ||
+        github.event.pull_request.user.login == 'dependabot[bot]'))
 
     env:
       CHECK_NAME: Codex-Verdikt
@@ -107,11 +122,12 @@ jobs:
       # damit von genau dem umgehbar, den er prüfen soll.
       #
       # Entschieden wird daran, ob der HEAD vertrauenswürdig ist — nicht
-      # daran, welcher Trigger gerade zuständig ist. Vertrauenswürdig heisst
-      # hier: aus diesem Repo; wer so einen Branch pusht, hat Schreibrecht,
-      # und der Gate prüft sich damit auf seinem eigenen PR. Sonst die Basis.
-      # Bei `issue_comment` gibt es kein `pull_request`-Objekt; dort greift
-      # `github.ref`, das bereits auf den Default-Branch zeigt.
+      # daran, welcher Trigger gerade zuständig ist. Vertrauenswürdig heisst:
+      # aus diesem Repo und nicht von Dependabot; wer so einen Branch pusht,
+      # hat Schreibrecht, und der Gate prüft sich damit auf seinem eigenen PR.
+      # Sonst die Basis. Bei `issue_comment` gibt es kein
+      # `pull_request`-Objekt; dort greift `github.ref`, das bereits auf den
+      # Default-Branch zeigt.
       #
       # Hier stand im Entwurf kurzzeitig `github.event_name == 'pull_request'`
       # — eine scheinbare Vereinfachung, weil der `if` oben ja schon filtert.
@@ -127,7 +143,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: >-
-            ${{ (github.event.pull_request.head.repo.full_name == github.repository
+            ${{ ((github.event.pull_request.head.repo.full_name == github.repository
+                  && github.event.pull_request.user.login != 'dependabot[bot]')
                  && github.event.pull_request.head.sha)
                 || github.event.pull_request.base.sha
                 || github.ref }}
