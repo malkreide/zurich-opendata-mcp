@@ -208,6 +208,58 @@ Merge-Konflikt: GitHub berechnet dafür keinen Merge-Commit und startet nichts.
 
 Ein Codex-Review auf einem PR wird beantwortet oder behoben, nie ignoriert.
 
+**Was nur beim Release läuft, bricht beim Release.** Am 19.9.2026 scheiterte
+der Release-Lauf von `zurich-opendata-mcp` 0.8.0 — und der Fehler stand am
+Ende von sechzig Zeilen Docker-Pull:
+
+```
+Checking dist/zurich_opendata_mcp-0.8.0-py3-none-any.whl:
+InvalidDistribution: Invalid distribution metadata:
+'2.5' is not a valid metadata version
+```
+
+Im Repo hatte sich nichts geändert. `[build-system] requires` nennt
+`hatchling` ohne Obergrenze, `python -m build` holt also beim Release die
+jeweils neuste: `hatchling 1.32.3` schreibt `Metadata-Version: 2.5`, wo
+`1.31.0` noch `2.4` schrieb. Die tag-gepinnte `pypa/gh-action-pypi-publish`
+stand auf `v1.14.1` und bringt twine 6.1.0 mit, die 2.5 nicht kennt.
+
+**Nicht PyPI hat abgelehnt, sondern das Prüfwerkzeug.** Positivkontrolle:
+`hatchling 1.32.3` liegt selbst auf PyPI mit genau dieser Metadata-Version,
+während andere Pakete im selben Lauf 2.4 zeigen — die Sonde unterscheidet
+also. Die richtige Antwort war deshalb, die Action zu heben (`v1.14.2`,
+twine 7), **nicht** das Backend zurückzupinnen. Ein Rückpin bindet das Repo
+dauerhaft an eine alte Metadaten-Generation, um ein anderswo gelöstes
+Problem zu umgehen.
+
+Vier Handgriffe daraus:
+
+- **Wandern zwei Dinge unabhängig und treffen sich nur beim Release, gehört
+  ihr Zusammenspiel in einen Check, der öfter läuft als das Release.** Hier
+  in den Job, der ohnehin frei auflöst (`fresh-install`), also auf jedem PR
+  und wöchentlich. Dieselbe Klasse wie der 0.5.1-Defekt, nur eine Schicht
+  weiter aussen: dort das Artefakt, hier das Werkzeug, das es prüft.
+- **Ein Release-Lauf benutzt die Workflow-Datei AM TAG.** Eine Korrektur auf
+  dem Standard-Branch rettet einen fehlgeschlagenen Lauf nie rückwirkend, und
+  «Re-run jobs» wiederholt exakt denselben Fehler. Der Weg ist
+  `workflow_dispatch` vom Standard-Branch — falls der Workflow ihn vorhält.
+- **Eine gescheiterte Publikation verbraucht die Versionsnummer nicht, eine
+  gelungene ist unwiderruflich.** Deshalb vor dem zweiten Anlauf *alle* Jobs
+  lesen, nicht nur den gescheiterten. Hier leitete der Registry-Job seine
+  Version sonst aus dem Tag-Namen ab und hätte bei einem Branch-Dispatch
+  «main» hineingeschrieben; er fing es selbst ab, aber das wusste vorher
+  niemand.
+- **Ein Log ist erst gelesen, wenn man beim letzten Fehler angekommen ist.**
+  Der Image-Pull davor sieht nach Inhalt aus und ist keiner.
+
+**Eine Quelle ist nicht die Quelle.** Nach dem geglückten Neuanlauf meldete
+PyPIs JSON-API (`/pypi/<name>/json`) weiterhin die alte Version, während der
+Simple-Index (`/simple/<name>/`) Wheel und sdist der neuen bereits führte und
+ein `pip install <name>==<neu>` durchlief. Die JSON-API hängt hinter einem
+eigenen Cache. Wer nur sie fragt, widerspricht einem Menschen, der recht hat.
+Bei einem Widerspruch zwischen zwei Diensten entscheidet der, der die Sache
+*tut* — hier die Installation.
+
 ### Wenn Codex gar nicht erst hinsieht
 
 Die Zeile oben unterstellt, dass es einen Befund geben *kann*. Das ist nicht
@@ -303,6 +355,44 @@ bekannten Schubladen zu zwingen: Dieser Abschnitt musste schon einmal von drei
 auf vier Gründe wachsen, und die 👍-Reaktion stand hier zwei Fassungen lang als
 Tatsache.
 
+**Seit dem 18.9.2026 kommt eine weitere Textform dazu — und sie ist kein
+fünfter Grund, sondern eine Anzeige über den Lauf selbst:**
+
+```
+## Codex Review Summary
+
+| Review | Status | Commit | Review trigger |
+| --- | --- | --- | --- |
+| 📝 Code Review | ✅ Completed <Zeitstempel> | `<sha>` | Draft marked ready |
+```
+
+Drei Eigenschaften, die den Umgang mit den vier Gründen oben ändern:
+
+- **Sie ersetzt die bekannten Formen nicht, sie tritt dazu.** Beim befundlosen
+  Lauf von `zurich-opendata-mcp` #115 kamen beide: die Tabelle *und* die Zeile
+  «Didn't find any major issues». Wer nur eines der beiden sieht, hat nicht
+  den anderen Fall vor sich, sondern nur die halbe Antwort.
+- **Sie wird in place editiert** — dieselbe `comment_id`, nur `updated_at`
+  bewegt sich, während Status, Commit und Trigger wechseln. Ein zweiter
+  Review hebt die Kommentarzahl also **nicht**. Das verschärft die Warnung
+  oben: Den Text lesen heisst hier, denselben Kommentar erneut zu lesen.
+- **Sie nennt den geprüften Commit.** Damit ist erstmals ablesbar, ob der
+  Review den aktuellen Head gesehen hat — bisher liess sich das nur hoffen.
+  Ein Push löst keinen neuen Review aus; die Trigger sind «open for review»,
+  «draft marked ready» und ein `@codex review`-Kommentar. Wer nach dem Review
+  noch einen Commit nachschiebt, mergt ihn ungeprüft, solange er nicht von
+  Hand nachtriggert.
+
+**Und ein Zustand, der sich von aussen nicht auflösen lässt.** Läuft
+der Review auf einem inzwischen **geschlossenen** PR zu Ende, steht die
+Tabelle auf `Completed` — aber es kommt weder ein Review-Objekt noch die
+Befundlos-Zeile. `get_reviews` leer, `get_review_comments` leer, im
+`get_comments` nur die Tabelle. Gemessen an #116 und #117. «Completed» sagt
+dann, dass der Lauf fertig ist, nicht wie er ausging: ob es keine Befunde gab
+oder ob welche nicht mehr zugestellt werden konnten, ist nicht entscheidbar.
+Nicht in eine der bekannten Schubladen zwingen — das ist der Fall, den man
+vermeidet, indem man nicht in den laufenden Review hineinmergt.
+
 Und ein befundloser Lauf ist kein Freispruch. Am 23.8. lief derselbe Text durch
 42 Reviews: 36 meldeten denselben P2-Befund, 6 die Befundlos-Meldung — gleiche
 Eingabe, gegenteiliges Urteil, alles in denselben neun Minuten. Ein sauberer
@@ -319,10 +409,30 @@ Findet nur, wo er *kommentiert* hat. Repos ohne PR-Aktivität tauchen nicht auf
 — das ist kein Beleg, dass dort geprüft wurde.
 
 Zweiter Weg, den Prüfer zu verlieren, ganz ohne Kontingentproblem: zu schnell
-mergen. Am 21./22.8. lagen zwischen «ready for review» und Merge mehrfach drei
-bis fünf Sekunden. Codex wird beim Umschalten von Draft auf ready ausgelöst und
-braucht danach Zeit; wer sofort mergt, hat das Häkchen gesetzt und den Review
-nicht abgewartet.
+mergen. Codex wird beim Umschalten von Draft auf ready ausgelöst und braucht
+danach Zeit; wer sofort mergt, hat das Häkchen gesetzt und den Review nicht
+abgewartet. Am 21./22.8. lagen zwischen «ready for review» und Merge mehrfach
+drei bis fünf Sekunden.
+
+Seit es die Summary-Tabelle gibt, ist das **messbar statt vermutet** — sie
+nennt Startzeit, Abschlusszeit und den geprüften Commit. Drei Fälle vom
+19.9.2026 in `zurich-opendata-mcp`, alle Zeiten UTC:
+
+| PR | ready | gemergt | Review begann | Review fertig | Befundlos-Meldung |
+|---|---|---|---|---|---|
+| #115 | 18:26:16 | 18:33:27 | 18:30:55 | 18:33:26 | **ja**, Commit genannt |
+| #116 | 17:11:25 | 17:11:29 | 17:11:31 | 17:13:42 | nein |
+| #117 | 19:21:27 | 19:21:31 | 19:21:33 | 19:24:10 | nein |
+
+Bei #116 und #117 begann der Review **nach** dem Merge, um zwei Sekunden, und
+lief danach noch gut zwei Minuten auf einem geschlossenen PR. Bei #115 lag
+zwischen Befundlos-Meldung und Merge **eine** Sekunde — es ging gut aus, aber
+aus Zufall, nicht aus Disziplin.
+
+Daraus der Richtwert: der Review braucht **zwei bis drei Minuten** ab «ready».
+Und die Erklärung dafür, warum #116 und #117 in genau dem nicht auflösbaren
+Zustand landeten, der weiter oben beschrieben ist: ein Review, der auf einem schon
+geschlossenen PR fertig wird, hinterlässt nur die Tabelle.
 
 Das Kontingent hängt am Konto, nicht am Repo, und Code-Reviews haben einen
 eigenen Topf — nur GitHub-getriggerte Reviews zählen hinein. ChatGPT-Pläne
