@@ -84,6 +84,8 @@ _NO_FINDINGS = re.compile(r"Didn't find any major issues", re.IGNORECASE)
 _QUOTA = re.compile(r"reached your Codex usage limits", re.IGNORECASE)
 _ENVIRONMENT = re.compile(r"create an environment for this repo", re.IGNORECASE)
 _SUMMARY_MARKER = "codex-pull-request-review-summary"
+# Ueberschrift eines echten Review-Objekts — eine Thread-Antwort hat keine.
+_REVIEW_MARKER = re.compile(r"Codex Review", re.IGNORECASE)
 _REVIEWED_COMMIT = re.compile(r"Reviewed commit:\*{0,2}\s*`([0-9a-f]{7,40})`", re.IGNORECASE)
 # Zelle der Summary-Tabelle: | 📝 **Code Review** | ✅ **Completed** … | `sha` | … |
 _TABLE_STATUS = re.compile(r"\*\*(Completed|Running|Failed)\*\*", re.IGNORECASE)
@@ -142,8 +144,26 @@ def evaluate(event: dict[str, Any], waiver_label: str = DEFAULT_WAIVER_LABEL) ->
         )
 
     # 1. Review-Objekt auf dem Head: ein Befund liegt vor.
+    #
+    # `commit_id` allein genuegt hier NICHT. GitHub verpackt jede Antwort auf
+    # einen Inline-Kommentar als Review-Objekt, und es traegt den aktuellen
+    # Head. Am 20.9.2026 auf PR #119 gemessen: Codex antwortete um 13:03:12 in
+    # einem Thread mit seiner Environment-Meldung, das dabei entstandene
+    # Review-Objekt trug `b64b96d` — einen Commit, den Codex nie geprueft hat.
+    # Der Gate schaltete darauf gruen. Ein blosser Wortwechsel haette also
+    # genau die Luecke geoeffnet, gegen die dieses Skript geschrieben ist.
+    #
+    # Unterscheidbar sind die beiden am Body: ein echtes Review fuehrt die
+    # Ueberschrift «Codex Review» und nennt den geprueften Commit im Text;
+    # eine Thread-Antwort hat gar keinen Body. Der Text schlaegt `commit_id`,
+    # weil er sagt, was geprueft wurde, und nicht bloss, woran der Kommentar
+    # haengt.
     for review in _codex_items(event.get("reviews") or []):
-        commit = str(review.get("commit_id") or "")
+        body = str(review.get("body") or "")
+        if not _REVIEW_MARKER.search(body):
+            continue
+        reviewed = _REVIEWED_COMMIT.search(body)
+        commit = reviewed.group(1) if reviewed else str(review.get("commit_id") or "")
         if commit and _same_commit(commit, head):
             return Verdict(
                 True,

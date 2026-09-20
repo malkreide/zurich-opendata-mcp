@@ -64,3 +64,34 @@ nie erreichte. Gefunden hat das ein Codex-Review auf PR #119 (P1,
 Dass hier zusammengesetzt wurde, hat einen Grund: Ein echter Mitschnitt
 bräuchte ein erschöpftes Kontingent, und das lässt sich nicht herbeiführen.
 Aufzuzeichnen wäre er trotzdem, sobald er einmal vorkommt.
+
+## Nachtrag 20.9.2026 — `pr119_thread_antwort_kein_review.json`
+
+**Wörtlich mitgeschrieben** von PR #119, aus `get_reviews` gelesen, alle Zeiten
+UTC. Der Anlass ist ein Falsch-Positiv im eigenen Entwurf.
+
+GitHub verpackt jede Antwort auf einen Inline-Kommentar als **Review-Objekt**,
+und dieses trägt den aktuellen Head:
+
+| Zeit | Autor | `commit_id` | Body |
+|---|---|---|---|
+| 12:57:36 | Codex | `6dc81d17cc` | «💡 Codex Review … **Reviewed commit:** `6dc81d17cc`» |
+| 13:03:05 | malkreide | `b64b96d2…` | — (Thread-Antwort) |
+| 13:03:12 | Codex | `b64b96d2…` | — (Thread-Antwort) |
+
+Die dritte Zeile ist das Problem. Codex hat `b64b96d` **nie geprüft** — es
+antwortete nur im Thread mit seiner Environment-Meldung. Die alte Regel prüfte
+Bot-Login und `commit_id`, also schaltete der Gate grün. Gemessen, nicht
+vermutet: `check_codex_verdict.py` gegen diesen Zustand endete mit Exit 0.
+
+Unterscheidbar sind die Fälle am Body: ein echtes Review trägt die Überschrift
+und nennt den geprüften Commit im Text, eine Thread-Antwort hat gar keinen
+Body. Der Text schlägt seither `commit_id`.
+
+Und eine Beobachtung, die nicht in die vier Gründe aus `CLAUDE.md` passt: Die
+Environment-Meldung kam hier als **Review-Kommentar an einer Datei-Zeile**, nicht
+als gewöhnlicher Issue-Kommentar — und das, während wenige Minuten zuvor ein
+GitHub-getriggerter Code-Review derselben PR sauber durchlief. «Environment
+fehlt» hiess hier also nicht «kein Review möglich». Der Gate wertet
+Review-Kommentare deshalb bewusst nicht als Ausfallmeldung aus; er würde sonst
+einen Ausfall melden, den es nicht gab. Bislang eine einzelne Beobachtung.

@@ -75,6 +75,49 @@ def test_ein_review_objekt_auf_dem_head_ist_ein_verdikt() -> None:
 # ── Was keines ist: die drei Beinahe-Faelle ──────────────────────────────
 
 
+def test_eine_thread_antwort_von_codex_ist_kein_review() -> None:
+    """Der gefährlichste Fall, weil er GRÜN schaltete statt rot.
+
+    GitHub verpackt jede Antwort auf einen Inline-Kommentar als Review-Objekt,
+    und dieses trägt den aktuellen Head. Am 20.9.2026 auf PR #119 mitgeschrieben:
+    Codex antwortete um 13:03:12 in einem Thread, das Objekt trug `b64b96d` —
+    einen Commit, den Codex nie geprüft hat. Ein blosser Wortwechsel hätte den
+    Gate erfüllt.
+    """
+    verdict = gate.evaluate(event("pr119_thread_antwort_kein_review.json"))
+    assert not verdict.ok, verdict.reason
+
+
+def test_positivkontrolle_dasselbe_ereignis_auf_dem_geprueften_commit() -> None:
+    """Gegenprobe zum Test davor: dieselben Objekte, nur der Head passt.
+
+    Ohne sie hiesse «nicht grün» womöglich nur, dass die Regel alles ablehnt.
+    """
+    ereignis = event("pr119_thread_antwort_kein_review.json")
+    ereignis["head_sha"] = "6dc81d17ccf8f4aee8cddf58ae127b1281bb683f"
+    verdict = gate.evaluate(ereignis)
+    assert verdict.ok, verdict.reason
+    assert "Review-Objekt" in verdict.reason
+
+
+def test_der_text_des_reviews_schlaegt_die_commit_id() -> None:
+    """`commit_id` sagt, woran das Objekt hängt; der Text, was geprüft wurde."""
+    ereignis = {
+        "head_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "labels": [],
+        "comments": [],
+        "reviews": [
+            {
+                "user": {"login": gate.CODEX_LOGIN},
+                "commit_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "body": "### 💡 Codex Review\n\n**Reviewed commit:** `bbbbbbbbbb`\n",
+            }
+        ],
+    }
+    verdict = gate.evaluate(ereignis)
+    assert not verdict.ok, verdict.reason
+
+
 def test_completed_ohne_verdikt_zaehlt_nicht() -> None:
     """Der Kern. PR #116: Der Review lief auf dem geschlossenen PR zu Ende,
     die Tabelle stand auf «Completed», ein Verdikt kam nie. Wer hier grün

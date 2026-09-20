@@ -347,6 +347,30 @@ Das sind verschiedene Abfragen — `get_reviews` fürs Objekt, `get_comments` f�
 alles andere; wer nur eine nimmt, übersieht den Rest. Genau so ist die
 Limit-Meldung zuerst durchgerutscht.
 
+**Und `get_reviews` liefert mehr als Reviews.** GitHub verpackt jede Antwort auf
+einen Inline-Kommentar als Review-Objekt — auch die von Codex —, und dieses
+trägt den **aktuellen Head**, nicht den geprüften Commit. Am 20.9.2026 auf
+PR #119 mitgeschrieben: der echte Review um 12:57:36 auf `6dc81d17cc`, um
+13:03:12 eine blosse Thread-Antwort auf `b64b96d2`. Wer Bot-Login und
+`commit_id` prüft, hält die Antwort für ein Verdikt zum neuen Head. Genau das
+tat der Gate dieses Repos, bis es auffiel; gemessen endete er mit Exit 0 auf
+einem Commit, den Codex nie gesehen hatte.
+
+Unterscheidbar sind die beiden am Body: ein echtes Review trägt die Überschrift
+«Codex Review» und nennt den geprüften Commit im Text, eine Thread-Antwort hat
+gar keinen Body. **Der Text schlägt `commit_id`** — er sagt, was geprüft wurde,
+`commit_id` bloss, woran der Kommentar hängt.
+
+**Die Environment-Meldung kann auch anderswo stehen — und anderes heissen.** Im
+selben Vorgang kam sie als **Review-Kommentar an einer Datei-Zeile**, nicht als
+Issue-Kommentar, wie es oben steht. Und sie kam, während wenige Minuten zuvor ein
+GitHub-getriggerter Code-Review derselben PR sauber durchgelaufen war. «Für das
+Repo fehlt eine Environment» hiess dort also **nicht** «kein Review möglich»,
+sondern betraf offenbar nur das Antworten im Thread. Die vier Gründe oben bleiben
+richtig; was nicht stimmt, ist die Annahme, jede Environment-Meldung belege einen
+ausgefallenen Review. Bislang eine einzelne Beobachtung — deshalb hier als
+Beobachtung notiert und nicht als Regel.
+
 Der Kommentarzähler allein reicht ohnehin nicht: `comments: 1` kann die
 Befundlos-, die Kontingent- **oder** die Environment-Meldung sein — drei
 gegensätzliche Bedeutungen unter derselben Zahl. Den Text lesen, nicht die Zahl.
