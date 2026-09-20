@@ -123,6 +123,49 @@ jobs:
       REPO: ${{ github.repository }}
 
     steps:
+      # ZUERST den Check auf «läuft» setzen, vor allem Fehlbaren.
+      #
+      # Ein Required Status Check richtet sich nach dem JÜNGSTEN Check-Run
+      # dieses Namens auf dem Head. Wurde der Notausgang `codex-review-waived`
+      # gesetzt und dann wieder entfernt, steht dort weiterhin das Grün des
+      # Waivers — der Head hat sich ja nicht geändert. Bis zum POST am Ende
+      # dieses Jobs bliebe der PR also mergebar, und scheiterte davor ein
+      # Schritt (Checkout, Python, eine der API-Abfragen), bliebe das Grün
+      # DAUERHAFT stehen: Der Job-Fehlschlag trägt den Namen «Codex-Verdikt
+      # ermitteln» und nicht den des Required Checks.
+      #
+      # Das ist der einzige bisher gefundene Fall, in dem dieser Gate OFFEN
+      # statt geschlossen ausfällt. Deshalb wird hier zuerst ein Check-Run
+      # mit `status: in_progress` angelegt — ein solcher gilt nicht als
+      # bestanden — und derselbe Run am Ende per PATCH abgeschlossen.
+      #
+      # Restrisiko, das bleibt: Scheitert schon dieser Schritt, entsteht kein
+      # neuer Run, und ein älteres Grün auf demselben Head bliebe stehen. Das
+      # lässt sich nicht ganz beseitigen — irgendetwas muss laufen, um den
+      # Check zu setzen —, aber das Fenster ist damit auf einen einzigen,
+      # minimalen Schritt geschrumpft. Befund eines Codex-Reviews auf PR #119.
+      - name: Check als «läuft» anlegen
+        env:
+          EVENT_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          # Bei `issue_comment` steht der Head nicht im Ereignis; nur dann
+          # kostet es eine Abfrage.
+          HEAD_SHA="$EVENT_HEAD_SHA"
+          if [ -z "$HEAD_SHA" ]; then
+            HEAD_SHA="$(gh api "repos/$REPO/pulls/$PR" --jq .head.sha)"
+          fi
+
+          CHECK_ID="$(jq -n --arg n "$CHECK_NAME" --arg s "$HEAD_SHA" \
+            '{name:$n, head_sha:$s, status:"in_progress",
+              output:{title:"Verdikt wird ermittelt",
+                      summary:"Der Gate prueft gerade, ob fuer diesen Head ein Codex-Verdikt vorliegt. Bis dahin gilt er als nicht bestanden."}}' \
+            | gh api --method POST "repos/$REPO/check-runs" --input - --jq .id)"
+
+          echo "HEAD_SHA=$HEAD_SHA" >> "$GITHUB_ENV"
+          echo "CHECK_ID=$CHECK_ID" >> "$GITHUB_ENV"
+          echo "Head $HEAD_SHA, Check-Run $CHECK_ID auf in_progress."
+
       # Den auszucheckenden Stand AUSDRÜCKLICH festlegen. Ohne `ref` richtet
       # sich der Checkout nach dem Ereignis — am 20.9.2026 an Lauf
       # 35514764426 im Log abgelesen:
@@ -189,7 +232,7 @@ jobs:
           gh api --paginate "repos/$REPO/pulls/$PR/reviews"   > reviews.json
 
           python - <<'PY' > event.json
-          import json, pathlib
+          import json, os, pathlib
 
           def read_all(name):
               """Alle JSON-Werte der Datei, flach.
@@ -213,7 +256,9 @@ jobs:
 
           pr = json.loads(pathlib.Path("pr.json").read_text(encoding="utf-8"))
           print(json.dumps({
-              "head_sha": pr["head"]["sha"],
+              # Derselbe Head wie im angelegten Check-Run — eine Quelle, damit
+              # Urteil und Check nicht auf verschiedene Commits zeigen koennen.
+              "head_sha": os.environ["HEAD_SHA"],
               "labels": [label["name"] for label in pr.get("labels") or []],
               "comments": read_all("comments.json"),
               "reviews": read_all("reviews.json"),
@@ -240,11 +285,11 @@ jobs:
           fi
           echo "$OUT"
 
-          HEAD_SHA="$(python -c "import json;print(json.load(open('event.json'))['head_sha'])")"
           TITLE="$( [ "$CONCLUSION" = success ] && echo 'Verdikt liegt vor' || echo 'Kein Verdikt fuer diesen Head' )"
 
-          # Der Check-Run traegt den Head-SHA, damit ein Ruleset ihn dem PR
-          # zuordnen kann — unabhaengig davon, welches Ereignis uns geweckt hat.
+          # PATCH auf den Run, der oben schon als «läuft» angelegt wurde —
+          # kein zweiter Run. So gibt es zu keinem Zeitpunkt ein veraltetes
+          # Grün neben einem laufenden Urteil.
           # Der POST wird AUSDRUECKLICH geprueft. Gemessen traegt dieser Step
           # `bash -e` (im Log: `shell: /usr/bin/bash -e {0}`), ein
           # fehlschlagendes `gh` braeche ihn also ohnehin ab — aber diese
@@ -254,11 +299,10 @@ jobs:
           # bleiben. Angeregt durch einen Codex-Review auf PR #119; dessen
           # Begruendung (`-e` sei nicht aktiv) trifft nicht zu, der Rat
           # schon.
-          if ! jq -n --arg n "$CHECK_NAME" --arg s "$HEAD_SHA" --arg c "$CONCLUSION" \
-                     --arg t "$TITLE" --arg o "$OUT" \
-               '{name:$n, head_sha:$s, status:"completed", conclusion:$c,
+          if ! jq -n --arg c "$CONCLUSION" --arg t "$TITLE" --arg o "$OUT" \
+               '{status:"completed", conclusion:$c,
                  output:{title:$t, summary:$o}}' \
-               | gh api --method POST "repos/$REPO/check-runs" --input -
+               | gh api --method PATCH "repos/$REPO/check-runs/$CHECK_ID" --input -
           then
             echo "::error::Check-Run konnte nicht veroeffentlicht werden — das Urteil lautete: $OUT"
             exit 1

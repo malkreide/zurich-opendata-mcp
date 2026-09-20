@@ -377,6 +377,33 @@ def test_dependabot_laeuft_ueber_den_privilegierten_pfad() -> None:
     assert "github.actor" not in bedingung
 
 
+def test_der_check_wird_vor_dem_fehlbaren_teil_auf_laufend_gesetzt() -> None:
+    """Vierte Drift-Wache — der einzige Fall, der OFFEN statt geschlossen ausfiel.
+
+    Ein Required Status Check richtet sich nach dem juengsten Check-Run seines
+    Namens auf dem Head. Wird `codex-review-waived` wieder entfernt, steht dort
+    weiterhin das Gruen des Waivers; der Head hat sich ja nicht geaendert.
+    Scheitert dann ein vorgelagerter Schritt, bliebe es DAUERHAFT stehen, denn
+    der Job-Fehlschlag traegt einen anderen Namen als der Required Check.
+
+    Deshalb wird der Run vor allem Fehlbaren als `in_progress` angelegt und am
+    Ende per PATCH abgeschlossen — nicht am Ende neu gepostet.
+    """
+    text = (ROOT / ".github" / "workflows" / "codex-gate.yml").read_text(encoding="utf-8")
+    schritte = text.split("\n      - ")
+
+    erster = schritte[1]
+    assert 'status:"in_progress"' in erster, (
+        "der erste Schritt legt keinen laufenden Check-Run mehr an"
+    )
+    assert "actions/checkout" not in erster, "vor dem Check-Run darf nichts Fehlbares stehen"
+
+    letzter = schritte[-1]
+    assert "--method PATCH" in letzter and "$CHECK_ID" in letzter, (
+        "das Urteil schliesst nicht denselben Run ab, sondern legt einen neuen an"
+    )
+
+
 def test_das_cli_endet_mit_0_bei_verdikt_und_1_ohne(capsys, tmp_path) -> None:
     ok = tmp_path / "ok.json"
     ok.write_text((FIXTURES / "pr115_befundlos.json").read_text(encoding="utf-8"), "utf-8")
