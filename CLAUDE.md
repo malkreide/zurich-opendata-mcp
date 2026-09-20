@@ -575,12 +575,32 @@ eine Abhängigkeitsspanne für Fremde kaputt auflöst; dieser Job kann es.
 
 **Vierter Workflow: `codex-gate.yml`.** Meldet einen Check-Run
 `Codex-Verdikt`, der rot bleibt, solange für den aktuellen Head kein
-Codex-Verdikt vorliegt. Ausgelöst von `pull_request`, `issue_comment` und
-`pull_request_review` — die befundlose Meldung ist ein gewöhnlicher Kommentar,
-ein Befund ein Review-Objekt, und beide Wege lösen sicher aus. `edited` ist bei
-`issue_comment` mitgenommen, weil Codex seine Summary-Tabelle in place
-editiert; ob ein Bot-Selbst-Edit das Ereignis auslöst, sagt die
-GitHub-Dokumentation nicht, und der Entwurf hängt deshalb nicht daran.
+Codex-Verdikt vorliegt. Ausgelöst von `pull_request`, `pull_request_target`,
+`issue_comment` und `pull_request_review` — die befundlose Meldung ist ein
+gewöhnlicher Kommentar, ein Befund ein Review-Objekt, und beide Wege lösen
+sicher aus. `edited` ist bei `issue_comment` mitgenommen, weil Codex seine
+Summary-Tabelle in place editiert; ob ein Bot-Selbst-Edit das Ereignis
+auslöst, sagt die GitHub-Dokumentation nicht, und der Entwurf hängt deshalb
+nicht daran.
+
+**Warum vier Trigger und nicht drei.** Bei einem PR aus einem Fork gibt GitHub
+dem `pull_request`-Lauf einen Nur-Lese-Token, und der `permissions:`-Block hebt
+das nicht auf: der POST auf die Checks-API endet mit 403, der alte rote Check
+bleibt stehen — auch dann, wenn jemand den Notausgang setzt. `pull_request_target`
+läuft im Basis-Kontext mit vollem Token. Sicher ist der sonst heikle Trigger
+hier, weil der Job ohne `ref` auscheckt, also den Basis-Stand fährt und keinen
+Fork-Code ausführt, und weil Fremdtext als JSON ins Skript wandert statt in eine
+Shell-Zeile. Die beiden teilen sich die Arbeit strikt nach Herkunft:
+`pull_request` für dieses Repo, `pull_request_target` nur für Forks.
+
+**Und `concurrency` steht auf JOB-Ebene, nicht auf Workflow-Ebene.**
+`pull_request_target` feuert für jeden PR, nicht nur für Forks; für dieselbe
+Aktion entstehen also immer zwei Läufe. Stünde die Gruppe oben, träten beide ihr
+bei — sie wird ausgewertet, bevor der Job-`if` je gelesen wird. Mit
+`cancel-in-progress` könnte dann der Lauf gewinnen, dessen Job der Filter gleich
+darauf überspringt: kein Job, kein POST, gar kein Check. Auf Job-Ebene tritt ein
+übersprungener Lauf der Gruppe nie bei. `tests/test_codex_gate.py` hält das mit
+einer Drift-Wache fest.
 
 Gemeldet wird über die Checks-API und nicht über den Job-Status: `issue_comment`
 und `pull_request_review` laufen nicht am Head-SHA, ihr Job-Status landet also
