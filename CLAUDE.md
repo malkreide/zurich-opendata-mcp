@@ -586,12 +586,41 @@ nicht daran.
 **Warum vier Trigger und nicht drei.** Bei einem PR aus einem Fork gibt GitHub
 dem `pull_request`-Lauf einen Nur-Lese-Token, und der `permissions:`-Block hebt
 das nicht auf: der POST auf die Checks-API endet mit 403, der alte rote Check
-bleibt stehen — auch dann, wenn jemand den Notausgang setzt. `pull_request_target`
-läuft im Basis-Kontext mit vollem Token. Sicher ist der sonst heikle Trigger
-hier, weil der Job ohne `ref` auscheckt, also den Basis-Stand fährt und keinen
-Fork-Code ausführt, und weil Fremdtext als JSON ins Skript wandert statt in eine
-Shell-Zeile. Die beiden teilen sich die Arbeit strikt nach Herkunft:
-`pull_request` für dieses Repo, `pull_request_target` nur für Forks.
+bleibt stehen — auch dann, wenn jemand den Notausgang setzt.
+`pull_request_target` bekommt den normalen Token und übernimmt deshalb diese
+Fälle.
+
+**Dasselbe gilt für Dependabot, und das sieht man ihm nicht an.** Sein Branch
+liegt in diesem Repo, eine reine Herkunftsprüfung schickt ihn also auf den
+`pull_request`-Pfad — aber GitHub behandelt von Dependabot ausgelöste
+Ereignisse wie Fork-Ereignisse und stuft den Token ebenso herunter. Unter einem
+Required Check wäre jeder wöchentliche Dependabot-PR dauerhaft blockiert,
+Notausgang eingeschlossen. Entschieden wird am PR-**Autor**, nicht an
+`github.actor`: Wer ein Label setzt, wechselt; die Herkunft des PR nicht.
+
+**Der Checkout muss ausdrücklich gepinnt werden — hier lag der schwerste
+Fehler dieses Entwurfs.** Die naheliegende Annahme, ein Job ohne `ref` erhalte
+den Basis-Stand, gilt **nur für `pull_request_target`**. Am 20.9.2026 an Lauf
+35514764426 gemessen, ausgelöst durch `pull_request_review`:
+
+```
+git checkout --force refs/remotes/pull/119/merge
+HEAD is now at 18595a4 Merge 601d2214… into a8023ab2…
+```
+
+Also der PR-Merge-Ref — und `pull_request_review` trägt auch bei einem Fork-PR
+einen Token mit `checks: write`, denn nur `pull_request` wird heruntergestuft.
+Ein Fork hätte `check_codex_verdict.py` in eigener Fassung ausführen lassen und
+sich sein grünes Verdikt selbst geschrieben. Der `ref` wird deshalb explizit
+gesetzt, und zwar an der **Vertrauensfrage**: Head aus diesem Repo und nicht
+von Dependabot → PR-Stand, sonst Basis. Dazu `persist-credentials: false`.
+
+Die Vertrauensfrage ist nicht dasselbe wie die Trigger-Frage. Ein Versuch, das
+am Ereignisnamen abzukürzen, legte den Gate sofort lahm — ein
+`pull_request_review` auf einem PR aus diesem Repo landete auf der Basis, wo
+das Skript vor dem Merge gar nicht liegt. Dass Fremdtext als JSON ins Skript
+wandert und nie in eine Shell-Zeile, bleibt richtig; es ersetzt den gepinnten
+`ref` aber nicht.
 
 **Und `concurrency` steht auf JOB-Ebene, nicht auf Workflow-Ebene.**
 `pull_request_target` feuert für jeden PR, nicht nur für Forks; für dieselbe
