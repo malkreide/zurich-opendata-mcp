@@ -117,6 +117,56 @@ def test_fehlende_environment_ist_kein_verdikt_und_nennt_den_weg() -> None:
     assert "settings/environments" in verdict.reason
 
 
+def test_ein_spaeterer_erfolg_schlaegt_eine_aeltere_kontingent_meldung() -> None:
+    """Die Ausfallmeldung bleibt für immer in der Kommentarliste stehen.
+
+    Sie rät, per «@codex review» erneut auszulösen. Bewertete das Skript sie
+    weiterhin als Absage, wäre genau dieser Rat unbefolgbar: der Gate käme nach
+    einem erschöpften Kontingent nie mehr auf Grün. Befund eines Codex-Reviews
+    auf PR #119.
+    """
+    verdict = gate.evaluate(event("kontingent_dann_verdikt.json"))
+    assert verdict.ok, verdict.reason
+    assert "keinen Befund" in verdict.reason
+
+
+def test_ein_spaeterer_erfolg_schlaegt_eine_aeltere_environment_meldung() -> None:
+    verdict = gate.evaluate(event("environment_dann_verdikt.json"))
+    assert verdict.ok, verdict.reason
+
+
+def test_eine_aeltere_ausfallmeldung_bleibt_sichtbar_wenn_sie_nichts_entscheidet() -> None:
+    """Sie entscheidet nichts mehr — verschwiegen wird sie deshalb nicht.
+
+    Ohne Verdikt erklärt eine Kontingent-Meldung oft genau, warum keines da
+    ist; sie aus dem Text zu streichen wäre der gegenteilige Fehler.
+    """
+    ereignis = event("kontingent_dann_verdikt.json")
+    # Das Verdikt entfernen, die Ausfallmeldung stehen lassen.
+    ereignis["comments"] = [
+        k for k in ereignis["comments"] if "Didn't find any major issues" not in k["body"]
+    ]
+    verdict = gate.evaluate(ereignis)
+    assert not verdict.ok
+    assert "Kontingent" in verdict.reason
+
+
+def test_ein_laufender_review_schlaegt_eine_aeltere_ausfallmeldung() -> None:
+    """«Running» ist die jüngere Auskunft und gewinnt — die ältere bleibt im Text."""
+    ereignis = event("pr118_running.json")
+    ereignis["comments"].insert(
+        0,
+        {
+            "user": {"login": "chatgpt-codex-connector[bot]"},
+            "body": "You have reached your Codex usage limits for code reviews.",
+        },
+    )
+    verdict = gate.evaluate(ereignis)
+    assert not verdict.ok
+    assert "Running" in verdict.reason
+    assert "Kontingent-Meldung" in verdict.reason
+
+
 def test_gar_nichts_ist_kein_verdikt() -> None:
     verdict = gate.evaluate(event("leer.json"))
     assert not verdict.ok

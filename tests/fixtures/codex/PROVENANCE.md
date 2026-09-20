@@ -45,3 +45,22 @@ das Skript über ein gemeinsames Präfix und nicht wörtlich.
 Die letzte Zeile ist der Grund, warum diese Tabelle dreigeteilt ist: Eine
 konstruierte Fixture ist brauchbar, solange niemand sie später für eine
 Messung hält.
+
+## Nachtrag 20.9.2026 — zwei zusammengesetzte Abläufe
+
+`kontingent_dann_verdikt.json` und `environment_dann_verdikt.json` sind
+**zusammengesetzt, nicht mitgeschrieben**. Die drei Kommentartexte darin sind
+je einzeln belegt — die Ausfallmeldung aus `kontingent.json` bzw.
+`environment.json`, Tabelle und Befundlos-Zeile wörtlich aus #115 —, die
+*Reihenfolge* ist konstruiert.
+
+Sie bilden den Ablauf ab, den die Ausfallmeldung selbst empfiehlt: Kontingent
+weg, später «@codex review», Review läuft durch. Genau diesen Ablauf konnte
+das Skript bis zum 20.9. nicht grün bewerten, weil es auf der alten
+Ausfallmeldung sofort negativ zurückkehrte und die spätere Befundlos-Meldung
+nie erreichte. Gefunden hat das ein Codex-Review auf PR #119 (P1,
+`scripts/check_codex_verdict.py`), nicht ein eigener Test.
+
+Dass hier zusammengesetzt wurde, hat einen Grund: Ein echter Mitschnitt
+bräuchte ein erschöpftes Kontingent, und das lässt sich nicht herbeiführen.
+Aufzuzeichnen wäre er trotzdem, sobald er einmal vorkommt.

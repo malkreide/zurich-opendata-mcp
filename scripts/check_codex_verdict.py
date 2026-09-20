@@ -111,6 +111,22 @@ def _codex_items(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return [i for i in items if (i.get("user") or {}).get("login") == CODEX_LOGIN]
 
 
+_OUTAGE_LABEL = {
+    "quota": "eine Kontingent-Meldung",
+    "environment": "eine Environment-Meldung",
+}
+
+
+def _also_seen(outage: str | None, unknown: list[str]) -> str:
+    """Nebenbeobachtungen anhaengen, statt sie zu verschweigen.
+
+    Sie entscheiden nichts mehr, sollen aber im Check-Text sichtbar bleiben:
+    eine aeltere Ausfallmeldung erklaert oft, warum ein Verdikt fehlt.
+    """
+    rest = ([_OUTAGE_LABEL[outage]] if outage else []) + list(unknown)
+    return "\nAusserdem gesehen: " + "; ".join(rest) if rest else ""
+
+
 def evaluate(event: dict[str, Any], waiver_label: str = DEFAULT_WAIVER_LABEL) -> Verdict:
     """Das ganze Urteil, als reine Funktion — damit es testbar ist."""
     head = str(event.get("head_sha") or "").strip()
@@ -140,7 +156,15 @@ def evaluate(event: dict[str, Any], waiver_label: str = DEFAULT_WAIVER_LABEL) ->
     table_status: str | None = None
     table_commit: str | None = None
     unknown: list[str] = []
+    # Juengste Ausfallmeldung, nicht die erste: Kommentare kommen chronologisch,
+    # eine spaetere ueberschreibt eine fruehere.
+    outage: str | None = None
 
+    # In dieser Schleife wird NUR positiv zurueckgekehrt. Eine Ausfallmeldung
+    # bleibt fuer immer in der Kommentarliste stehen; kehrte man auf ihr
+    # negativ zurueck, wuerde eine spaetere, gueltige Befundlos-Meldung nie
+    # mehr erreicht — der Rat «per @codex review erneut ausloesen», den die
+    # Ausfallmeldung selbst erteilt, waere mechanisch unbefolgbar.
     for comment in comments:
         body = str(comment.get("body") or "")
 
@@ -152,21 +176,12 @@ def evaluate(event: dict[str, Any], waiver_label: str = DEFAULT_WAIVER_LABEL) ->
             continue
 
         if _QUOTA.search(body):
-            return Verdict(
-                False,
-                "Codex meldet ein erschöpftes Kontingent — der Review hat NICHT "
-                "stattgefunden. Warten, bis das Fenster wieder offen ist, dann per "
-                "«@codex review» erneut auslösen. Kein Grund zu mergen.",
-            )
+            outage = "quota"
+            continue
 
         if _ENVIRONMENT.search(body):
-            return Verdict(
-                False,
-                "Codex meldet eine fehlende Environment für dieses Repo — der Review "
-                "hat NICHT stattgefunden. Environment unter "
-                "chatgpt.com/codex/cloud/settings/environments anlegen (je Repo), "
-                "dann per «@codex review» erneut auslösen.",
-            )
+            outage = "environment"
+            continue
 
         if _NO_FINDINGS.search(body):
             reviewed = _REVIEWED_COMMIT.search(body)
@@ -192,7 +207,7 @@ def evaluate(event: dict[str, Any], waiver_label: str = DEFAULT_WAIVER_LABEL) ->
             False,
             f"Codex prüft {(table_commit or head)[:10]} noch (Tabelle: «Running»). "
             "Der Review braucht zwei bis drei Minuten ab «ready» — das ist kein "
-            "Fehler, sondern der Grund, warum es diesen Check gibt.",
+            "Fehler, sondern der Grund, warum es diesen Check gibt." + _also_seen(outage, unknown),
         )
 
     if table_status == "completed" and table_commit and _same_commit(table_commit, head):
@@ -203,7 +218,24 @@ def evaluate(event: dict[str, Any], waiver_label: str = DEFAULT_WAIVER_LABEL) ->
             "«Completed» sagt, dass der Lauf fertig ist, nicht wie er ausging — "
             "gemessen an #116 und #117 ist das der Zustand, in dem ein Review auf "
             "einem bereits geschlossenen PR endete. Per «@codex review» erneut "
-            "auslösen." + ("\nAusserdem gesehen: " + "; ".join(unknown) if unknown else ""),
+            "auslösen." + _also_seen(outage, unknown),
+        )
+
+    if outage == "quota":
+        return Verdict(
+            False,
+            "Codex meldet ein erschöpftes Kontingent — der Review hat NICHT "
+            "stattgefunden. Warten, bis das Fenster wieder offen ist, dann per "
+            "«@codex review» erneut auslösen. Kein Grund zu mergen." + _also_seen(None, unknown),
+        )
+
+    if outage == "environment":
+        return Verdict(
+            False,
+            "Codex meldet eine fehlende Environment für dieses Repo — der Review "
+            "hat NICHT stattgefunden. Environment unter "
+            "chatgpt.com/codex/cloud/settings/environments anlegen (je Repo), "
+            "dann per «@codex review» erneut auslösen." + _also_seen(None, unknown),
         )
 
     if unknown:
