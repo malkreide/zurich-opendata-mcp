@@ -413,9 +413,12 @@ def test_der_job_status_haengt_nicht_am_verdikt() -> None:
     Gate tat, was es soll. Rauschen ist hier nicht harmlos: Es gewoehnt Leute
     daran, einen roten Eintrag auf diesem PR zu uebergehen.
 
-    Ebenso darf die Gruppe nicht abbrechen: Ein `cancelled`-Eintrag sieht
-    genauso rot aus, und seit der Check vorab auf `in_progress` steht, kann
-    ein Abbruch ihn unabgeschlossen zuruecklassen.
+    Ebenso soll die Gruppe den laufenden Job nicht abbrechen: Ein
+    `cancelled`-Eintrag sieht genauso rot aus, und seit der Check vorab auf
+    `in_progress` steht, kann ein Abbruch ihn unabgeschlossen zuruecklassen.
+    Das beseitigt den haeufigen Fall (zwei Ereignisse), nicht jeden: GitHub
+    haelt pro Gruppe nur EINEN wartenden Lauf vor und verwirft ihn, sobald
+    ein weiterer eintrifft.
     """
     text = (ROOT / ".github" / "workflows" / "codex-gate.yml").read_text(encoding="utf-8")
 
@@ -425,6 +428,19 @@ def test_der_job_status_haengt_nicht_am_verdikt() -> None:
     assert not alleinstehend, "der Job faellt wieder mit dem Verdikt — das Gate ist der Check-Run"
     assert "cancel-in-progress: false" in text, (
         "abgebrochene Laeufe hinterlassen rote Eintraege und offene Check-Runs"
+    )
+
+    # Rot bleibt der Job aber sehr wohl, wenn die MECHANIK ausfaellt. Der
+    # Exit-Code allein trennt das nicht: «kein Verdikt» endet mit 1, eine
+    # unbehandelte Ausnahme ebenfalls (lokal gemessen, beide STATUS=1).
+    # Unterschieden wird am Praefix, das das Skript selbst schreibt.
+    assert '"BLOCKIERT: "*)' in text and '"OK: "*)' in text, (
+        "Absturz und Urteil werden nicht mehr am Ausgabepraefix getrennt"
+    )
+    assert 'if [ "$BROKEN" = 1 ]' in text, "ein Ausfall der Mechanik faerbt den Job nicht mehr rot"
+    assert "2>err.txt" in text, (
+        "stderr wird wieder nach stdout gemischt — dann ist ein Absturz von "
+        "einem Urteil nicht zu unterscheiden"
     )
 
 

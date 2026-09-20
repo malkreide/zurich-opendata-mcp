@@ -93,10 +93,18 @@ jobs:
       # zuruecklassen, der nie abgeschlossen wird. (Beim beobachteten Fall
       # kam der Abbruch erst nach dem PATCH — Glueck, keine Eigenschaft.)
       #
-      # Ohne Abbruch serialisiert die Gruppe die Laeufe statt sie zu toeten:
-      # Der aeltere laeuft fertig, der juengere danach, und weil der
-      # juengere seinen Check-Run spaeter anlegt, ist sein Urteil das
-      # massgebende. Das ist strenger geordnet als vorher, nicht lockerer.
+      # Ohne Abbruch laeuft der bereits gestartete Lauf fertig, und der
+      # naechste kommt danach dran; weil dieser seinen Check-Run spaeter
+      # anlegt, ist sein Urteil das massgebende.
+      #
+      # Das ist KEINE vollstaendige Serialisierung, und die urspruengliche
+      # Fassung dieses Kommentars behauptete genau das zu Unrecht: GitHub
+      # haelt pro Gruppe nur EINEN wartenden Lauf vor und verwirft ihn,
+      # sobald ein weiterer eintrifft. Ab drei ueberlappenden Ereignissen
+      # entsteht also weiterhin ein `cancelled`-Eintrag. Die Einstellung
+      # beseitigt das Rauschen im haeufigen Fall (zwei Ereignisse) und
+      # schuetzt den LAUFENDEN Job; mehr leistet sie nicht. Befund eines
+      # Codex-Reviews auf PR #119.
       cancel-in-progress: false
     # Auf Issues, die keine PRs sind, gibt es nichts zu prüfen. Und die
     # beiden PR-Trigger teilen sich die Arbeit strikt nach Herkunft, damit
@@ -285,18 +293,34 @@ jobs:
       - name: Urteilen und als Check melden
         run: |
           set -uo pipefail
-          if OUT="$(python scripts/check_codex_verdict.py --event event.json 2>&1)"; then
-            CONCLUSION=success
+          # stderr NICHT nach stdout mischen: Sonst ist ein Absturz von einem
+          # Urteil nicht mehr zu unterscheiden.
+          if OUT="$(python scripts/check_codex_verdict.py --event event.json 2>err.txt)"; then
+            STATUS=0
           else
-            CONCLUSION=failure
+            STATUS=$?
           fi
-          # Ein Check ohne Begruendung ist fast so schlecht wie keiner. Faellt
-          # das Skript aus (etwa weil es im ausgecheckten Stand fehlt), stand
-          # hier vorher eine leere Zusammenfassung — gemessen an Lauf
-          # 35515251744.
-          if [ -z "${OUT//[[:space:]]/}" ]; then
-            CONCLUSION=failure
-            OUT="BLOCKIERT: check_codex_verdict.py lieferte keine Ausgabe. Der Gate faellt geschlossen aus, aber die Ursache liegt im Workflow und nicht im Verdikt — Lauf-Log ansehen."
+          ERR="$(cat err.txt || true)"
+
+          # Der Exit-Code allein reicht zum Unterscheiden NICHT: «kein
+          # Verdikt» endet mit 1, eine unbehandelte Ausnahme in Python
+          # ebenfalls. Entschieden wird deshalb am Praefix, das das Skript
+          # selbst schreibt — alles andere ist ein Ausfall der Mechanik.
+          BROKEN=0
+          case "$OUT" in
+            "OK: "*)        CONCLUSION=success ;;
+            "BLOCKIERT: "*) CONCLUSION=failure ;;
+            *)              CONCLUSION=failure; BROKEN=1 ;;
+          esac
+
+          if [ "$BROKEN" = 1 ]; then
+            # Der Gate faellt geschlossen aus — aber die Ursache liegt im
+            # Workflow und nicht im Verdikt, und das muss im Check stehen.
+            # Vorher fing hier nur eine LEERE Ausgabe auf; schrieb das Skript
+            # beim Absturz etwas nach stderr, ging der Ausfall als
+            # gewoehnliches «kein Verdikt» durch und der Job blieb gruen.
+            # Befund eines Codex-Reviews auf PR #119.
+            OUT="BLOCKIERT: check_codex_verdict.py lieferte kein verwertbares Urteil (Exit $STATUS). Das ist ein Ausfall der Mechanik, keine Aussage ueber den Review. stderr: ${ERR:-(leer)}"
           fi
           echo "$OUT"
 
@@ -337,8 +361,11 @@ jobs:
           # Eintrag auf diesem PR zu uebergehen. Genau die Erosion, gegen
           # die der Gate gebaut ist.
           #
-          # Der Job meldet deshalb ab jetzt nur noch, ob die MECHANIK lief:
-          # rot, wenn das Skript ausfiel oder der Check nicht veroeffentlicht
-          # werden konnte (beides oben), sonst gruen. Das Urteil selbst
-          # steht im Check-Run.
-          echo "Urteil veroeffentlicht ($CONCLUSION): $OUT"
+          # Der Job meldet deshalb nur noch, ob die MECHANIK lief: rot, wenn
+          # das Skript ausfiel oder der Check nicht veroeffentlicht werden
+          # konnte, sonst gruen. Das Urteil selbst steht im Check-Run.
+          if [ "$BROKEN" = 1 ]; then
+            echo "::error::check_codex_verdict.py lieferte kein verwertbares Urteil (Exit $STATUS)."
+            exit 1
+          fi
+          echo "Urteil veroeffentlicht ($CONCLUSION)."
