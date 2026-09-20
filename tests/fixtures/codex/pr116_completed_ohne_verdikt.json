@@ -1,0 +1,13 @@
+{
+  "head_sha": "72b2768eac36df7dde31ee62eb1be744a1f59311",
+  "labels": [],
+  "reviews": [],
+  "comments": [
+    {
+      "user": {
+        "login": "chatgpt-codex-connector[bot]"
+      },
+      "body": "<!-- codex-pull-request-review-summary -->\n\n## Codex Review Summary\n\nThis comment shows the latest Codex review activity on this pull request.\n\n| Review | Status | Commit | Review trigger |\n| --- | --- | --- | --- |\n| 📝 **Code Review** | ✅ **Completed** <relative-time datetime=\"…\">…</relative-time> | `72b2768` | Draft marked ready |\n"
+    }
+  ]
+}

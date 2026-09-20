@@ -434,6 +434,21 @@ Und die Erklärung dafür, warum #116 und #117 in genau dem nicht auflösbaren
 Zustand landeten, der weiter oben beschrieben ist: ein Review, der auf einem schon
 geschlossenen PR fertig wird, hinterlässt nur die Tabelle.
 
+**Und die Folgerung, nachdem es viermal nicht half, das aufzuschreiben.** Diese
+Zeilen stehen seit dem 18.9. in diesem Dokument; am 20.9. wurde der PR, der sie
+hinzufügte, vier Sekunden nach «ready» gemergt. Ein Text, den man zum
+Merge-Zeitpunkt lesen müsste, wird zum Merge-Zeitpunkt nicht gelesen — das ist
+keine Nachlässigkeit, sondern eine Eigenschaft des Ablaufs. Wer den Review
+wirklich als Gate will, braucht eine Mechanik: einen Check-Run, der rot bleibt,
+solange für den aktuellen Head kein Verdikt vorliegt. In diesem Repo liegt der
+in `.github/workflows/codex-gate.yml` und `scripts/check_codex_verdict.py`
+(Details in Teil 2); zum Portieren genügt, beide Dateien zu kopieren.
+
+**Der Workflow allein blockiert nichts.** Erst als Required Status Check in
+einem Ruleset hält er einen Merge auf, und das ist eine Repo-Einstellung, die
+kein PR setzen kann. Wer die Dateien kopiert und den Haken vergisst, hat eine
+hübschere Anzeige und dieselbe Lücke.
+
 Das Kontingent hängt am Konto, nicht am Repo, und Code-Reviews haben einen
 eigenen Topf — nur GitHub-getriggerte Reviews zählen hinein. ChatGPT-Pläne
 fahren ein rollendes Fünf-Stunden-Fenster plus Wochenlimits; welches greift,
@@ -533,6 +548,28 @@ Dazu ein zweiter Job «Fresh-resolve install smoke»: Wheel in ein leeres venv
 ohne Lockfile und mit kaltem Cache, dann ein echter MCP-Handshake über
 `scripts/smoke_installed.py`. Der Lockfile-Lauf oben kann nicht bemerken, wenn
 eine Abhängigkeitsspanne für Fremde kaputt auflöst; dieser Job kann es.
+
+**Vierter Workflow: `codex-gate.yml`.** Meldet einen Check-Run
+`Codex-Verdikt`, der rot bleibt, solange für den aktuellen Head kein
+Codex-Verdikt vorliegt. Ausgelöst von `pull_request`, `issue_comment` und
+`pull_request_review` — die befundlose Meldung ist ein gewöhnlicher Kommentar,
+ein Befund ein Review-Objekt, und beide Wege lösen sicher aus. `edited` ist bei
+`issue_comment` mitgenommen, weil Codex seine Summary-Tabelle in place
+editiert; ob ein Bot-Selbst-Edit das Ereignis auslöst, sagt die
+GitHub-Dokumentation nicht, und der Entwurf hängt deshalb nicht daran.
+
+Gemeldet wird über die Checks-API und nicht über den Job-Status: `issue_comment`
+und `pull_request_review` laufen nicht am Head-SHA, ihr Job-Status landet also
+nirgends, wo ein Ruleset ihn sieht.
+
+Die Entscheidung trifft `scripts/check_codex_verdict.py` — eine reine Funktion,
+geprüft in `tests/test_codex_gate.py` gegen aufgezeichnete Ereignisse in
+`tests/fixtures/codex/` (Herkunft in der dortigen `PROVENANCE.md`, drei davon
+wörtliche Mitschriften aus #115, #116 und #118). Notausgang ist das Label
+`codex-review-waived`; es lässt durch und schreibt das in die Begründung.
+
+**Noch nicht scharf:** Der Check hält erst auf, wenn er in einem Ruleset als
+Required Status Check eingetragen ist. Bis dahin ist er Anzeige, nicht Gate.
 
 **Live-Tests: geplanter Workflow vorhanden.** `.github/workflows/live-tests.yml`,
 `cron: "43 4 * * 1"` (wöchentlich Mo, 04:43 UTC). `ci.yml` hat zusätzlich einen

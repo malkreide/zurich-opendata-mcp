@@ -1,0 +1,141 @@
+# Macht den Codex-Review zu einem Check statt zu einer Checkbox.
+#
+# Warum: Zwischen dem 18. und 20.9.2026 wurde die Zeile «Codex-Review
+# beantwortet» in diesem Repo viermal in Folge formal gesetzt und faktisch
+# leer gelassen; dreimal begann der Review erst NACH dem Merge. Der Ablauf
+# lässt vier Sekunden zwischen «ready for review» und Merge zu, der Review
+# braucht zwei bis drei Minuten. Ein Text, den man zum Merge-Zeitpunkt lesen
+# müsste, wird zum Merge-Zeitpunkt nicht gelesen.
+#
+# Dieser Workflow meldet einen Check-Run mit festem Namen (siehe CHECK_NAME).
+# Erst wenn der als Required Status Check in einem Ruleset eingetragen ist,
+# blockiert er tatsächlich — das ist eine Repo-Einstellung und kann aus einem
+# PR heraus nicht gesetzt werden. Ohne diesen Schritt ist der Workflow nur
+# eine sichtbare Anzeige.
+#
+# Der Check wird über die Checks-API gemeldet und nicht über den Job-Status:
+# `issue_comment` und `pull_request_review` laufen nicht am Head-SHA des PR,
+# ihr Job-Status landet also nirgends, wo ein Ruleset ihn sieht. Über die API
+# hängt jede Auslösung denselben Namen an denselben SHA.
+
+name: Codex-Verdikt
+
+on:
+  # Erster Anlauf: sobald der PR reviewfähig ist. Ergebnis hier ist fast immer
+  # rot — das ist der Zweck, nicht ein Fehler.
+  pull_request:
+    types: [opened, ready_for_review, reopened, synchronize, labeled, unlabeled]
+  # Die befundlose Meldung und die beiden Ausfallmeldungen sind gewöhnliche
+  # Issue-Kommentare. `edited` ist mitgenommen, weil Codex seine
+  # Summary-Tabelle in place editiert; ob ein Bot-Selbst-Edit dieses Ereignis
+  # auslöst, sagt die GitHub-Dokumentation nicht, und der Entwurf hängt
+  # deshalb nicht daran: Verdikte kommen als NEUER Kommentar oder als
+  # Review-Objekt, beide lösen sicher aus.
+  issue_comment:
+    types: [created, edited]
+  # Ein Befund ist ein Review-Objekt, kein Kommentar.
+  pull_request_review:
+    types: [submitted, edited]
+
+permissions:
+  contents: read
+  pull-requests: read
+  issues: read
+  checks: write
+
+concurrency:
+  # Pro PR nur ein Urteil gleichzeitig; ein späteres ersetzt ein früheres.
+  # Nicht abbrechen wäre hier falsch: zwei parallele Läufe können den Check
+  # in unterschiedlicher Reihenfolge schreiben und das Ergebnis verwürfeln.
+  group: codex-verdikt-${{ github.event.pull_request.number || github.event.issue.number }}
+  cancel-in-progress: true
+
+jobs:
+  verdikt:
+    name: Codex-Verdikt ermitteln
+    runs-on: ubuntu-latest
+    # Auf Issues, die keine PRs sind, gibt es nichts zu prüfen.
+    if: >-
+      github.event_name != 'issue_comment' ||
+      github.event.issue.pull_request != null
+
+    env:
+      CHECK_NAME: Codex-Verdikt
+      GH_TOKEN: ${{ github.token }}
+      PR: ${{ github.event.pull_request.number || github.event.issue.number }}
+      REPO: ${{ github.repository }}
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+
+      - name: PR-Zustand einsammeln
+        run: |
+          set -euo pipefail
+          # Head-SHA und Labels aus dem PR selbst. Nicht aus dem Ereignis:
+          # bei `issue_comment` steht der Head dort gar nicht drin, und bei
+          # den übrigen wäre er womöglich schon überholt.
+          gh api "repos/$REPO/pulls/$PR" > pr.json
+          gh api --paginate "repos/$REPO/issues/$PR/comments" > comments.json
+          gh api --paginate "repos/$REPO/pulls/$PR/reviews"   > reviews.json
+
+          python - <<'PY' > event.json
+          import json, pathlib
+
+          def read_all(name):
+              """Alle JSON-Werte der Datei, flach.
+
+              `gh api --paginate` haengt bei mehreren Seiten MEHRERE Arrays
+              aneinander — das ist kein gueltiges JSON-Dokument, und ein
+              blosses `json.loads` wirft darauf. Ab der 31. Anmerkung (die
+              Seitengroesse ist 30) waere der Gate damit still kaputt. Ein
+              `raw_decode`-Lauf frisst beide Formen, die eine Seite wie die
+              vielen, und bleibt unabhaengig von der gh-Version.
+              """
+              text = pathlib.Path(name).read_text(encoding="utf-8").strip()
+              decoder, out, i = json.JSONDecoder(), [], 0
+              while i < len(text):
+                  value, end = decoder.raw_decode(text, i)
+                  out.extend(value if isinstance(value, list) else [value])
+                  i = end
+                  while i < len(text) and text[i].isspace():
+                      i += 1
+              return out
+
+          pr = json.loads(pathlib.Path("pr.json").read_text(encoding="utf-8"))
+          print(json.dumps({
+              "head_sha": pr["head"]["sha"],
+              "labels": [label["name"] for label in pr.get("labels") or []],
+              "comments": read_all("comments.json"),
+              "reviews": read_all("reviews.json"),
+          }))
+          PY
+
+          python -c "import json;print('head:', json.load(open('event.json'))['head_sha'])"
+
+      - name: Urteilen und als Check melden
+        run: |
+          set -uo pipefail
+          if OUT="$(python scripts/check_codex_verdict.py --event event.json)"; then
+            CONCLUSION=success
+          else
+            CONCLUSION=failure
+          fi
+          echo "$OUT"
+
+          HEAD_SHA="$(python -c "import json;print(json.load(open('event.json'))['head_sha'])")"
+          TITLE="$( [ "$CONCLUSION" = success ] && echo 'Verdikt liegt vor' || echo 'Kein Verdikt fuer diesen Head' )"
+
+          # Der Check-Run traegt den Head-SHA, damit ein Ruleset ihn dem PR
+          # zuordnen kann — unabhaengig davon, welches Ereignis uns geweckt hat.
+          jq -n --arg n "$CHECK_NAME" --arg s "$HEAD_SHA" --arg c "$CONCLUSION" \
+                --arg t "$TITLE" --arg o "$OUT" \
+            '{name:$n, head_sha:$s, status:"completed", conclusion:$c,
+              output:{title:$t, summary:$o}}' \
+            | gh api --method POST "repos/$REPO/check-runs" --input -
+
+          [ "$CONCLUSION" = success ]
