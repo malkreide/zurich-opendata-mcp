@@ -77,6 +77,10 @@ The commit matters: a push does **not** re-trigger Codex. A verdict on an
 earlier commit is not a verdict on yours; re-trigger by commenting
 `@codex review`.
 
+The check re-reads the PR state from the API on every run. So if it sits red
+although Codex has since answered, *Actions → Codex-Verdikt → open the run →
+"Re-run all jobs"* is enough; no empty commit needed.
+
 **If you genuinely need to merge without a review** — the quota is exhausted,
 or the change cannot wait — add the label `codex-review-waived`. The check then
 passes and records in its summary that it was waived. An escape hatch you can
