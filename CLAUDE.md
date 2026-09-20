@@ -484,6 +484,34 @@ Das ist die Pointe des ganzen Abschnitts: Ein Mechanismus, der nur anzeigt,
 ändert nichts am Ablauf. Der Haken im Ruleset ist nicht die Kür nach der
 Arbeit, er **ist** die Arbeit.
 
+**Und der Merge in Sekunden frisst auch Commits.** Zweimal hintereinander, am
+20.9.2026, ging ein Push verloren, weil er wenige Sekunden nach dem Merge
+ankam:
+
+| PR | gemergt | gemergter Head | Push danach | Inhalt |
+|---|---|---|---|---|
+| #120 | 16:58:43 | `60c7e25` | `8229ded` | verloren |
+| #121 | ~17:07:29 | `2e61bb2` | `5fb26e5` | verloren |
+
+GitHub mergt den Head, den es hat. Ein Push, der danach eintrifft, landet auf
+dem Branch und nirgends sonst — es gibt keine Warnung, der PR zeigt ihn nicht
+mehr an, und der Branch-Ref sieht gesund aus.
+
+**Der naheliegende Test taugt nichts.** Nach einem Squash-Merge ist *kein*
+Branch-Commit ein Vorfahr von `main`; `git merge-base --is-ancestor` meldet
+für den gemergten Head dasselbe wie für den verlorenen. Beide Male «nein»,
+und daraus lässt sich nichts ablesen. Verglichen werden muss der **Inhalt**:
+
+```bash
+git diff --stat <letzter-eigener-commit> origin/main -- <datei>
+```
+
+Zwei Handgriffe daraus. Erstens: Nach dem Merge eines eigenen PR den Inhalt
+gegenprüfen, nicht die Ahnenschaft. Zweitens, wirksamer: In einen PR, der
+jederzeit gemergt werden kann, keine Nachträge mehr pushen — sie gehören vor
+das Öffnen. Wer nachschiebt, wettet darauf, dass niemand in derselben Minute
+auf «Merge» drückt, und diese Wette ging hier zweimal verloren.
+
 Daraus der Richtwert: der Review braucht **zwei bis drei Minuten** ab «ready».
 Und die Erklärung dafür, warum #116 und #117 in genau dem nicht auflösbaren
 Zustand landeten, der weiter oben beschrieben ist: ein Review, der auf einem schon
@@ -545,6 +573,12 @@ diese Messung nicht.
 
 Der Anlass war ein Ausbleiben: Um 16:54:52 UTC kam die Kontingent-Meldung von
 Codex als Issue-Kommentar, und drei Minuten später gab es dazu keinen Lauf.
+
+**Die Gegenprobe kam eine Stunde später von selbst.** Nach dem Merge von
+#120 lag die Datei auf `main`; der erste PR danach (#121, Head `2e61bb2`,
+17:05:41) erzeugte prompt einen `pull_request_target`-Lauf — vorher null,
+nachher einer, ohne dass sich an der Datei etwas geändert hätte. Damit ist
+die Erklärung belegt und nicht bloss plausibel.
 
 Dasselbe gilt fürs Ändern eines bestehenden solchen Zweigs: Geprüft wird die
 alte Fassung. Das ist die Klasse «Ein Release-Lauf benutzt die Workflow-Datei
@@ -739,18 +773,32 @@ Entkopplung, die auf PR #119 gefehlt hatte. Ein Check-Run, nicht zwei:
 `CHECK_ID 106112983618` angelegt und derselbe abgeschlossen, 16:51:57 bis
 16:51:59.
 
-Ungeprüft bleiben drei Wege, jeder bis zu seinem ersten echten Anlass:
+**Auf PR #121 kam die Weichenstellung dann gleich zum Vorschein**, Head
+`2e61bb2`, 17:05:41 — zwei Läufe für dieselbe Aktion:
 
-| Weg | Hängt an | Zeigt sich bei |
+| Lauf | Ereignis | Job |
 |---|---|---|
-| Fork-PR | `pull_request_target` | erstem PR aus einem Fork |
-| Dependabot | `pull_request_target` | nächstem wöchentlichen Update-PR |
-| Grün nach befundloser Meldung | `issue_comment` | erstem Codex-Kommentar auf `main`-Basis |
+| 35524764994 | `pull_request` | `success`, urteilt |
+| 35524765030 | `pull_request_target` | **`skipped`** |
 
-Gedeckt sind sie bis dahin nur durch die Drift-Wachen und die Fixtures — also
-durch den Text der Datei und aufgezeichnete Antworten, nicht durch das
-Verhalten von GitHub. Beim ersten Dependabot-PR lohnt deshalb ein Blick, ob
-überhaupt ein `pull_request_target`-Lauf entsteht.
+Das belegt zwei Annahmen, die bis dahin nur aus der Dokumentation stammten:
+`pull_request_target` feuert für **jeden** PR und nicht nur für Forks — die
+Prämisse, auf der die `concurrency` auf Job-Ebene beruht —, und der `if`
+teilt exklusiv, es handelt genau einer der beiden.
+
+Ungeprüft bleibt damit weniger, aber Wesentliches:
+
+| Weg | Stand |
+|---|---|
+| `pull_request_target` **feuert und wird übersprungen** | gemessen auf #121 |
+| Fork-PR: der privilegierte Zweig **handelt** | offen, bis ein Fork-PR kommt |
+| Dependabot: derselbe Zweig | offen, bis zum nächsten Update-PR |
+| Grün nach befundloser Meldung (`issue_comment`) | offen, bis ein Codex-Kommentar auf `main`-Basis eintrifft |
+
+Die drei offenen Zeilen decken bis dahin nur die Drift-Wachen und die
+Fixtures — also der Text der Datei und aufgezeichnete Antworten, nicht das
+Verhalten von GitHub. Beim ersten Dependabot-PR lohnt deshalb der Blick, ob
+der Job dort auch wirklich läuft statt übersprungen zu werden.
 
 Der Rest ist gemessen. Auf PR #120, Head `475fbce9`, 20.9.2026: Check-Run
 `Codex-Verdikt` auf `failure` («Kein Verdikt fuer diesen Head»), Job
