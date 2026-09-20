@@ -48,6 +48,65 @@ pip install -e ".[dev]"
 Pro Feature/Bugfix ein PR, und aktualisieren Sie die Dokumentation **sowohl** auf
 Englisch als auch auf Deutsch (`README.md` / `README.de.md`).
 
+### Der Check `Codex-Verdikt`: warum Ihr PR zwei Minuten rot stehen kann
+
+Wer einen Draft auf «ready» schaltet, löst einen Codex-Review aus, und der
+braucht **zwei bis drei Minuten**. Der Merge-Button wartet darauf nicht.
+Zwischen dem 18. und 20.9.2026 wurde die Zeile «Codex-Review beantwortet» in
+diesem Repo viermal in Folge gesetzt, ohne dass ein Review stattgefunden
+hätte; bei dreien begann er überhaupt erst *nach* dem Merge — abgelesen an den
+Zeitstempeln, die Codex selbst in seiner Summary-Tabelle veröffentlicht.
+
+Der Review ist deshalb jetzt ein Check und keine Checkbox.
+`.github/workflows/codex-gate.yml` meldet einen Check-Run namens
+`Codex-Verdikt`, und `scripts/check_codex_verdict.py` entscheidet, was zählt:
+
+| Beobachtet | Zählt als Verdikt? |
+|---|---|
+| Review-Objekt mit Überschrift «Codex Review» auf dem aktuellen Head | ja — es gibt Befunde, beantworten Sie sie |
+| «Didn't find any major issues» mit dem aktuellen Commit | ja |
+| Antwort von Codex in einem Kommentar-Thread | **nein** |
+| Summary-Tabelle auf `Completed`, sonst nichts | **nein** |
+| Summary-Tabelle auf `Running` | nein, läuft noch |
+| Kontingent- oder Environment-Meldung | nein, der Review fand nicht statt |
+
+Zwei Zeilen darin überraschen, und beide sehen von aussen nach einem Verdikt
+aus.
+
+Die **Thread-Antwort**: GitHub verpackt jede Antwort auf einen
+Inline-Kommentar als Review-Objekt — auch die von Codex —, und dieses trägt
+den *aktuellen* Head statt des geprüften Commits. Wer einen Befund
+beantwortet und Codex antwortet zurück, hat damit kein neues Verdikt. Zu
+unterscheiden ist es am Text: Ein echtes Review trägt die Überschrift «Codex
+Review» und nennt den geprüften Commit, eine Thread-Antwort hat gar keinen
+Body.
+
+Die **`Completed`-Tabelle**: Läuft ein Review auf einem bereits geschlossenen
+PR zu Ende, steht die Tabelle auf `Completed`, und ein Verdikt kommt nie —
+«completed» sagt, dass der Lauf fertig ist, nicht wie er ausging.
+
+Der Commit zählt mit: Ein Push löst **keinen** neuen Codex-Review aus. Ein
+Verdikt zu einem früheren Commit ist kein Verdikt zu Ihrem; nachtriggern mit
+einem Kommentar `@codex review`.
+
+Der Check liest den PR-Zustand bei jedem Lauf frisch über die API. Steht er
+rot, obwohl Codex inzwischen geantwortet hat, genügt deshalb *Actions →
+Codex-Verdikt → den Lauf öffnen → «Re-run all jobs»*; ein leerer Commit ist
+dafür nicht nötig.
+
+**Wenn Sie wirklich ohne Review mergen müssen** — das Kontingent ist weg, oder
+die Änderung kann nicht warten — setzen Sie das Label `codex-review-waived`.
+Der Check wird dann grün und hält in seiner Zusammenfassung fest, dass
+gewaivert wurde. Eine Hintertür, die im Log steht, ist besser als eine, die
+niemand bemerkt.
+
+**Ein Vorbehalt, solange das neu ist.** Ein Check hält einen Merge erst dann
+auf, wenn er in einem Ruleset als Required Status Check eingetragen ist, und
+das ist eine Repo-Einstellung, die kein PR setzen kann. Bis jemand den Haken
+setzt, ist `Codex-Verdikt` eine zutreffende Anzeige und sonst nichts — rot
+neben einem freigeschalteten Merge-Button heisst, dass der Haken noch fehlt,
+nicht dass der Check kaputt ist.
+
 ---
 
 ## Ein neues Tool hinzufügen
