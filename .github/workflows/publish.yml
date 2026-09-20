@@ -54,7 +54,23 @@ jobs:
         # whose ghcr.io image is tagged by ref name only — pinning the SHA
         # makes the runner pull ghcr.io/...:<sha>, which does not exist
         # ("manifest unknown", broke the v0.5.0 release run).
-        uses: pypa/gh-action-pypi-publish@v1.14.1
+        #
+        # Keep this current, and mirror it in `scripts/check_wheel_metadata.py`.
+        # The action ships its own twine, so ITS twine decides which core
+        # metadata version an artifact may carry — not PyPI, and not the twine
+        # anywhere else in this repo. v1.14.1 bundles twine 6.1.0, which knows
+        # metadata up to 2.4 and rejected the v0.8.0 release run outright:
+        #
+        #     InvalidDistribution: Invalid distribution metadata:
+        #     '2.5' is not a valid metadata version
+        #
+        # Nothing in this repo had changed. `[build-system] requires` names
+        # `hatchling` unbounded, so `python -m build` fetches the newest one at
+        # release time, and hatchling 1.32.3 emits metadata 2.5 where 1.31.0
+        # emitted 2.4. PyPI itself accepts 2.5 — hatchling 1.32.3 is published
+        # there carrying exactly that — so the rejection was the action's
+        # pre-flight check, not the registry.
+        uses: pypa/gh-action-pypi-publish@v1.14.2
 
   publish-mcp:
     name: Publish to MCP Registry

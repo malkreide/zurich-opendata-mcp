@@ -114,6 +114,14 @@ jobs:
           pip install --no-cache-dir build
           python -m build --wheel
 
+      # Der Bau oben loest `hatchling` frei auf — genau wie der Release-Lauf.
+      # Damit kann die Kernmetadaten-Version der gepinnten Publish-Action
+      # davonlaufen, ohne dass sich hier eine Zeile aendert. Genau so fiel
+      # v0.8.0. Der Check gehoert deshalb hierher und nicht in `check`: dort
+      # loest `uv sync` aus dem Lock auf und sieht das Build-Backend nie.
+      - name: Metadaten-Version gegen die gepinnte Publish-Action
+        run: python scripts/check_wheel_metadata.py
+
       - name: Install the wheel into a clean venv (no lockfile, cold cache)
         run: |
           python -m venv /tmp/fresh
