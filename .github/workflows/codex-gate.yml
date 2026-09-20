@@ -35,9 +35,10 @@ on:
   # Basis-Branch und bekommt den normalen Token.
   #
   # Das ist hier die sichere Variante dieses sonst heiklen Triggers: Der Job
-  # checkt ohne `ref` aus und erhält damit den BASIS-Stand, führt also keinen
-  # Code aus dem Fork aus. Was aus dem PR kommt — Kommentar- und Review-Texte
-  # — wandert als JSON in ein Python-Skript und nie in eine Shell-Zeile; es
+  # checkt einen ausdrücklich gesetzten Ref aus (siehe beim Checkout-Schritt)
+  # und führt damit keinen Code aus dem Fork aus. Was aus dem PR kommt —
+  # Kommentar- und Review-Texte — wandert als JSON ins Skript, nie in eine
+  # Shell-Zeile; es
   # gibt keine `${{ }}`-Einsetzung von Fremdtext. Ein Fork kann die
   # Entscheidungslogik damit auch nicht zu seinen Gunsten ändern: es gilt das
   # `check_codex_verdict.py` des Basis-Branch.
@@ -86,8 +87,10 @@ jobs:
     # beiden PR-Trigger teilen sich die Arbeit strikt nach Herkunft, damit
     # kein PR doppelt bewertet wird: `pull_request` für dieses Repo,
     # `pull_request_target` für Forks. `issue_comment` und
-    # `pull_request_review` laufen ohnehin im Basis-Kontext mit vollem Token
-    # und brauchen die Unterscheidung nicht.
+    # `pull_request_review` tragen bei beiden Herkünften einen vollen Token
+    # und brauchen die Unterscheidung hier nicht — wohl aber beim Checkout:
+    # `pull_request_review` läuft NICHT im Basis-Kontext, sondern am
+    # PR-Merge-Ref. Das steht dort.
     if: >-
       (github.event_name == 'issue_comment' &&
        github.event.issue.pull_request != null) ||
@@ -104,7 +107,40 @@ jobs:
       REPO: ${{ github.repository }}
 
     steps:
+      # Den auszucheckenden Stand AUSDRÜCKLICH festlegen. Ohne `ref` richtet
+      # sich der Checkout nach dem Ereignis — am 20.9.2026 an Lauf
+      # 35514764426 im Log abgelesen:
+      #
+      #     git checkout --force refs/remotes/pull/119/merge
+      #     HEAD is now at 18595a4 Merge 601d2214… into a8023ab2…
+      #
+      # Bei `pull_request_review` ist die Vorgabe also der PR-MERGE-REF und
+      # enthält bei einem Fork-PR Fork-Code — während der Token dieses
+      # Ereignisses `checks: write` trägt, denn nur `pull_request` wird bei
+      # Forks auf Nur-Lesen heruntergestuft. Wer dort ungefiltert auscheckt,
+      # führt `check_codex_verdict.py` in der Fassung des Forks aus und lässt
+      # ihn sein eigenes grünes `Codex-Verdikt` schreiben. Der Gate wäre
+      # damit von genau dem umgehbar, den er prüfen soll.
+      #
+      # Deshalb: aus diesem Repo den PR-Stand selbst — wer hierher pushen
+      # kann, hat ohnehin Schreibrecht, und so prüft sich der Gate auf seinem
+      # eigenen PR. Sonst immer die Basis. Bei `issue_comment` gibt es kein
+      # `pull_request`-Objekt; dort greift `github.ref`, das bereits auf den
+      # Default-Branch zeigt.
+      #
+      # Befund eines Codex-Reviews auf PR #119. Die frühere Begründung, der
+      # Job erhalte «ohne `ref` den Basis-Stand», galt nur für
+      # `pull_request_target` und wurde fälschlich verallgemeinert.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: >-
+            ${{ (github.event.pull_request.head.repo.full_name == github.repository
+                 && github.event.pull_request.head.sha)
+                || github.event.pull_request.base.sha
+                || github.ref }}
+          # Nichts wird gepusht, und ein privilegierter Lauf soll den Token
+          # nicht in der git-Konfiguration liegen lassen.
+          persist-credentials: false
 
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0

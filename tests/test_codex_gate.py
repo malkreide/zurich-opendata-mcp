@@ -317,6 +317,30 @@ def test_die_concurrency_gruppe_steht_auf_job_ebene() -> None:
     assert len(eingerueckt) == 1, "genau eine concurrency-Gruppe, auf Job-Ebene"
 
 
+def test_der_checkout_pinnt_einen_ref() -> None:
+    """Zweite Drift-Wache, und die sicherheitsrelevante.
+
+    Ohne `ref` richtet sich `actions/checkout` nach dem Ereignis. Bei
+    `pull_request_review` ist die Vorgabe `refs/pull/<n>/merge` — am
+    20.9.2026 an Lauf 35514764426 im Log abgelesen —, und dieses Ereignis
+    trägt auch bei einem Fork-PR einen Token mit `checks: write`. Ein Fork
+    könnte `check_codex_verdict.py` dann in eigener Fassung ausführen lassen
+    und sich ein grünes `Codex-Verdikt` selbst schreiben.
+
+    Wer die `ref:`-Zeile entfernt, öffnet genau das wieder.
+    """
+    text = (ROOT / ".github" / "workflows" / "codex-gate.yml").read_text(encoding="utf-8")
+    checkout = text.split("actions/checkout@", 1)[1]
+    # Nur der Block bis zum naechsten Schritt derselben Ebene.
+    block = checkout.split("\n      - ", 1)[0]
+
+    assert "ref:" in block, "der Checkout pinnt keinen Ref mehr"
+    assert "github.event.pull_request.base.sha" in block, (
+        "der Fork-Fall faellt nicht mehr auf die Basis zurueck"
+    )
+    assert "persist-credentials: false" in block
+
+
 def test_das_cli_endet_mit_0_bei_verdikt_und_1_ohne(capsys, tmp_path) -> None:
     ok = tmp_path / "ok.json"
     ok.write_text((FIXTURES / "pr115_befundlos.json").read_text(encoding="utf-8"), "utf-8")
