@@ -467,15 +467,25 @@ wirklich als Gate will, braucht eine Mechanik: einen Check-Run, der rot bleibt,
 solange für den aktuellen Head kein Verdikt vorliegt.
 
 Die Entscheidung dafür — *liegt für genau diesen Head ein Verdikt vor?* — steht
-in diesem Repo als reine Funktion in `scripts/check_codex_verdict.py` (Details
-in Teil 2). Der Workflow, der daraus einen Check-Run macht, **fehlt noch
-absichtlich**: Er wurde zusammen mit dem Skript entworfen und in elf
-Review-Runden achtmal nachgebessert — Fork-Token, Dependabot, Checkout-Ref,
-Zustandsführung des Check-Runs. Jede dieser Weichen ist eine eigene Aussage
-über GitHub, und mehrere davon waren zuerst falsch. Sie gehören einzeln belegt
-statt gebündelt, deshalb folgt der Workflow getrennt.
+in diesem Repo als reine Funktion in `scripts/check_codex_verdict.py`, der
+Check-Run dazu in `.github/workflows/codex-gate.yml` (Details zu beidem in
+Teil 2). Zum Portieren genügt, beide Dateien zu kopieren.
 
-**Und selbst dann blockiert er nichts.** Erst als Required Status Check in
+Der Workflow kam bewusst erst nach dem Skript und in sechs einzelnen Commits.
+Der erste Entwurf bündelte beides und lief durch elf Review-Runden; **acht
+Befunde betrafen ausschliesslich den Workflow und keiner das Skript** —
+Fork-Token, Dependabot, Checkout-Ref, Concurrency, Zustandsführung des
+Check-Runs, Job-Status. Fünf davon hatten dieselbe Wurzel: Eine Eigenschaft
+eines GitHub-Triggers war auf einen anderen übertragen worden, ohne sie dort
+zu messen. Gebündelt liess sich keine davon mehr einzeln belegen.
+
+Das ist die übertragbare Lehre, nicht der Gate: **Eine reine Funktion und die
+Plattformweichen drumherum sind zwei verschiedene Arten von Arbeit.** Die erste
+lässt sich gegen Aufzeichnungen prüfen, die zweite nur gegen die Plattform
+selbst. Sie in einen PR zu legen heisst, den geprüften Teil so lange
+festzuhalten, wie der ungeprüfte braucht.
+
+**Und selbst jetzt blockiert er nichts.** Erst als Required Status Check in
 einem Ruleset hält er einen Merge auf, und das ist eine Repo-Einstellung, die
 kein PR setzen kann. Wer die Dateien kopiert und den Haken vergisst, hat eine
 hübschere Anzeige und dieselbe Lücke.
@@ -606,9 +616,56 @@ Geprüft in `tests/test_codex_gate.py` gegen aufgezeichnete Ereignisse in
 `tests/fixtures/codex/`; die dortige `PROVENANCE.md` trennt wörtliche
 Mitschriften, `CLAUDE.md`-Wortlaute und Konstruiertes.
 
-**Noch kein Gate.** Das Skript entscheidet, meldet aber nichts: Der Workflow,
-der daraus einen Check-Run macht, folgt in einem eigenen PR (Begründung in
-Teil 1). Bis dahin ist die Logik vorhanden und geprüft, wirkt aber nirgends.
+**Vierter Workflow: `codex-gate.yml`.** Macht aus dem Skript einen Check-Run
+`Codex-Verdikt`, der rot bleibt, solange für den aktuellen Head kein Verdikt
+vorliegt. Vier Trigger, weil die Verdikte in vier Formen kommen und weil zwei
+Token-Sonderfälle einen eigenen Pfad brauchen.
+
+Gemeldet wird über die **Checks-API**, nicht über den Job-Status:
+`issue_comment` und `pull_request_review` laufen nicht am Head-SHA, ihr
+Job-Status landet also nirgends, wo ein Ruleset ihn sieht.
+
+Die fünf Weichen, je mit dem Befund, der sie erzwungen hat:
+
+| Weiche | Warum |
+|---|---|
+| `pull_request` nur für dieses Repo | Fork-PRs bekommen dort einen Nur-Lese-Token; der POST endet mit 403, auch für den Notausgang |
+| `pull_request_target` für Forks **und Dependabot** | Dependabots Branch liegt in diesem Repo, GitHub stuft den Token trotzdem herunter |
+| `ref:` am Checkout gepinnt | Ohne `ref` checkt `pull_request_review` `refs/pull/<n>/merge` aus — Fork-Code, mit `checks: write` |
+| Check-Run vorab auf `in_progress` | Sonst bliebe ein älteres Waiver-Grün stehen, wenn ein vorgelagerter Schritt scheitert |
+| `concurrency` auf **Job**-Ebene, ohne Abbruch | Auf Workflow-Ebene träte auch der übersprungene Lauf bei; `cancelled` sieht rot aus |
+
+Zwei Dinge, die man dabei leicht falsch herum annimmt. Erstens: «ohne `ref`
+bekommt der Job den Basis-Stand» gilt **nur für `pull_request_target`** — am
+20.9.2026 an Lauf 35514764426 gemessen, ausgelöst durch
+`pull_request_review`:
+
+```
+git checkout --force refs/remotes/pull/119/merge
+HEAD is now at 18595a4 Merge 601d2214… into a8023ab2…
+```
+
+Zweitens: Welcher Trigger zuständig ist und ob der Head vertrauenswürdig ist,
+sind **zwei verschiedene Fragen**. Die Abkürzung über `github.event_name` legte
+den Gate sofort lahm (Lauf 35515251744: `python: can't open file
+'…/scripts/check_codex_verdict.py'`), weil ein `pull_request_review` auf einem
+PR aus diesem Repo damit auf der Basis landete, wo das Skript vor dem Merge
+nicht liegt. Nur die zweite Frage gehört an den Checkout.
+
+Der **Job-Status hängt nicht am Verdikt** — das Gate ist der Check-Run. Ein
+roter Job neben einem grünen Check trägt keine Information, nur Rauschen, und
+Rauschen gewöhnt Leute daran, einen roten Eintrag auf diesem PR zu übergehen.
+Rot wird der Job nur bei einem Ausfall der Mechanik, und der wird am
+Ausgabepräfix des Skripts erkannt, nicht am Exit-Code: «kein Verdikt» und eine
+unbehandelte Ausnahme enden beide mit 1.
+
+Fünf Drift-Wachen in `tests/test_codex_gate.py` halten diese Eigenschaften
+fest; sie lesen die Datei als Text, weil pyyaml keine Abhängigkeit dieses
+Projekts ist.
+
+**Noch nicht scharf.** Der Check hält erst auf, wenn er in einem Ruleset als
+Required Status Check eingetragen ist. Bis dahin ist er Anzeige, nicht Gate —
+und das ist eine Repo-Einstellung, die kein PR setzen kann.
 
 **Live-Tests: geplanter Workflow vorhanden.** `.github/workflows/live-tests.yml`,
 `cron: "43 4 * * 1"` (wöchentlich Mo, 04:43 UTC). `ci.yml` hat zusätzlich einen
