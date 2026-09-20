@@ -66,6 +66,44 @@ jobs:
     name: Codex-Verdikt ermitteln
     runs-on: ubuntu-latest
 
+    # Bewusst auf JOB-Ebene, nicht auf Workflow-Ebene.
+    #
+    # `pull_request_target` feuert für JEDEN PR, nicht nur für Forks; für
+    # dieselbe Aktion entstehen also immer zwei Läufe. Stünde die Gruppe
+    # oben, träten beide ihr bei — sie wird ausgewertet, bevor der `if`
+    # unten je gelesen wird. Mit `cancel-in-progress` könnte dann der Lauf
+    # gewinnen, dessen Job der Filter gleich darauf überspringt: kein Job,
+    # kein POST, gar kein Check. Bei einem Fork träfe das ausgerechnet den
+    # Notausgang.
+    #
+    # Auf Job-Ebene tritt der übersprungene Lauf der Gruppe nie bei. Es
+    # bleibt bei einem Urteil pro PR, und zwar dem des Laufs, der auch
+    # handelt.
+    concurrency:
+      group: codex-verdikt-${{ github.event.pull_request.number || github.event.issue.number }}
+      # NICHT abbrechen, sondern anstellen. Zwei Gruende, beide gemessen:
+      #
+      # Ein abgebrochener Lauf hinterlaesst einen `cancelled`-Eintrag in der
+      # Check-Liste des PR — auf PR #119 am 20.9.2026 genau das, was den PR
+      # rot aussehen liess, obwohl der Required Check gruen war.
+      #
+      # Und seit der Check vor dem fehlbaren Teil auf `in_progress` gesetzt
+      # wird (Commit davor), kann ein Abbruch mitten im Schritt einen Run in
+      # `in_progress` zuruecklassen, der nie abgeschlossen wird. Beim
+      # beobachteten Fall kam der Abbruch erst nach dem PATCH — Glueck, keine
+      # Eigenschaft.
+      #
+      # Ohne Abbruch laeuft der bereits gestartete Lauf fertig, und der
+      # naechste kommt danach dran; weil dieser seinen Check-Run spaeter
+      # anlegt, ist sein Urteil das massgebende.
+      #
+      # Das ist KEINE vollstaendige Serialisierung: GitHub haelt pro Gruppe
+      # nur EINEN wartenden Lauf vor und verwirft ihn, sobald ein weiterer
+      # eintrifft. Ab drei ueberlappenden Ereignissen entsteht also weiterhin
+      # ein `cancelled`-Eintrag. Die Einstellung beseitigt das Rauschen im
+      # haeufigen Fall (zwei Ereignisse) und schuetzt den LAUFENDEN Job; mehr
+      # leistet sie nicht.
+      cancel-in-progress: false
     # Auf Issues, die keine PRs sind, gibt es nichts zu prüfen. Und die
     # beiden PR-Trigger teilen sich die Arbeit strikt nach Herkunft, damit
     # kein PR doppelt bewertet wird: `pull_request` für dieses Repo,
