@@ -245,10 +245,23 @@ jobs:
 
           # Der Check-Run traegt den Head-SHA, damit ein Ruleset ihn dem PR
           # zuordnen kann — unabhaengig davon, welches Ereignis uns geweckt hat.
-          jq -n --arg n "$CHECK_NAME" --arg s "$HEAD_SHA" --arg c "$CONCLUSION" \
-                --arg t "$TITLE" --arg o "$OUT" \
-            '{name:$n, head_sha:$s, status:"completed", conclusion:$c,
-              output:{title:$t, summary:$o}}' \
-            | gh api --method POST "repos/$REPO/check-runs" --input -
+          # Der POST wird AUSDRUECKLICH geprueft. Gemessen traegt dieser Step
+          # `bash -e` (im Log: `shell: /usr/bin/bash -e {0}`), ein
+          # fehlschlagendes `gh` braeche ihn also ohnehin ab — aber diese
+          # Eigenschaft haengt dann an einem impliziten Flag, das ein
+          # `set +e` oder ein `shell:`-Override still entfernt. Bei einem
+          # Gate ist «faellt geschlossen aus» zu wichtig, um implizit zu
+          # bleiben. Angeregt durch einen Codex-Review auf PR #119; dessen
+          # Begruendung (`-e` sei nicht aktiv) trifft nicht zu, der Rat
+          # schon.
+          if ! jq -n --arg n "$CHECK_NAME" --arg s "$HEAD_SHA" --arg c "$CONCLUSION" \
+                     --arg t "$TITLE" --arg o "$OUT" \
+               '{name:$n, head_sha:$s, status:"completed", conclusion:$c,
+                 output:{title:$t, summary:$o}}' \
+               | gh api --method POST "repos/$REPO/check-runs" --input -
+          then
+            echo "::error::Check-Run konnte nicht veroeffentlicht werden — das Urteil lautete: $OUT"
+            exit 1
+          fi
 
           [ "$CONCLUSION" = success ]
