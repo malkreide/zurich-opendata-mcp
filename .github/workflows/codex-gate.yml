@@ -138,19 +138,25 @@ jobs:
       # ihn sein eigenes grünes `Codex-Verdikt` schreiben. Der Gate wäre
       # damit von genau dem umgehbar, den er prüfen soll.
       #
-      # Entschieden wird am EREIGNISNAMEN, weil der `if` oben die
-      # Vertrauensfrage schon abschliessend beantwortet: Ein
-      # `pull_request`-Lauf kommt dort nur noch zustande, wenn der PR aus
-      # diesem Repo stammt und nicht von Dependabot. Dessen Head ist damit
-      # von jemandem mit Schreibrecht, darf ausgecheckt werden, und der Gate
-      # prüft sich so auf seinem eigenen PR. Jeder andere Pfad —
-      # `pull_request_target`, `pull_request_review` — nimmt die Basis. Bei
-      # `issue_comment` gibt es kein `pull_request`-Objekt; dort greift
-      # `github.ref`, das bereits auf den Default-Branch zeigt.
+      # Entschieden wird daran, ob der HEAD vertrauenswürdig ist — nicht
+      # daran, welcher Trigger gerade zuständig ist. Vertrauenswürdig heisst:
+      # aus diesem Repo und nicht von Dependabot; wer so einen Branch pusht,
+      # hat Schreibrecht, und der Gate prüft sich damit auf seinem eigenen PR.
+      # Sonst die Basis. Bei `issue_comment` gibt es kein
+      # `pull_request`-Objekt; dort greift `github.ref`, das bereits auf den
+      # Default-Branch zeigt.
       #
-      # Eine Herkunftsprüfung an dieser Stelle waere subtil falsch: Ein
-      # Dependabot-PR liegt in diesem Repo und bestuende sie, obwohl sein
-      # Lauf gerade deshalb ueber `pull_request_target` geht.
+      # Hier stand kurzzeitig `github.event_name == 'pull_request'` — eine
+      # scheinbare Vereinfachung, weil der `if` oben ja schon filtert. Sie
+      # war falsch und hat den Gate sofort lahmgelegt: Ein
+      # `pull_request_review` auf einem PR AUS DIESEM REPO landete damit auf
+      # der Basis, und dort liegt `check_codex_verdict.py` erst nach dem
+      # Merge. Gemessen an Lauf 35515251744:
+      #
+      #     python: can't open file '…/scripts/check_codex_verdict.py'
+      #
+      # Welcher Trigger zuständig ist und ob der Head vertrauenswürdig ist,
+      # sind zwei verschiedene Fragen. Nur die zweite gehört hierher.
       #
       # Befund eines Codex-Reviews auf PR #119. Die frühere Begründung, der
       # Job erhalte «ohne `ref` den Basis-Stand», galt nur für
@@ -158,7 +164,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: >-
-            ${{ (github.event_name == 'pull_request'
+            ${{ ((github.event.pull_request.head.repo.full_name == github.repository
+                  && github.event.pull_request.user.login != 'dependabot[bot]')
                  && github.event.pull_request.head.sha)
                 || github.event.pull_request.base.sha
                 || github.ref }}
@@ -218,10 +225,18 @@ jobs:
       - name: Urteilen und als Check melden
         run: |
           set -uo pipefail
-          if OUT="$(python scripts/check_codex_verdict.py --event event.json)"; then
+          if OUT="$(python scripts/check_codex_verdict.py --event event.json 2>&1)"; then
             CONCLUSION=success
           else
             CONCLUSION=failure
+          fi
+          # Ein Check ohne Begruendung ist fast so schlecht wie keiner. Faellt
+          # das Skript aus (etwa weil es im ausgecheckten Stand fehlt), stand
+          # hier vorher eine leere Zusammenfassung — gemessen an Lauf
+          # 35515251744.
+          if [ -z "${OUT//[[:space:]]/}" ]; then
+            CONCLUSION=failure
+            OUT="BLOCKIERT: check_codex_verdict.py lieferte keine Ausgabe. Der Gate faellt geschlossen aus, aber die Ursache liegt im Workflow und nicht im Verdikt — Lauf-Log ansehen."
           fi
           echo "$OUT"
 

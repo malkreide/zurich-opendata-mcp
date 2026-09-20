@@ -340,6 +340,19 @@ def test_der_checkout_pinnt_einen_ref() -> None:
     )
     assert "persist-credentials: false" in block
 
+    # Entschieden werden muss an der VERTRAUENSWUERDIGKEIT des Heads, nicht
+    # am Ereignisnamen. `github.event_name == 'pull_request'` stand hier
+    # kurzzeitig als vermeintliche Vereinfachung und legte den Gate lahm:
+    # ein `pull_request_review` auf einem PR aus diesem Repo landete damit
+    # auf der Basis, wo das Skript erst nach dem Merge liegt.
+    assert "github.event.pull_request.head.repo.full_name" in block, (
+        "der Checkout entscheidet nicht mehr an der Herkunft des Heads"
+    )
+    assert "dependabot[bot]" in block, "Dependabot-Heads duerfen nicht als vertrauenswuerdig gelten"
+    assert "github.event_name" not in block, (
+        "der Ereignisname beantwortet die Vertrauensfrage nicht"
+    )
+
 
 def test_dependabot_laeuft_ueber_den_privilegierten_pfad() -> None:
     """Dritte Drift-Wache: der unscheinbarste der drei Faelle.
