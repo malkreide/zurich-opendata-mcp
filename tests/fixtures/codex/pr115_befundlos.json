@@ -1,0 +1,19 @@
+{
+  "head_sha": "65fd46b4bc7bc1d4f8b5be6c8a7af13f92703b30",
+  "labels": [],
+  "reviews": [],
+  "comments": [
+    {
+      "user": {
+        "login": "chatgpt-codex-connector[bot]"
+      },
+      "body": "<!-- codex-pull-request-review-summary -->\n\n## Codex Review Summary\n\nThis comment shows the latest Codex review activity on this pull request.\n\n| Review | Status | Commit | Review trigger |\n| --- | --- | --- | --- |\n| 📝 **Code Review** | ✅ **Completed** <relative-time datetime=\"…\">…</relative-time> | `65fd46b` | Draft marked ready |\n"
+    },
+    {
+      "user": {
+        "login": "chatgpt-codex-connector[bot]"
+      },
+      "body": "Codex Review: Didn't find any major issues. :rocket:\n\n**Reviewed commit:** `65fd46b4bc`\n"
+    }
+  ]
+}

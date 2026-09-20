@@ -347,6 +347,30 @@ Das sind verschiedene Abfragen — `get_reviews` fürs Objekt, `get_comments` f�
 alles andere; wer nur eine nimmt, übersieht den Rest. Genau so ist die
 Limit-Meldung zuerst durchgerutscht.
 
+**Und `get_reviews` liefert mehr als Reviews.** GitHub verpackt jede Antwort auf
+einen Inline-Kommentar als Review-Objekt — auch die von Codex —, und dieses
+trägt den **aktuellen Head**, nicht den geprüften Commit. Am 20.9.2026 auf
+PR #119 mitgeschrieben: der echte Review um 12:57:36 auf `6dc81d17cc`, um
+13:03:12 eine blosse Thread-Antwort auf `b64b96d2`. Wer Bot-Login und
+`commit_id` prüft, hält die Antwort für ein Verdikt zum neuen Head. Genau das
+tat der Gate dieses Repos, bis es auffiel; gemessen endete er mit Exit 0 auf
+einem Commit, den Codex nie gesehen hatte.
+
+Unterscheidbar sind die beiden am Body: ein echtes Review trägt die Überschrift
+«Codex Review» und nennt den geprüften Commit im Text, eine Thread-Antwort hat
+gar keinen Body. **Der Text schlägt `commit_id`** — er sagt, was geprüft wurde,
+`commit_id` bloss, woran der Kommentar hängt.
+
+**Die Environment-Meldung kann auch anderswo stehen — und anderes heissen.** Im
+selben Vorgang kam sie als **Review-Kommentar an einer Datei-Zeile**, nicht als
+Issue-Kommentar, wie es oben steht. Und sie kam, während wenige Minuten zuvor ein
+GitHub-getriggerter Code-Review derselben PR sauber durchgelaufen war. «Für das
+Repo fehlt eine Environment» hiess dort also **nicht** «kein Review möglich»,
+sondern betraf offenbar nur das Antworten im Thread. Die vier Gründe oben bleiben
+richtig; was nicht stimmt, ist die Annahme, jede Environment-Meldung belege einen
+ausgefallenen Review. Bislang eine einzelne Beobachtung — deshalb hier als
+Beobachtung notiert und nicht als Regel.
+
 Der Kommentarzähler allein reicht ohnehin nicht: `comments: 1` kann die
 Befundlos-, die Kontingent- **oder** die Environment-Meldung sein — drei
 gegensätzliche Bedeutungen unter derselben Zahl. Den Text lesen, nicht die Zahl.
@@ -433,6 +457,28 @@ Daraus der Richtwert: der Review braucht **zwei bis drei Minuten** ab «ready».
 Und die Erklärung dafür, warum #116 und #117 in genau dem nicht auflösbaren
 Zustand landeten, der weiter oben beschrieben ist: ein Review, der auf einem schon
 geschlossenen PR fertig wird, hinterlässt nur die Tabelle.
+
+**Und die Folgerung, nachdem es viermal nicht half, das aufzuschreiben.** Diese
+Zeilen stehen seit dem 18.9. in diesem Dokument; am 20.9. wurde der PR, der sie
+hinzufügte, vier Sekunden nach «ready» gemergt. Ein Text, den man zum
+Merge-Zeitpunkt lesen müsste, wird zum Merge-Zeitpunkt nicht gelesen — das ist
+keine Nachlässigkeit, sondern eine Eigenschaft des Ablaufs. Wer den Review
+wirklich als Gate will, braucht eine Mechanik: einen Check-Run, der rot bleibt,
+solange für den aktuellen Head kein Verdikt vorliegt.
+
+Die Entscheidung dafür — *liegt für genau diesen Head ein Verdikt vor?* — steht
+in diesem Repo als reine Funktion in `scripts/check_codex_verdict.py` (Details
+in Teil 2). Der Workflow, der daraus einen Check-Run macht, **fehlt noch
+absichtlich**: Er wurde zusammen mit dem Skript entworfen und in elf
+Review-Runden achtmal nachgebessert — Fork-Token, Dependabot, Checkout-Ref,
+Zustandsführung des Check-Runs. Jede dieser Weichen ist eine eigene Aussage
+über GitHub, und mehrere davon waren zuerst falsch. Sie gehören einzeln belegt
+statt gebündelt, deshalb folgt der Workflow getrennt.
+
+**Und selbst dann blockiert er nichts.** Erst als Required Status Check in
+einem Ruleset hält er einen Merge auf, und das ist eine Repo-Einstellung, die
+kein PR setzen kann. Wer die Dateien kopiert und den Haken vergisst, hat eine
+hübschere Anzeige und dieselbe Lücke.
 
 Das Kontingent hängt am Konto, nicht am Repo, und Code-Reviews haben einen
 eigenen Topf — nur GitHub-getriggerte Reviews zählen hinein. ChatGPT-Pläne
@@ -533,6 +579,36 @@ Dazu ein zweiter Job «Fresh-resolve install smoke»: Wheel in ein leeres venv
 ohne Lockfile und mit kaltem Cache, dann ein echter MCP-Handshake über
 `scripts/smoke_installed.py`. Der Lockfile-Lauf oben kann nicht bemerken, wenn
 eine Abhängigkeitsspanne für Fremde kaputt auflöst; dieser Job kann es.
+
+**`scripts/check_codex_verdict.py` — die Entscheidung, noch ohne Workflow.**
+Eine reine Funktion: Sie bekommt `head_sha`, `labels`, `comments` und `reviews`
+in GitHub-REST-Form und beantwortet eine einzige Frage — liegt für GENAU diesen
+Head ein Codex-Verdikt vor? Nicht, ob es gut ist; einen Befund zu beantworten
+bleibt Menschenarbeit.
+
+| Beobachtung | zählt als Verdikt? |
+|---|---|
+| Review-Objekt **mit Body** «Codex Review» auf dem aktuellen Head | ja |
+| «Didn't find any major issues» mit passendem Commit | ja |
+| Thread-Antwort von Codex (Review-Objekt ohne Body) | nein |
+| Summary-Tabelle `Completed`, sonst nichts | nein |
+| Summary-Tabelle `Running` | nein |
+| Kontingent- oder Environment-Meldung | nein |
+
+Die dritte Zeile ist der teuerste Einzelbefund: Ohne sie zählte eine blosse
+Thread-Antwort als Verdikt zum neuen Head (siehe Teil 1). Ausfallmeldungen
+entscheiden nichts mehr, sondern werden gesammelt und nur angehängt — sonst
+wäre nach einem erschöpften Kontingent nie wieder ein Verdikt erreichbar.
+Notausgang ist das Label aus `--waiver-label` (Vorgabe `codex-review-waived`);
+es lässt durch und schreibt das in die Begründung.
+
+Geprüft in `tests/test_codex_gate.py` gegen aufgezeichnete Ereignisse in
+`tests/fixtures/codex/`; die dortige `PROVENANCE.md` trennt wörtliche
+Mitschriften, `CLAUDE.md`-Wortlaute und Konstruiertes.
+
+**Noch kein Gate.** Das Skript entscheidet, meldet aber nichts: Der Workflow,
+der daraus einen Check-Run macht, folgt in einem eigenen PR (Begründung in
+Teil 1). Bis dahin ist die Logik vorhanden und geprüft, wirkt aber nirgends.
 
 **Live-Tests: geplanter Workflow vorhanden.** `.github/workflows/live-tests.yml`,
 `cron: "43 4 * * 1"` (wöchentlich Mo, 04:43 UTC). `ci.yml` hat zusätzlich einen
