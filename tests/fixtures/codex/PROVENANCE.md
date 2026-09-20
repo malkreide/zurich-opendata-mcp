@@ -95,3 +95,28 @@ GitHub-getriggerter Code-Review derselben PR sauber durchlief. «Environment
 fehlt» hiess hier also nicht «kein Review möglich». Der Gate wertet
 Review-Kommentare deshalb bewusst nicht als Ausfallmeldung aus; er würde sonst
 einen Ausfall melden, den es nicht gab. Bislang eine einzelne Beobachtung.
+
+## Nachtrag 20.9.2026 — `kontingent_allgemein.json`
+
+**Wörtlich mitgeschrieben** von PR #120, Kommentar 5751230887, 16:54:52 UTC.
+
+Bis dahin war nur ein Wortlaut der Kontingent-Meldung belegt, der in
+`kontingent.json`. Auf demselben PR kamen beide, 230 Sekunden auseinander:
+
+```
+16:54:52  You have reached your Codex usage limits.
+16:58:42  You have reached your Codex usage limits for code reviews.
+```
+
+Der zweite ist der bekannte; der erste war neu. Das Muster im Skript sitzt auf
+dem gemeinsamen Teil und erkennt beide — das war Glück, denn belegt war nur
+die lange Fassung, und ein Pin darauf hätte nahegelegen. Die kurze wäre dann
+als unbekannter Text durchgelaufen: kein Fehlalarm, aber der Gate hätte
+«Kontingent» nicht mehr benennen können und nur noch «sonst noch gesehen»
+gemeldet.
+
+Der erste Kommentar stand auf einem PR, der noch **Draft** war. `CLAUDE.md`
+sagt, auf einem Draft laufe Codex nicht an; das bleibt für den Review richtig,
+für den Kommentarzähler nicht. Was die Meldung ausgelöst hat, ist ungeklärt —
+dreizehn Sekunden davor lag ein eigener Kommentar, davor ein Push. Belegt ist
+keines von beidem, deshalb steht hier nur die Beobachtung.
