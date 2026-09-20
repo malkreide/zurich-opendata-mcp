@@ -341,6 +341,29 @@ def test_der_checkout_pinnt_einen_ref() -> None:
     assert "persist-credentials: false" in block
 
 
+def test_dependabot_laeuft_ueber_den_privilegierten_pfad() -> None:
+    """Dritte Drift-Wache: der unscheinbarste der drei Faelle.
+
+    Ein Dependabot-Branch liegt in diesem Repo, eine blosse Herkunftspruefung
+    schickt ihn also auf den `pull_request`-Pfad. GitHub behandelt von
+    Dependabot ausgeloeste Ereignisse aber wie Fork-Ereignisse und gibt einen
+    Nur-Lese-Token; der POST endet mit 403. Unter einem Required Check waere
+    jeder woechentliche Dependabot-PR dauerhaft blockiert — der Notausgang
+    eingeschlossen. `.github/dependabot.yml` erzeugt zwei davon pro Woche.
+    """
+    text = (ROOT / ".github" / "workflows" / "codex-gate.yml").read_text(encoding="utf-8")
+    bedingung = text.split("if: >-", 1)[1].split("env:", 1)[0]
+
+    # Beide Zweige muessen Dependabot kennen, sonst faellt er durch oder
+    # laeuft doppelt.
+    assert bedingung.count("dependabot[bot]") == 2, (
+        "beide PR-Zweige muessen Dependabot benennen — einmal ausschliessend, einmal einschliessend"
+    )
+    # Am PR-Autor, nicht am Ausloeser: wer das Label setzt, wechselt.
+    assert "github.event.pull_request.user.login" in bedingung
+    assert "github.actor" not in bedingung
+
+
 def test_das_cli_endet_mit_0_bei_verdikt_und_1_ohne(capsys, tmp_path) -> None:
     ok = tmp_path / "ok.json"
     ok.write_text((FIXTURES / "pr115_befundlos.json").read_text(encoding="utf-8"), "utf-8")

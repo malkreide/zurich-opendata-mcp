@@ -86,19 +86,35 @@ jobs:
     # Auf Issues, die keine PRs sind, gibt es nichts zu prüfen. Und die
     # beiden PR-Trigger teilen sich die Arbeit strikt nach Herkunft, damit
     # kein PR doppelt bewertet wird: `pull_request` für dieses Repo,
-    # `pull_request_target` für Forks. `issue_comment` und
-    # `pull_request_review` tragen bei beiden Herkünften einen vollen Token
-    # und brauchen die Unterscheidung hier nicht — wohl aber beim Checkout:
-    # `pull_request_review` läuft NICHT im Basis-Kontext, sondern am
-    # PR-Merge-Ref. Das steht dort.
+    # `pull_request_target` für Forks UND für Dependabot.
+    #
+    # Dependabot ist der unscheinbare Fall: Sein Branch liegt in diesem Repo,
+    # die Herkunftsprüfung allein schickt ihn also auf den `pull_request`-Pfad
+    # — aber GitHub behandelt von Dependabot ausgelöste Ereignisse wie
+    # Fork-Ereignisse und gibt einen Nur-Lese-Token. Der POST endet mit 403,
+    # und unter einem Required Check waere jeder woechentliche Dependabot-PR
+    # dauerhaft blockiert, Notausgang eingeschlossen. Dieses Repo erzeugt
+    # zwei solche PRs pro Woche (`.github/dependabot.yml`: github-actions und
+    # pip). Befund eines Codex-Reviews auf PR #119.
+    #
+    # Geprüft wird der PR-AUTOR und nicht `github.actor`: Wer das Label setzt,
+    # wechselt, die Herkunft des PR nicht. So bleibt die Zuordnung stabil, und
+    # es läuft in jedem Fall genau einer der beiden Pfade.
+    #
+    # `issue_comment` und `pull_request_review` tragen bei jeder Herkunft
+    # einen vollen Token und brauchen die Unterscheidung hier nicht — wohl
+    # aber beim Checkout: `pull_request_review` läuft NICHT im Basis-Kontext,
+    # sondern am PR-Merge-Ref. Das steht dort.
     if: >-
       (github.event_name == 'issue_comment' &&
        github.event.issue.pull_request != null) ||
       github.event_name == 'pull_request_review' ||
       (github.event_name == 'pull_request' &&
-       github.event.pull_request.head.repo.full_name == github.repository) ||
+       github.event.pull_request.head.repo.full_name == github.repository &&
+       github.event.pull_request.user.login != 'dependabot[bot]') ||
       (github.event_name == 'pull_request_target' &&
-       github.event.pull_request.head.repo.full_name != github.repository)
+       (github.event.pull_request.head.repo.full_name != github.repository ||
+        github.event.pull_request.user.login == 'dependabot[bot]'))
 
     env:
       CHECK_NAME: Codex-Verdikt
@@ -122,11 +138,19 @@ jobs:
       # ihn sein eigenes grünes `Codex-Verdikt` schreiben. Der Gate wäre
       # damit von genau dem umgehbar, den er prüfen soll.
       #
-      # Deshalb: aus diesem Repo den PR-Stand selbst — wer hierher pushen
-      # kann, hat ohnehin Schreibrecht, und so prüft sich der Gate auf seinem
-      # eigenen PR. Sonst immer die Basis. Bei `issue_comment` gibt es kein
-      # `pull_request`-Objekt; dort greift `github.ref`, das bereits auf den
-      # Default-Branch zeigt.
+      # Entschieden wird am EREIGNISNAMEN, weil der `if` oben die
+      # Vertrauensfrage schon abschliessend beantwortet: Ein
+      # `pull_request`-Lauf kommt dort nur noch zustande, wenn der PR aus
+      # diesem Repo stammt und nicht von Dependabot. Dessen Head ist damit
+      # von jemandem mit Schreibrecht, darf ausgecheckt werden, und der Gate
+      # prüft sich so auf seinem eigenen PR. Jeder andere Pfad —
+      # `pull_request_target`, `pull_request_review` — nimmt die Basis. Bei
+      # `issue_comment` gibt es kein `pull_request`-Objekt; dort greift
+      # `github.ref`, das bereits auf den Default-Branch zeigt.
+      #
+      # Eine Herkunftsprüfung an dieser Stelle waere subtil falsch: Ein
+      # Dependabot-PR liegt in diesem Repo und bestuende sie, obwohl sein
+      # Lauf gerade deshalb ueber `pull_request_target` geht.
       #
       # Befund eines Codex-Reviews auf PR #119. Die frühere Begründung, der
       # Job erhalte «ohne `ref` den Basis-Stand», galt nur für
@@ -134,7 +158,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: >-
-            ${{ (github.event.pull_request.head.repo.full_name == github.repository
+            ${{ (github.event_name == 'pull_request'
                  && github.event.pull_request.head.sha)
                 || github.event.pull_request.base.sha
                 || github.ref }}
