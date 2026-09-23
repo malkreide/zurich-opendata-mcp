@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- **Das Codex-Gate ist entfernt.** Weg sind `.github/workflows/codex-gate.yml`,
+  `scripts/check_codex_verdict.py`, `tests/test_codex_gate.py` und der
+  Fixture-Ordner `tests/fixtures/codex/` (13 aufgezeichnete Antworten samt
+  `PROVENANCE.md`). Dazu die Codex-Zeile im PR-Template, der Abschnitt zum
+  Check `Codex-Verdikt` in beiden CONTRIBUTING-Dateien, der Abschnitt «Wenn
+  Codex gar nicht erst hinsieht» in `CLAUDE.md` (349 Zeilen) und der
+  Gate-Block in Teil 2 (133 Zeilen).
+
+  Der Check war nie scharf: `CLAUDE.md` hielt zum Stand 20.9.2026 fest, dass
+  er in keinem Ruleset als Required Status Check eingetragen war. Es gibt
+  hier also nichts nachzufuehren — anders als in Repos, in denen ein required
+  Kontext ohne Berichterstatter zurueckbliebe.
+
+  Stehen bleiben die Herkunftsangabe in `tests/test_werkzeug_versionen.py`,
+  die Branch-Namen der Zwei-Agenten-Anekdote und die bisherigen Eintraege hier.
+
 ## [0.8.0] - 2026-09-19
 
 Minor: der Server beantwortet jetzt selbst, was Spec `2026-07-28` von ihm
