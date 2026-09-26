@@ -336,12 +336,14 @@ wie der Code: Nichts ist rot, weil nichts geprüft wird, worauf es ankommt.
 
 ## Teil 2 — Dieses Repo
 
-**ruff: eine Quelle.** `pyproject.toml` `[dev]` pinnt `ruff==0.16.3`, `uv.lock`
-hält dieselbe Version. `ci.yml` rief ruff vorher per
-`uv run --with ruff==0.16.1` auf, während der Lock auf `0.15.18` stand — das
-überschrieb nur diesen einen Aufruf, und wer lokal `uv run ruff check` fuhr,
-lintete mit 0.15.18 gegen ein Gate, das 0.16.1 fuhr. Beim Anheben:
-`pyproject.toml` ändern, `uv lock`, `ruff format`, alles zusammen committen.
+**ruff: eine Quelle.** `pyproject.toml` `[dev]` pinnt ruff exakt, `uv.lock`
+hält dieselbe Version — die Zahl dort nachlesen, nicht hier
+(`tests/test_ruff_pin_doku.py` hält sie aus dieser Datei draussen). `ci.yml`
+rief ruff vorher per `uv run --with ruff==0.16.1` auf, während der Lock auf
+`0.15.18` stand — das überschrieb nur diesen einen Aufruf, und wer lokal
+`uv run ruff check` fuhr, lintete mit 0.15.18 gegen ein Gate, das 0.16.1 fuhr.
+Beim Anheben: `pyproject.toml` ändern, `uv lock`, `ruff format`, alles
+zusammen committen.
 
 Vor dem Lauf `ruff --version` prüfen: ein älteres ruff früher im `PATH`
 schlägt den Pin, ohne dass der Install etwas meldet.
