@@ -15,7 +15,7 @@
   "type": "group",
   "packages": [
     {
-      "author": "Grundlagen + Strategien, Tiefbauamt, Tiefbau- und Entsorgungsdepartement",
+      "author": "Fachstelle GIS, Tiefbauamt, Tiefbau- und Entsorgungsdepartement",
       "author_email": null,
       "creator_user_id": "fb87ce0e-e695-45b6-8017-eeb36a2952ab",
       "dataQuality": "",
@@ -23,7 +23,7 @@
         "Einzeldaten"
       ],
       "dateFirstPublished": "",
-      "dateLastUpdated": "01.10.2026",
+      "dateLastUpdated": "01.11.2026",
       "id": "f26ff361-18f9-4268-93c1-95bc3db54c59",
       "isopen": true,
       "legalInformation": "",
@@ -33,7 +33,7 @@
       "maintainer": "Open Data Zürich",
       "maintainer_email": "opendata@zuerich.ch",
       "metadata_created": "2026-04-29T05:52:30.284710",
-      "metadata_modified": "2026-08-07T06:28:24.709524",
+      "metadata_modified": "2026-10-14T06:32:36.962603",
       "name": "geo_abstimmungsgeraete_taz",
       "notes": "Die vom städtischen Tiefbauamt entwickelten Abstimmungsgeräte werden für Befragungen eingesetzt. Ziel ist dabei, ein Stimmungsbild zu einer bestimmten Fragestellung einzuholen. Mit jedem Gerät kann genau eine Frage gestellt werden, die bis zu vier unterschiedliche Antwortmöglichkeiten anbietet. Jedes Drücken einer Taste wird vom Gerät registriert und in 10-Minuten-Intervallen aggregiert. Diese Daten werden drahtlos alle zehn Minuten in eine Datenbank übertragen. Die Rohdaten werden zunächst auf fixe Stundenintervalle aggregiert und anschliessend bereinigt und analysiert. Derzeit werden die Abstimmungsgeräte vor allem für die Befragung der Zufriedenheit mit Piazza Pop-up eingesetzt. Der Datensatz enthält die Standorte und die zugehören aggregierten Endresultate jeder Befragung, vor und nach der Bereinigung.\n\n**Zweck**: Bedürfnisermittlung, Controlling, Wirkungsmessung, allgemeine Planungsgrundlage",
       "num_resources": 9,
@@ -76,7 +76,7 @@
         "Einzeldaten"
       ],
       "dateFirstPublished": "",
-      "dateLastUpdated": "07.08.2026",
+      "dateLastUpdated": "14.10.2026",
       "id": "930c93fd-c67a-41db-9fba-b15457de5ff0",
       "isopen": true,
       "legalInformation": "",
@@ -86,7 +86,7 @@
       "maintainer": "Open Data Zürich",
       "maintainer_email": "opendata@zuerich.ch",
       "metadata_created": "2026-04-29T05:43:43.773918",
-      "metadata_modified": "2026-08-07T06:14:05.917994",
+      "metadata_modified": "2026-10-14T06:35:14.658104",
       "name": "geo_oeffentlich_zugaengliche_parkhaeuser",
       "notes": "Der Datensatz umfasst alle Parkhäuser auf dem Gebiet der Stadt Zürich, die Kunden und / oder Besuchern öffentlich zugängliche Parkplätze anbieten. Die Daten werden alle zwei Jahre manuell erhoben (2015, 2017, 2019 ...) und in der Datenbank nachgeführt. Die Daten sind somit nicht tagesaktuell und es bestehen auch keine Angaben über die Belegung der Parkfelder. Einzelne Parkfelder können zudem kurzfristig ummarkiert oder beispielsweise infolge von Baumassnahmen nicht zugänglich sein. \n\n**Zweck**: Parkraumplanung, für Statistisches Jahrbuch / STIP, für Controlling &quot;Stadtverkehr 2025&quot;, für Bilanzierung des Historischen Parkplatzkompromisses",
       "num_resources": 9,
@@ -129,7 +129,7 @@
         "Einzeldaten"
       ],
       "dateFirstPublished": "",
-      "dateLastUpdated": "07.08.2026",
+      "dateLastUpdated": "14.10.2026",
       "id": "a99bb701-2f4b-4ecc-8622-fc4f4c4055e1",
       "isopen": true,
       "legalInformation": "",
@@ -139,7 +139,7 @@
       "maintainer": "Open Data Zürich",
       "maintainer_email": "opendata@zuerich.ch",
       "metadata_created": "2026-04-29T05:50:56.450094",
-      "metadata_modified": "2026-08-07T06:26:21.721975",
+      "metadata_modified": "2026-10-14T06:40:37.572552",
       "name": "geo_dienstleistungen",
       "notes": "Standorte von städtischen Dienstleistungen\n\n**Zweck**: Auffinden und Darstellen der Daten im Kontaktparagraphen der städtischen Internetseiten sowie im Stadtplan.",
       "num_resources": 9,

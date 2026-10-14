@@ -10,7 +10,7 @@
     "is_organization": false,
     "name": "arbeit-und-erwerb",
     "num_followers": 0,
-    "package_count": 40,
+    "package_count": 41,
     "state": "active",
     "title": "Arbeit und Erwerb",
     "type": "group"
@@ -26,7 +26,7 @@
     "is_organization": false,
     "name": "basiskarten",
     "num_followers": 0,
-    "package_count": 134,
+    "package_count": 138,
     "state": "active",
     "title": "Basis­karten",
     "type": "group"
@@ -42,7 +42,7 @@
     "is_organization": false,
     "name": "bauen-und-wohnen",
     "num_followers": 0,
-    "package_count": 194,
+    "package_count": 196,
     "state": "active",
     "title": "Bauen und Wohnen",
     "type": "group"
@@ -58,7 +58,7 @@
     "is_organization": false,
     "name": "bevolkerung",
     "num_followers": 0,
-    "package_count": 223,
+    "package_count": 222,
     "state": "active",
     "title": "Bevölk­erung",
     "type": "group"
@@ -90,7 +90,7 @@
     "is_organization": false,
     "name": "energie",
     "num_followers": 0,
-    "package_count": 43,
+    "package_count": 40,
     "state": "active",
     "title": "Energie",
     "type": "group"
@@ -138,7 +138,7 @@
     "is_organization": false,
     "name": "gesundheit",
     "num_followers": 0,
-    "package_count": 39,
+    "package_count": 40,
     "state": "active",
     "title": "Ge­sund­heit",
     "type": "group"
@@ -154,7 +154,7 @@
     "is_organization": false,
     "name": "kriminalitat",
     "num_followers": 0,
-    "package_count": 18,
+    "package_count": 17,
     "state": "active",
     "title": "Kri­mi­na­li­tät",
     "type": "group"
@@ -202,7 +202,7 @@
     "is_organization": false,
     "name": "netznutzung",
     "num_followers": 0,
-    "package_count": 1,
+    "package_count": 0,
     "state": "active",
     "title": "Netznutzung",
     "type": "group"
@@ -234,7 +234,7 @@
     "is_organization": false,
     "name": "preise",
     "num_followers": 0,
-    "package_count": 5,
+    "package_count": 6,
     "state": "active",
     "title": "Preise",
     "type": "group"
@@ -266,7 +266,7 @@
     "is_organization": false,
     "name": "strom",
     "num_followers": 0,
-    "package_count": 1,
+    "package_count": 0,
     "state": "active",
     "title": "Strom",
     "type": "group"
@@ -298,7 +298,7 @@
     "is_organization": false,
     "name": "umwelt",
     "num_followers": 0,
-    "package_count": 278,
+    "package_count": 280,
     "state": "active",
     "title": "Umwelt",
     "type": "group"
@@ -314,7 +314,7 @@
     "is_organization": false,
     "name": "verwaltung",
     "num_followers": 0,
-    "package_count": 133,
+    "package_count": 137,
     "state": "active",
     "title": "Ver­walt­ung",
     "type": "group"
@@ -330,7 +330,7 @@
     "is_organization": false,
     "name": "volkswirtschaft",
     "num_followers": 0,
-    "package_count": 59,
+    "package_count": 61,
     "state": "active",
     "title": "​​Volks​­wirt​­schaft",
     "type": "group"

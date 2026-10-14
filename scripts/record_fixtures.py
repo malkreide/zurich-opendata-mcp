@@ -9,7 +9,8 @@ und Fixture stammen aus demselben Kopf, derselben Stunde, derselben Lektuere
 der Doku. Wo beide irren, irren beide gleich, und die Suite bleibt gruen.
 
 Aufgezeichnet werden die drei CKAN-Antworten, auf denen die Katalog-Tools
-stehen: `group_list`, `group_show` und `package_search`. Die Auswahlregel je
+stehen: `group_list`, `group_show` und `package_search`, dazu eine Antwort von
+`datastore_search_sql` fuer `zurich_datastore_sql`. Die Auswahlregel je
 Datei steht in `tests/fixtures/PROVENANCE.md` neben dem Abrufdatum — ohne Datum
 ist «aufgezeichnet» nach zwei Jahren von «ausgedacht» nicht mehr zu
 unterscheiden, weil die Datei gleich aussieht.
@@ -35,12 +36,19 @@ from pathlib import Path
 
 import httpx
 
+from zurich_opendata_mcp.config import AIR_QUALITY_RESOURCE_ID
+
 CKAN = "https://data.stadt-zuerich.ch/api/3/action"
 FIXTURES = Path(__file__).resolve().parent.parent / "tests" / "fixtures"
 
 SEARCH_TERM = "verkehr"
 SEARCH_ROWS = 3
 GROUP = "mobilitat"
+# Die stuendliche Luftqualitaet: dieselbe Tabelle, die der Server selbst liest.
+# `SELECT *` holt, was CKAN dabei mitliefert, auch die internen Spalten `_id`
+# und `_full_text`.
+SQL_RESOURCE = AIR_QUALITY_RESOURCE_ID
+SQL_LIMIT = 3
 
 
 def record() -> int:
@@ -133,6 +141,19 @@ def record() -> int:
             "nur die beiden Zahlen: wie viele es gibt und wie viele ohne "
             "`rows` kommen. Der Beleg dafuer, dass das Weglassen des Parameters "
             "eine willkuerliche Teilmenge liefert und keine Vollmenge",
+        )
+
+        # 5) Eine SQL-Abfrage auf den DataStore, unveraendert.
+        sql = f'SELECT * FROM "{SQL_RESOURCE}" LIMIT {SQL_LIMIT}'
+        r = c.get(f"{CKAN}/datastore_search_sql", params={"sql": sql})
+        r.raise_for_status()
+        rows = unwrap(r)
+        write(
+            "ckan_datastore_sql.json",
+            rows,
+            f"{CKAN}/datastore_search_sql?sql={sql}",
+            f"Luftqualitaet stuendlich, `SELECT *` mit LIMIT {SQL_LIMIT}; vollstaendig, "
+            "samt der internen Spalten `_id` und `_full_text`",
         )
 
     _write_provenance(recorded_at, entries)

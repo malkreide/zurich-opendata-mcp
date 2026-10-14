@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import httpx
 import respx
+from fixture_data import fixture_json
 
 from zurich_opendata_mcp.config import CKAN_API_URL
 from zurich_opendata_mcp.tools.datastore import (
@@ -136,6 +137,24 @@ async def test_datastore_sql_rejects_non_select_without_http():
         result = await zurich_datastore_sql(DatastoreSqlInput(sql='DROP TABLE "abc"'))
 
     assert "Nur SELECT" in result
+
+
+@respx.mock
+async def test_datastore_sql_drops_ckans_full_text_index():
+    """Against a recorded `SELECT *` (tests/fixtures/ckan_datastore_sql.json):
+    CKAN returns its tsvector index `_full_text` as a column and in every
+    row. It reaches neither the column list nor the records."""
+    recorded = fixture_json("ckan_datastore_sql")
+    assert "_full_text" in recorded["records"][0], "the recording must carry it"
+    respx.get(_SQL).mock(return_value=_ckan(recorded))
+
+    result = await zurich_datastore_sql(DatastoreSqlInput(sql=recorded["sql"]))
+
+    assert "**Spalten**: Datum, Standort, Parameter, Intervall, Einheit, Wert, Status" in result
+    assert "_full_text" not in result
+    assert recorded["records"][0]["_full_text"] not in result
+    assert f'"Standort": "{recorded["records"][0]["Standort"]}"' in result
+    assert '"_id": ' in result  # only the column list drops `_id`, as before
 
 
 @respx.mock

@@ -179,7 +179,12 @@ async def zurich_datastore_sql(params: DatastoreSqlInput) -> str:
         if not records:
             return "SQL-Abfrage lieferte keine Ergebnisse."
 
-        field_names = [f["id"] for f in fields if f["id"] != "_id"]
+        # `_full_text` is CKAN's tsvector search index, which `SELECT *` hands
+        # back with every row (`'+0100':6 '-01':2,3 '/m3':12 …`). It costs
+        # tokens and means nothing to a reader, so it leaves the column list
+        # AND the records; `_id` only the column list, as before.
+        field_names = [f["id"] for f in fields if f["id"] not in ("_id", "_full_text")]
+        records = [{k: v for k, v in r.items() if k != "_full_text"} for r in records]
 
         lines = [
             f"## SQL-Ergebnis: {len(records)} Zeilen",
