@@ -158,6 +158,29 @@ async def test_datastore_sql_drops_ckans_full_text_index():
 
 
 @respx.mock
+async def test_datastore_sql_keeps_a_column_the_caller_named_full_text():
+    """Only CKAN's index goes, told apart by its type. The response below is
+    what CKAN returned live on 2026-10-15 for
+    `SELECT COUNT(*) AS "_full_text", MAX("Wert") AS "x" FROM <air quality>`:
+    the same name, typed int8 — a column the caller asked for."""
+    respx.get(_SQL).mock(
+        return_value=_ckan(
+            {
+                "fields": [{"id": "_full_text", "type": "int8"}, {"id": "x", "type": "text"}],
+                "records": [{"_full_text": 165432, "x": "NA"}],
+            }
+        )
+    )
+
+    result = await zurich_datastore_sql(
+        DatastoreSqlInput(sql='SELECT COUNT(*) AS "_full_text", MAX("Wert") AS "x" FROM t')
+    )
+
+    assert "**Spalten**: _full_text, x" in result
+    assert '"_full_text": 165432' in result
+
+
+@respx.mock
 async def test_datastore_sql_empty_result():
     respx.get(_SQL).mock(return_value=_ckan({"fields": [], "records": []}))
 

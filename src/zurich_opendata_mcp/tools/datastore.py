@@ -182,9 +182,12 @@ async def zurich_datastore_sql(params: DatastoreSqlInput) -> str:
         # `_full_text` is CKAN's tsvector search index, which `SELECT *` hands
         # back with every row (`'+0100':6 '-01':2,3 '/m3':12 …`). It costs
         # tokens and means nothing to a reader, so it leaves the column list
-        # AND the records; `_id` only the column list, as before.
-        field_names = [f["id"] for f in fields if f["id"] not in ("_id", "_full_text")]
-        records = [{k: v for k, v in r.items() if k != "_full_text"} for r in records]
+        # AND the records; `_id` only the column list, as before. Told apart
+        # by its type, not its name alone: `COUNT(*) AS "_full_text"` is a
+        # column the caller asked for (int8) and stays.
+        index = {f["id"] for f in fields if f["id"] == "_full_text" and f.get("type") == "tsvector"}
+        field_names = [f["id"] for f in fields if f["id"] != "_id" and f["id"] not in index]
+        records = [{k: v for k, v in r.items() if k not in index} for r in records]
 
         lines = [
             f"## SQL-Ergebnis: {len(records)} Zeilen",

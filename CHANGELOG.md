@@ -32,7 +32,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `'+0100':6 '-01':2,3 '/m3':12 …`, in der Spaltenliste und in jedem Datensatz.
   Das Tool filterte `_id` aus der Spaltenliste, diesen Index nicht. Er kostet
   Tokens und bedeutet für Lesende nichts. Jetzt fehlt er in beiden; `_id` bleibt
-  wie bisher in den Datensätzen. Aufgefallen ist es mcp-continuous-auditor am
+  wie bisher in den Datensätzen. Erkannt wird der Index an Name **und** Typ
+  (`tsvector`): eine Spalte, die jemand selbst `_full_text` nennt, etwa
+  `COUNT(*) AS "_full_text"` (`int8`), bleibt stehen. Aufgefallen ist es mcp-continuous-auditor am
   2026-10-14, als dessen Fixture zum ersten Mal von der echten Tabelle stammte.
 
   Belegt mit einer neuen **aufgezeichneten** Antwort
