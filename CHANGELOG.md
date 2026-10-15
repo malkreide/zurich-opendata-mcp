@@ -44,6 +44,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `datastore_search_sql` nur handgeschriebene Antworten, und in keiner kam
   `_full_text` vor.
 
+### Security
+
+- **`zurich_datastore_sql` liest nur noch DataStore-Ressourcen** (Nachtrag zu
+  M-8). Das SELECT-Gate liess jedes einzelne SELECT durch, also auch
+  `SELECT * FROM "x" UNION SELECT password FROM users--`. Gemessen hat das
+  mcp-continuous-auditor am 2026-10-14: Die Abfrage ging unverändert an CKAN.
+  Den Schaden begrenzt CKAN selbst (lesende Rolle, Berechtigung pro Ressource),
+  aber das Tool gab weiter, wofür es nicht gebaut ist.
+
+  Jetzt muss jede Tabelle, die eine Abfrage liest, eine Ressourcen-ID in
+  Anführungszeichen sein oder ein CTE derselben Abfrage. Geprüft wird die
+  Position, nicht der Tokentyp: nach `FROM`, `JOIN`, `TABLE` und nach jedem
+  Komma einer FROM-Liste, auch in Unterabfragen, CTE-Rümpfen und
+  Funktionsargumenten. `UNION`, JOINs, CTEs und Unterabfragen über Ressourcen
+  bleiben erlaubt; `EXTRACT(… FROM …)`, `SUBSTRING(… FROM …)` und
+  `IS DISTINCT FROM` gelten nicht als Tabellenangabe.
+
+  Abgelehnt wird vor jeder Anfrage, mit einem Hinweis auf
+  `zurich_get_dataset` und höchstens drei Namen, je auf das erste Wort
+  gekürzt. Was der Leser nicht einordnen kann, lehnt er ab: Schema-Namen,
+  Tabellenfunktionen, geklammerte JOINs, von sqlparse als Schlüsselwort
+  gelesene Namen wie `user` oder `role`.
+
+  **Verhaltensänderung:** CKAN-Aliasnamen für Ressourcen werden nicht mehr
+  angenommen, nur die ID. Funktionen prüft das Gate nicht; dafür bleibt CKAN
+  zuständig (die Stadt betreibt 2.11.6, laut CKAN-Dokumentation mit einer
+  Allowlist für Funktionen). 56 neue Testfälle; jede
+  Bedingung des Gates wurde einzeln neutralisiert, alle 23 Mutanten fallen.
+
 ## [0.8.0] - 2026-09-19
 
 Minor: der Server beantwortet jetzt selbst, was Spec `2026-07-28` von ihm

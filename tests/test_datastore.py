@@ -11,7 +11,7 @@ import httpx
 import respx
 from fixture_data import fixture_json
 
-from zurich_opendata_mcp.config import CKAN_API_URL
+from zurich_opendata_mcp.config import AIR_QUALITY_RESOURCE_ID, CKAN_API_URL
 from zurich_opendata_mcp.tools.datastore import (
     DatastoreQueryInput,
     DatastoreSqlInput,
@@ -21,6 +21,7 @@ from zurich_opendata_mcp.tools.datastore import (
 
 _SEARCH = f"{CKAN_API_URL}/datastore_search"
 _SQL = f"{CKAN_API_URL}/datastore_search_sql"
+_AIR = f'"{AIR_QUALITY_RESOURCE_ID}"'
 
 
 def _ckan(result: dict) -> httpx.Response:
@@ -121,7 +122,7 @@ async def test_datastore_sql_renders_rows():
     )
 
     result = await zurich_datastore_sql(
-        DatastoreSqlInput(sql='SELECT "Jahr", "Anzahl" FROM "abc" LIMIT 1')
+        DatastoreSqlInput(sql=f'SELECT "Jahr", "Anzahl" FROM {_AIR} LIMIT 1')
     )
 
     assert dict(route.calls[0].request.url.params)["sql"].startswith("SELECT")
@@ -137,6 +138,19 @@ async def test_datastore_sql_rejects_non_select_without_http():
         result = await zurich_datastore_sql(DatastoreSqlInput(sql='DROP TABLE "abc"'))
 
     assert "Nur SELECT" in result
+
+
+async def test_datastore_sql_refuses_a_foreign_table_without_http():
+    # The auditor's case, end to end: no route is mocked, so a request
+    # leaving the tool would raise. Nothing about `users` is echoed but the
+    # name itself.
+    with respx.mock:
+        result = await zurich_datastore_sql(
+            DatastoreSqlInput(sql=f"SELECT * FROM {_AIR} UNION SELECT password FROM users--")
+        )
+
+    assert "nur DataStore-Ressourcen" in result
+    assert "FROM users" not in result
 
 
 @respx.mock
@@ -173,7 +187,7 @@ async def test_datastore_sql_keeps_a_column_the_caller_named_full_text():
     )
 
     result = await zurich_datastore_sql(
-        DatastoreSqlInput(sql='SELECT COUNT(*) AS "_full_text", MAX("Wert") AS "x" FROM t')
+        DatastoreSqlInput(sql=f'SELECT COUNT(*) AS "_full_text", MAX("Wert") AS "x" FROM {_AIR}')
     )
 
     assert "**Spalten**: _full_text, x" in result
@@ -184,7 +198,7 @@ async def test_datastore_sql_keeps_a_column_the_caller_named_full_text():
 async def test_datastore_sql_empty_result():
     respx.get(_SQL).mock(return_value=_ckan({"fields": [], "records": []}))
 
-    result = await zurich_datastore_sql(DatastoreSqlInput(sql='SELECT * FROM "abc" WHERE 1=0'))
+    result = await zurich_datastore_sql(DatastoreSqlInput(sql=f"SELECT * FROM {_AIR} WHERE 1=0"))
 
     assert "keine Ergebnisse" in result
 
@@ -193,6 +207,6 @@ async def test_datastore_sql_empty_result():
 async def test_datastore_sql_http_error():
     respx.get(_SQL).mock(return_value=httpx.Response(500))
 
-    result = await zurich_datastore_sql(DatastoreSqlInput(sql='SELECT * FROM "abc"'))
+    result = await zurich_datastore_sql(DatastoreSqlInput(sql=f"SELECT * FROM {_AIR}"))
 
     assert "Fehler bei SQL-Abfrage" in result
