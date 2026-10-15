@@ -25,6 +25,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Stehen bleiben die Herkunftsangabe in `tests/test_werkzeug_versionen.py`,
   die Branch-Namen der Zwei-Agenten-Anekdote und die bisherigen Eintraege hier.
 
+### Fixed
+
+- **`zurich_datastore_sql` gibt CKANs Volltextindex nicht mehr weiter.** Ein
+  `SELECT *` liefert die interne Spalte `_full_text` mit, einen tsvector wie
+  `'+0100':6 '-01':2,3 '/m3':12 …`, in der Spaltenliste und in jedem Datensatz.
+  Das Tool filterte `_id` aus der Spaltenliste, diesen Index nicht. Er kostet
+  Tokens und bedeutet für Lesende nichts. Jetzt fehlt er in beiden; `_id` bleibt
+  wie bisher in den Datensätzen. Erkannt wird der Index an Name **und** Typ
+  (`tsvector`): eine Spalte, die jemand selbst `_full_text` nennt, etwa
+  `COUNT(*) AS "_full_text"` (`int8`), bleibt stehen. Aufgefallen ist es
+  mcp-continuous-auditor am 2026-10-14, als dessen Fixture zum ersten Mal von
+  der echten Tabelle stammte.
+
+  Belegt mit einer neuen **aufgezeichneten** Antwort
+  (`tests/fixtures/ckan_datastore_sql.json`, `SELECT *` auf die stündliche
+  Luftqualität), erzeugt von `scripts/record_fixtures.py`. Bisher gab es für
+  `datastore_search_sql` nur handgeschriebene Antworten, und in keiner kam
+  `_full_text` vor.
+
 ## [0.8.0] - 2026-09-19
 
 Minor: der Server beantwortet jetzt selbst, was Spec `2026-07-28` von ihm

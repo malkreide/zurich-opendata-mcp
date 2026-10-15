@@ -1,0 +1,76 @@
+{
+  "sql": "SELECT * FROM \"90410203-4b4f-4a65-9015-1fca2792e04d\" LIMIT 3",
+  "records": [
+    {
+      "_id": 1,
+      "_full_text": "'+0100':6 '-01':2,3 '/m3':12 '00':5 '2026':1 '3.82':13 'h1':10 'heubeeribüel':8 'provisorisch':14 't00':4 'zch':7 'µg':11",
+      "Datum": "2026-01-01T00:00+0100",
+      "Standort": "Zch_Heubeeribüel",
+      "Parameter": "NO",
+      "Intervall": "h1",
+      "Einheit": "µg/m3",
+      "Wert": "3.82",
+      "Status": "provisorisch"
+    },
+    {
+      "_id": 2,
+      "_full_text": "'+0100':6 '-01':2,3 '/m3':12 '00':5 '2026':1 '30.12':13 'h1':10 'heubeeribüel':8 'no2':9 'provisorisch':14 't00':4 'zch':7 'µg':11",
+      "Datum": "2026-01-01T00:00+0100",
+      "Standort": "Zch_Heubeeribüel",
+      "Parameter": "NO2",
+      "Intervall": "h1",
+      "Einheit": "µg/m3",
+      "Wert": "30.12",
+      "Status": "provisorisch"
+    },
+    {
+      "_id": 3,
+      "_full_text": "'+0100':6 '-01':2,3 '00':5 '18.81':12 '2026':1 'h1':10 'heubeeribüel':8 'nox':9 'ppb':11 'provisorisch':13 't00':4 'zch':7",
+      "Datum": "2026-01-01T00:00+0100",
+      "Standort": "Zch_Heubeeribüel",
+      "Parameter": "NOx",
+      "Intervall": "h1",
+      "Einheit": "ppb",
+      "Wert": "18.81",
+      "Status": "provisorisch"
+    }
+  ],
+  "fields": [
+    {
+      "id": "_id",
+      "type": "int4"
+    },
+    {
+      "id": "_full_text",
+      "type": "tsvector"
+    },
+    {
+      "id": "Datum",
+      "type": "text"
+    },
+    {
+      "id": "Standort",
+      "type": "text"
+    },
+    {
+      "id": "Parameter",
+      "type": "text"
+    },
+    {
+      "id": "Intervall",
+      "type": "text"
+    },
+    {
+      "id": "Einheit",
+      "type": "text"
+    },
+    {
+      "id": "Wert",
+      "type": "text"
+    },
+    {
+      "id": "Status",
+      "type": "text"
+    }
+  ]
+}
