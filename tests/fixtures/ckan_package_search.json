@@ -1,5 +1,5 @@
 {
-  "count": 102,
+  "count": 104,
   "facets": {},
   "results": [
     {
@@ -21,7 +21,7 @@
       "maintainer": "Open Data Zürich",
       "maintainer_email": "opendata@zuerich.ch",
       "metadata_created": "2026-04-29T05:41:46.818919",
-      "metadata_modified": "2026-08-07T06:10:44.740279",
+      "metadata_modified": "2026-10-14T06:34:23.720689",
       "name": "geo_kommunaler_richtplan_verkehr",
       "notes": "Kommunaler Richtplan Verkehr neuer Entwurf. Besteht aus den 4 Teilplänen:\n- Fussverkehr\n- Veloverkehr\n- MIV\n- OEV\n\n**Zweck**: Richtplanung",
       "num_resources": 9,
@@ -55,7 +55,7 @@
       "extras": [
         {
           "key": "harvest_object_id",
-          "value": "875d4c72-b8d1-4223-ac29-b0807bccd01b"
+          "value": "5d81b9ca-6f92-4736-b756-11e51dfb97b3"
         },
         {
           "key": "harvest_source_id",
@@ -384,7 +384,7 @@
       "maintainer": "Open Data Zürich",
       "maintainer_email": "opendata@zuerich.ch",
       "metadata_created": "2022-07-05T13:55:52.879293",
-      "metadata_modified": "2026-08-07T08:18:44.165838",
+      "metadata_modified": "2026-10-14T10:31:53.100243",
       "name": "ktzh_haltestellen_des_oeffentlichen_verkehrs___ogd_",
       "notes": "Die Haltestellen des öffentlichen Verkehrs wurden im Laufe des Jahres 1997 in Zusammenarbeit mit dem ZVV, dem Tiefbauamt, den regionalen Verkehrsbetrieben, der Post und dem GIS-Zentrum erfasst. Die laufende Aktualisierung geschieht durch die VBZ.",
       "num_resources": 10,
@@ -418,7 +418,7 @@
       "extras": [
         {
           "key": "harvest_object_id",
-          "value": "95923e1d-e8cc-4068-b249-3cd08e72b679"
+          "value": "b7c1f638-a308-44ec-b527-e898d26ba39c"
         },
         {
           "key": "harvest_source_id",
@@ -740,7 +740,7 @@
       "maintainer": "Open Data Zürich",
       "maintainer_email": "opendata@zuerich.ch",
       "metadata_created": "2022-07-05T13:58:38.904738",
-      "metadata_modified": "2026-08-07T08:18:44.668965",
+      "metadata_modified": "2026-10-14T10:31:52.707918",
       "name": "ktzh_tarifzonen_des_oeffentlichen_verkehrs__ogd_",
       "notes": "Die Tarifzonen des öffentlichen Verkehrs wurden im Laufe des Jahres 2014 in Zusammenarbeit mit dem ZVV. Die laufende Aktualisierung geschieht im Auftrag des ZVV durch das GIS-Zentrum des ARE des Kantons Zürich, auf Basis der Haltestellendaten der VBZ.",
       "num_resources": 7,
@@ -774,7 +774,7 @@
       "extras": [
         {
           "key": "harvest_object_id",
-          "value": "172b5c6e-7133-4e99-8d5f-1767b17c98cd"
+          "value": "5bfe2529-19fd-4a8d-adc1-da847b540a16"
         },
         {
           "key": "harvest_source_id",
