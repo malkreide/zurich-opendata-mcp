@@ -34,8 +34,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Tokens und bedeutet für Lesende nichts. Jetzt fehlt er in beiden; `_id` bleibt
   wie bisher in den Datensätzen. Erkannt wird der Index an Name **und** Typ
   (`tsvector`): eine Spalte, die jemand selbst `_full_text` nennt, etwa
-  `COUNT(*) AS "_full_text"` (`int8`), bleibt stehen. Aufgefallen ist es mcp-continuous-auditor am
-  2026-10-14, als dessen Fixture zum ersten Mal von der echten Tabelle stammte.
+  `COUNT(*) AS "_full_text"` (`int8`), bleibt stehen. Aufgefallen ist es
+  mcp-continuous-auditor am 2026-10-14, als dessen Fixture zum ersten Mal von
+  der echten Tabelle stammte.
 
   Belegt mit einer neuen **aufgezeichneten** Antwort
   (`tests/fixtures/ckan_datastore_sql.json`, `SELECT *` auf die stündliche
